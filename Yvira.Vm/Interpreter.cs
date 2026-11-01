@@ -911,6 +911,8 @@ public class Interpreter
             IndexAssignmentExpressionNode indexAssign => EvaluateIndexAssignment(indexAssign),
             MemberAccessNode member => EvaluateMemberAccess(member),
             MethodCallNode method => EvaluateMethodCall(method),
+            SpawnExpressionNode spawnExpr => EvaluateSpawn(spawnExpr),
+            WorkerExpressionNode workerExpr => EvaluateWorker(workerExpr),
             _ => throw new Exception($"Expressão desconhecida para avaliação: {expression.GetType().Name}")
         };
     }
@@ -2516,4 +2518,70 @@ public class Interpreter
         DocumentModule.RenderPdfContext(ctx, fullPath);
     }
 
+
+    private object? EvaluateSpawn(SpawnExpressionNode spawn)
+    {
+        var evaluatedArgs = new List<object?>();
+        foreach (var arg in spawn.Arguments)
+        {
+            evaluatedArgs.Add(EvaluateExpression(arg));
+        }
+
+        object? callable = null;
+        if (!string.IsNullOrEmpty(spawn.FunctionName))
+        {
+            callable = _environment.Get(spawn.FunctionName);
+        }
+
+        var cts = new System.Threading.CancellationTokenSource();
+
+        var workerInterp = CreateWorkerClone();
+
+        var task = System.Threading.Tasks.Task.Run(() =>
+        {
+            if (callable is YviraFunction yvFunc)
+            {
+                return yvFunc.Call(workerInterp, evaluatedArgs);
+            }
+            else if (callable is HostFunction hostFn)
+            {
+                return hostFn.Call(workerInterp, evaluatedArgs);
+            }
+            else if (spawn.BlockBody != null)
+            {
+                var blockEnv = new Environment(workerInterp.Environment);
+                workerInterp.ExecuteBlockWithEnv(spawn.BlockBody, blockEnv);
+                return (object?)null;
+            }
+            else
+            {
+                throw new Exception($"Função ou bloco inválido para @spawn: {spawn.FunctionName ?? "bloco"}");
+            }
+        }, cts.Token);
+
+        var spawnTask = new YviraSpawnTask(task, cts);
+        return spawnTask.ToYviraObject();
+    }
+
+    private object? EvaluateWorker(WorkerExpressionNode worker)
+    {
+        string method = worker.Method?.ToLowerInvariant() ?? "pool";
+        if (method == "pool")
+        {
+            int concurrency = System.Environment.ProcessorCount;
+            if (worker.Arguments.Count > 0)
+            {
+                var argVal = EvaluateExpression(worker.Arguments[0]);
+                if (argVal != null)
+                {
+                    concurrency = Convert.ToInt32(argVal);
+                }
+            }
+
+            var pool = new YviraWorkerPool(concurrency, this);
+            return pool.ToYviraObject();
+        }
+
+        throw new Exception($"Método @worker desconhecido: '{worker.Method}'. Use @worker.pool(N).");
+    }
 }

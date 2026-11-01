@@ -1012,6 +1012,62 @@ public class Parser
                 {
                     return ParseDbExecExpression(atAlias);
                 }
+                if (atAction == "spawn")
+                {
+                    // Caso 1B: @spawn.minhaFuncao(arg1, arg2)
+                    string? targetFn = atAlias;
+                    var spawnArgs = new List<ExpressionNode>();
+                    BlockStatementNode? block = null;
+
+                    if (Current.Type == TokenType.OpenParen)
+                    {
+                        Match(TokenType.OpenParen);
+                        if (Current.Type != TokenType.CloseParen)
+                        {
+                            while (true)
+                            {
+                                spawnArgs.Add(ParseExpression());
+                                if (Current.Type == TokenType.Comma)
+                                {
+                                    Advance();
+                                    continue;
+                                }
+                                break;
+                            }
+                        }
+                        Match(TokenType.CloseParen);
+                    }
+                    else if (Current.Type == TokenType.OpenBrace)
+                    {
+                        block = ParseBlockStatement();
+                    }
+
+                    return new SpawnExpressionNode(targetFn, spawnArgs, block);
+                }
+
+                if (atAction == "worker")
+                {
+                    // Caso 2B: @worker.pool(N)
+                    string method = atAlias ?? "pool";
+                    Match(TokenType.OpenParen);
+                    var workerArgs = new List<ExpressionNode>();
+                    if (Current.Type != TokenType.CloseParen)
+                    {
+                        while (true)
+                        {
+                            workerArgs.Add(ParseExpression());
+                            if (Current.Type == TokenType.Comma)
+                            {
+                                Advance();
+                                continue;
+                            }
+                            break;
+                        }
+                    }
+                    Match(TokenType.CloseParen);
+                    return new WorkerExpressionNode(method, workerArgs);
+                }
+
                 if (atAction == "realtime")
                 {
                     // @realtime.servidor(...) ou @realtime.cliente(...)

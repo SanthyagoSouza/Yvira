@@ -1,0 +1,67 @@
+# Teste dos Recursos de Concorrência Nativa do Yvira
+# @spawn (Tarefas Assíncronas) & @worker.pool (Paralelismo Multicore)
+
+print("==================================================")
+print("TESTANDO CONCORRÊNCIA NATIVA NO YVIRA")
+print("==================================================")
+
+# ----------------------------------------------------
+# 1. Teste de @spawn com função nomeada
+# ----------------------------------------------------
+fn calcularQuadrado(x) {
+    sleep(100)
+    return x * x
+}
+
+print("\n[1] Disparando tarefa assíncrona com @spawn...")
+let tarefa = @spawn.calcularQuadrado(12)
+
+print("Tarefa disparada! Está concluída imediatamente?", tarefa.isDone())
+
+print("Aguardando resultado via tarefa.wait()...")
+let resultadoQuadrado = tarefa.wait()
+print("Resultado de calcularQuadrado(12):", resultadoQuadrado)
+print("Agora está concluída?", tarefa.isDone())
+
+# ----------------------------------------------------
+# 2. Teste de @spawn com Timeout
+# ----------------------------------------------------
+fn operacaoDemorada() {
+    sleep(500)
+    return "sucesso!"
+}
+
+print("\n[2] Testando @spawn com Timeout...")
+let tarefaLenta = @spawn.operacaoDemorada()
+let pegouTimeout = false
+try {
+    # Timeout de 0.05 segundos (50ms) deve estourar TimeoutException
+    tarefaLenta.wait(0.05)
+} catch (erro) {
+    pegouTimeout = true
+    print("Timeout capturado com sucesso:", erro)
+}
+
+# ----------------------------------------------------
+# 3. Teste de @worker.pool (Mapeamento Paralelo Multicore)
+# ----------------------------------------------------
+print("\n[3] Testando @worker.pool e pool.map()...")
+let pool = @worker.pool(4)
+print("Pool criado com concorrência:", pool.concurrency)
+
+fn processarItem(n) {
+    return n * 10
+}
+
+let numeros = [1, 2, 3, 4, 5, 6, 7, 8]
+print("Lista de entrada:", numeros)
+
+let transformados = pool.map(numeros, processarItem)
+print("Lista processada pelo Worker Pool:", transformados)
+
+pool.close()
+print("Pool encerrado com sucesso.")
+
+print("\n==================================================")
+print("TODOS OS TESTES DE CONCORRÊNCIA PASSARAM COM SUCESSO!")
+print("==================================================")

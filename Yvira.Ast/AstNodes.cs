@@ -675,6 +675,34 @@ public class PdfDirectiveStatementNode : StatementNode
     }
 }
 
+// Concorrência: @spawn.funcao(...) ou @spawn { ... }
+public class SpawnExpressionNode : ExpressionNode
+{
+    public string? FunctionName { get; }
+    public IReadOnlyList<ExpressionNode> Arguments { get; }
+    public BlockStatementNode? BlockBody { get; }
+
+    public SpawnExpressionNode(string? functionName, IReadOnlyList<ExpressionNode> arguments, BlockStatementNode? blockBody = null)
+    {
+        FunctionName = functionName;
+        Arguments = arguments;
+        BlockBody = blockBody;
+    }
+}
+
+// Concorrência Multicore: @worker.pool(N)
+public class WorkerExpressionNode : ExpressionNode
+{
+    public string Method { get; } // "pool"
+    public IReadOnlyList<ExpressionNode> Arguments { get; }
+
+    public WorkerExpressionNode(string method, IReadOnlyList<ExpressionNode> arguments)
+    {
+        Method = method;
+        Arguments = arguments;
+    }
+}
+
 public class ProgramNode : AstNode
 {
     public IReadOnlyList<StatementNode> Statements { get; }
