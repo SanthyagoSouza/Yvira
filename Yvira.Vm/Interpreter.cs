@@ -444,6 +444,21 @@ public class Interpreter
             return;
         }
 
+        if (rawPath.Equals("doc", StringComparison.OrdinalIgnoreCase) || rawPath.Equals("document", StringComparison.OrdinalIgnoreCase) || rawPath.Equals("pdf", StringComparison.OrdinalIgnoreCase) || rawPath.Equals("excel", StringComparison.OrdinalIgnoreCase))
+        {
+            var docModule = DocumentModule.CreateModule(_currentDirectory);
+            if (string.IsNullOrEmpty(importStmt.Alias))
+            {
+                _environment.Define("doc", docModule);
+                ApplyModuleSymbols(docModule, null);
+            }
+            else
+            {
+                ApplyModuleSymbols(docModule, importStmt.Alias);
+            }
+            return;
+        }
+
         // Resolve caminho do arquivo ou pacote
         string fullPath;
         if (rawPath.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||

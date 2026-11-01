@@ -1,0 +1,46 @@
+import "doc" as doc
+
+print("=== TESTE DE GERACAO DE DOCUMENTOS NATIVOS NO YVIRA ===")
+
+# 1. Gerando Planilha Excel (.xlsx) com Dados, Headers e Cores
+print("\n[1] Gerando planilha Excel 'relatorio_vendas.xlsx'...")
+let dadosPlanilha = {
+    "title": "Relatório de Vendas Corporativo - Yvira",
+    "headers": ["ID", "Produto", "Categoria", "Preço (R$)", "Quantidade", "Status"],
+    "rows": [
+        [101, "Servidor Cloud Enterprise", "Infraestrutura", 2490.50, 4, "Ativo"],
+        [102, "Módulo de IA & Q-Learning", "Inteligência Artificial", 1850.00, 10, "Entregue"],
+        [103, "Cluster de Banco de Dados", "Storage", 3200.00, 2, "Em Processamento"],
+        [104, "Licença Yvira Pro Desktop", "Software", 450.00, 35, "Ativo"]
+    ]
+}
+
+doc.writeExcel("relatorio_vendas.xlsx", dadosPlanilha)
+print("-> Planilha gerada com sucesso!")
+
+# 2. Lendo a Planilha de volta para comprovar fidelidade
+print("\n[2] Lendo dados da planilha Excel recém-gerada...")
+let linhas = doc.readExcel("relatorio_vendas.xlsx")
+foreach (linha in linhas) {
+    print("Linha Excel:", linha)
+}
+
+# 3. Gerando Relatório Executivo em PDF profissional
+print("\n[3] Gerando Relatório Executivo em PDF 'relatorio_executivo.pdf'...")
+let dadosPdf = {
+    "title": "RELATÓRIO EXECUTIVO DE AUDITORIA",
+    "subtitle": "Emitido automaticamente pelo ecossistema Yvira v2.1",
+    "content": "Este documento foi compilado e renderizado de forma 100% nativa sem dependências externas adicionais pelo motor Yvira. O sistema integrou métricas de banco de dados, matrizes de cálculo e dados de faturamento diretamente neste PDF.",
+    "headers": ["Cód.", "Descrição do Ativo", "Valor de Mercado", "Risco"],
+    "rows": [
+        ["ATV-01", "Fundo de Criptoativos Quantitativo", "R$ 450.000,00", "Baixo"],
+        ["ATV-02", "Cluster de Redes Neurais Distribuídas", "R$ 280.000,00", "Médio"],
+        ["ATV-03", "Reserva de Liquidez em Ouro (XAU/USD)", "R$ 620.000,00", "Mínimo"]
+    ],
+    "footer": "Yvira Language Platform • Document Engine Oficial"
+}
+
+doc.writePdf("relatorio_executivo.pdf", dadosPdf)
+print("-> PDF gerado com sucesso!")
+
+print("\n=== TODOS OS DOCUMENTOS GERADOS COM SUCESSO! ===")
