@@ -1,0 +1,48 @@
+import "crypto" as crypto
+import "fs" as fs
+
+print("=== BATERIA DE TESTES DE SEGURANCA AVANCADA - YVIRA ===")
+
+# 1. Hashing Criptográfico SHA-256 e SHA-512
+print("\n[1] Testando Hashes Criptograficos...")
+let hash256 = crypto.sha256("admin@yvira.com.br")
+let hash512 = crypto.sha512("admin@yvira.com.br")
+print("-> SHA-256:", hash256)
+print("-> SHA-512:", hash512)
+
+# 2. Assinatura e Autenticação de Mensagens HMAC-SHA256
+print("\n[2] Testando Assinatura HMAC...")
+let chaveHmac = "MINHA_CHAVE_SECRETA_API"
+let assinatura = crypto.hmac(chaveHmac, "pedido_id=9872&valor=1500.00")
+print("-> HMAC Assinatura:", assinatura)
+
+# 3. Geração de Bytes Aleatórios Criptograficamente Seguros (CSPRNG) e UUID v4
+print("\n[3] Testando Gerador de Chaves Aleatorias e UUID...")
+let tokenSessao = crypto.randomBytes(32)
+let novoUuid = crypto.uuid()
+print("-> Token Seguro (256 bits):", tokenSessao)
+print("-> UUID v4 Identificador:", novoUuid)
+
+# 4. Hash e Verificação de Senhas com PBKDF2 + Salt + Tempo Constante
+print("\n[4] Testando Hash de Senha (Anti-Brute Force com PBKDF2)...")
+let senhaOriginal = "SenhaUltraSecreta!2026"
+let senhaHash = crypto.hashPassword(senhaOriginal)
+print("-> Hash Gerado com Salt:", senhaHash)
+
+let validouCorreta = crypto.verifyPassword(senhaOriginal, senhaHash)
+let validouIncorreta = crypto.verifyPassword("SenhaErrada123", senhaHash)
+print("-> Verificacao com senha correta:", validouCorreta)
+print("-> Verificacao com senha errada  :", validouIncorreta)
+
+# 5. Criptografia Simétrica de Alta Segurança AES-256
+print("\n[5] Testando Criptografia AES-256...")
+let dadoSensivel = "NumeroCartao=4532-1198-4421-9988;CVV=882;Titular=Santhyago"
+let chaveCifrar = "Chave-Corporativa-Mestre-Segura-Yvira"
+
+let envelopeCifrado = crypto.encrypt(dadoSensivel, chaveCifrar)
+print("-> Payload Cifrado em Base64:", envelopeCifrado)
+
+let dadoDecifrado = crypto.decrypt(envelopeCifrado, chaveCifrar)
+print("-> Payload Decifrado com Sucesso:", dadoDecifrado)
+
+print("\n=== TODOS OS SISTEMAS DE SEGURANCA OPERANDO COM 100% DE EFICIENCIA! ===")

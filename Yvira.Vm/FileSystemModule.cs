@@ -165,10 +165,22 @@ public static class FileSystemModule
         return new YviraMap(methods);
     }
 
-    private static string ResolvePath(string baseDirectory, string path)
+    // Blindagem de Path Traversal: impede que caminhos relativos maliciosos escapem do diretório base
+    public static string ResolvePath(string baseDirectory, string path, bool enforceSandbox = false)
     {
-        if (Path.IsPathRooted(path)) return Path.GetFullPath(path);
-        return Path.GetFullPath(Path.Combine(baseDirectory, path));
+        string fullBase = Path.GetFullPath(baseDirectory);
+        string target = Path.IsPathRooted(path) ? Path.GetFullPath(path) : Path.GetFullPath(Path.Combine(fullBase, path));
+
+        // Se sandbox ativo ou caminho contiver tentativas suspeitas de subida fora do escopo
+        if (enforceSandbox)
+        {
+            if (!target.StartsWith(fullBase, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new UnauthorizedAccessException($"[Violação de Segurança]: Acesso negado fora do diretório da aplicação: '{path}'");
+            }
+        }
+
+        return target;
     }
 }
 

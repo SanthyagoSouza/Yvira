@@ -88,10 +88,16 @@ public class HttpServerInstance : IDisposable
 
         try
         {
-            // 1. Extrai Body
+            // 1. Extrai Body com proteção de tamanho máximo (Anti-DoS Payload - Max 10MB)
             string bodyString = "";
             if (req.HasEntityBody)
             {
+                if (req.ContentLength64 > 10 * 1024 * 1024)
+                {
+                    res.StatusCode = 413; // Payload Too Large
+                    res.Close();
+                    return;
+                }
                 using var reader = new StreamReader(req.InputStream, req.ContentEncoding ?? Encoding.UTF8);
                 bodyString = reader.ReadToEnd();
             }
@@ -196,6 +202,12 @@ public class HttpServerInstance : IDisposable
         int statusCode = 200;
         string contentType = "application/json; charset=utf-8";
         byte[] responseBytes = Array.Empty<byte>();
+
+        // Cabeçalhos de segurança defensiva automáticos (OWASP / Hardening)
+        res.Headers["X-Content-Type-Options"] = "nosniff";
+        res.Headers["X-Frame-Options"] = "SAMEORIGIN";
+        res.Headers["X-XSS-Protection"] = "1; mode=block";
+        res.Headers["Server"] = "Yvira-Server/2.2";
 
         if (result is HttpResponseHelper respHelper)
         {

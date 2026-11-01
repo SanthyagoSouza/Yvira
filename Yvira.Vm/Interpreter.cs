@@ -463,6 +463,21 @@ public class Interpreter
             return;
         }
 
+        if (rawPath.Equals("crypto", StringComparison.OrdinalIgnoreCase) || rawPath.Equals("security", StringComparison.OrdinalIgnoreCase))
+        {
+            var cryptoModule = CryptoModule.CreateModule();
+            if (string.IsNullOrEmpty(importStmt.Alias))
+            {
+                _environment.Define("crypto", cryptoModule);
+                ApplyModuleSymbols(cryptoModule, null);
+            }
+            else
+            {
+                ApplyModuleSymbols(cryptoModule, importStmt.Alias);
+            }
+            return;
+        }
+
         // Resolve caminho do arquivo ou pacote
         string fullPath;
         if (rawPath.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
