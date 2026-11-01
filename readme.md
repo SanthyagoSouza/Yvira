@@ -51,7 +51,7 @@
 
 > *"Muitas linguagens modernas tentam abraçar o mundo inteiro e acabam exigindo ecossistemas pesados, dependências complexas e dezenas de ferramentas externas apenas para fazer o básico de análise de dados ou automação contínua. O Yvira nasceu da necessidade real de ter uma ferramenta ágil, independente e desenhada sob medida para resolver esses desafios com elegância."*
 
-O **Yvira** foi idealizado e desenvolvido por **Santhyago Souza Ponciano**, desenvolvedor e pesquisador brasileiro.
+O **Yvira** foi idealizado e desenvolvido por **Santhyago Souza Ponciano**, programador brasileiro apaixonado por computação de baixo nível e obcecado em saber como as coisas funcionam por trás dos panos (dos compiladores e da VM até o hardware).
 
 O projeto nasceu de uma dor prática: no ecossistema atual de desenvolvimento, quem desenvolve aplicações de backend, APIs, rotinas com IA, processamento de dados e automações em tempo real (como monitoramento de APIs financeiras, trading, análise quantitativa e processamento matricial) frequentemente se depara com a mesma encruzilhada:
 

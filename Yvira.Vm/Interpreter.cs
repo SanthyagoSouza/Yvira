@@ -205,6 +205,10 @@ public class Interpreter
                 ExecuteSleepStatement(sleepStmt);
                 return null;
 
+            case PdfDirectiveStatementNode pdfStmt:
+                ExecutePdfDirective(pdfStmt);
+                return null;
+
             default:
                 throw new Exception($"Comando não suportado pelo interpretador: {statement.GetType().Name}");
         }
@@ -2334,4 +2338,167 @@ public class Interpreter
         }
         return sb.ToString();
     }
+
+    private void ExecutePdfDirective(PdfDirectiveStatementNode pdfStmt)
+    {
+        string rawFilePath = EvaluateExpression(pdfStmt.FilePathExpression)?.ToString() ?? "documento.pdf";
+        string fullPath = System.IO.Path.IsPathRooted(rawFilePath)
+            ? rawFilePath
+            : System.IO.Path.GetFullPath(System.IO.Path.Combine(_currentDirectory, rawFilePath));
+
+        string? dir = System.IO.Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrEmpty(dir) && !System.IO.Directory.Exists(dir))
+        {
+            System.IO.Directory.CreateDirectory(dir);
+        }
+
+        // Caso @pdf.fromView("template.html", "arquivo.pdf", [dados])
+        if (pdfStmt.Method != null && pdfStmt.Method.Equals("fromView", StringComparison.OrdinalIgnoreCase))
+        {
+            string viewFile = rawFilePath;
+            string targetPdf = pdfStmt.Arguments.Count > 0 ? (EvaluateExpression(pdfStmt.Arguments[0])?.ToString() ?? "view.pdf") : "view.pdf";
+            string fullViewPath = System.IO.Path.IsPathRooted(viewFile) ? viewFile : System.IO.Path.GetFullPath(System.IO.Path.Combine(_currentDirectory, viewFile));
+            string fullTargetPdf = System.IO.Path.IsPathRooted(targetPdf) ? targetPdf : System.IO.Path.GetFullPath(System.IO.Path.Combine(_currentDirectory, targetPdf));
+
+            if (!System.IO.File.Exists(fullViewPath))
+                throw new System.IO.FileNotFoundException($"Arquivo de template view não encontrado: {fullViewPath}");
+
+            string html = System.IO.File.ReadAllText(fullViewPath);
+            if (pdfStmt.Arguments.Count > 1 && EvaluateExpression(pdfStmt.Arguments[1]) is YviraMap dataMap)
+            {
+                foreach (var entry in dataMap)
+                {
+                    html = html.Replace("{{" + entry.Key + "}}", entry.Value?.ToString() ?? "");
+                }
+            }
+
+            var ctxView = new PdfBuilderContext { Title = System.IO.Path.GetFileNameWithoutExtension(fullViewPath) };
+            ctxView.Sections.Add(new PdfBuilderContext.ViewSection { HtmlContent = html });
+            DocumentModule.RenderPdfContext(ctxView, fullTargetPdf);
+            return;
+        }
+
+        // Caso @pdf("arquivo.pdf", [opcoes]) { title(...); subtitle(...); table(...); text(...); footer(...); }
+        var ctx = new PdfBuilderContext();
+        if (pdfStmt.Arguments.Count > 0)
+        {
+            var optObj = EvaluateExpression(pdfStmt.Arguments[0]);
+            if (optObj is YviraMap optMap)
+            {
+                ctx.PageSize = optMap.Get("size")?.ToString() ?? ctx.PageSize;
+                ctx.Orientation = optMap.Get("orientation")?.ToString() ?? ctx.Orientation;
+            }
+        }
+
+        if (pdfStmt.Body != null)
+        {
+            var pdfEnv = new Environment(_environment);
+            
+            // Registra DSL interna do bloco @pdf
+            pdfEnv.Define("title", new HostFunction("title", (interp, args) =>
+            {
+                if (args.Count > 0 && args[0] != null) ctx.Title = args[0]!.ToString()!;
+                if (args.Count > 1 && args[1] is YviraMap opts)
+                {
+                    ctx.TitleColor = opts.Get("color")?.ToString() ?? ctx.TitleColor;
+                    ctx.TitleAlign = opts.Get("align")?.ToString() ?? ctx.TitleAlign;
+                }
+                return null;
+            }));
+
+            pdfEnv.Define("subtitle", new HostFunction("subtitle", (interp, args) =>
+            {
+                if (args.Count > 0 && args[0] != null) ctx.Subtitle = args[0]!.ToString()!;
+                return null;
+            }));
+
+            pdfEnv.Define("text", new HostFunction("text", (interp, args) =>
+            {
+                if (args.Count > 0 && args[0] != null)
+                {
+                    var textSec = new PdfBuilderContext.TextSection { Text = args[0]!.ToString()! };
+                    if (args.Count > 1 && args[1] is YviraMap opts)
+                    {
+                        textSec.Color = opts.Get("color")?.ToString();
+                        textSec.Align = opts.Get("align")?.ToString() ?? "left";
+                        if (opts.Get("size") is double sz) textSec.FontSize = (float)sz;
+                        if (opts.Get("bold") is bool b) textSec.Bold = b;
+                        if (opts.Get("italic") is bool it) textSec.Italic = it;
+                    }
+                    ctx.Sections.Add(textSec);
+                }
+                return null;
+            }));
+
+            // Ingestão Polimórfica Direta: table(vendas, [opts])
+            pdfEnv.Define("table", new HostFunction("table", (interp, args) =>
+            {
+                if (args.Count > 0 && args[0] != null)
+                {
+                    DocumentModule.ExtractTableData(args[0]!, out var autoHeaders, out var autoRows);
+
+                    var tableSec = new PdfBuilderContext.TableSection
+                    {
+                        Headers = autoHeaders,
+                        Rows = autoRows
+                    };
+
+                    if (args.Count > 1 && args[1] is YviraMap opts)
+                    {
+                        if (opts.Get("headers") is YviraList customHeaders)
+                        {
+                            tableSec.Headers = customHeaders.Select(h => h?.ToString() ?? "").ToList();
+                        }
+                        tableSec.Theme = opts.Get("theme")?.ToString() ?? "striped";
+                        tableSec.HeaderColor = opts.Get("color")?.ToString() ?? opts.Get("headerColor")?.ToString();
+                    }
+
+                    ctx.Sections.Add(tableSec);
+                }
+                return null;
+            }));
+
+            pdfEnv.Define("footer", new HostFunction("footer", (interp, args) =>
+            {
+                if (args.Count > 0 && args[0] != null) ctx.Footer = args[0]!.ToString()!;
+                return null;
+            }));
+
+            pdfEnv.Define("view", new HostFunction("view", (interp, args) =>
+            {
+                if (args.Count > 0 && args[0] != null)
+                {
+                    string vPath = args[0]!.ToString()!;
+                    string fvPath = System.IO.Path.IsPathRooted(vPath) ? vPath : System.IO.Path.GetFullPath(System.IO.Path.Combine(_currentDirectory, vPath));
+                    if (System.IO.File.Exists(fvPath))
+                    {
+                        string hContent = System.IO.File.ReadAllText(fvPath);
+                        if (args.Count > 1 && args[1] is YviraMap dataMap)
+                        {
+                            foreach (var entry in dataMap)
+                            {
+                                hContent = hContent.Replace("{{" + entry.Key + "}}", entry.Value?.ToString() ?? "");
+                            }
+                        }
+                        ctx.Sections.Add(new PdfBuilderContext.ViewSection { HtmlContent = hContent });
+                    }
+                }
+                return null;
+            }));
+
+            var prevEnv = _environment;
+            _environment = pdfEnv;
+            try
+            {
+                ExecuteBlock(pdfStmt.Body);
+            }
+            finally
+            {
+                _environment = prevEnv;
+            }
+        }
+
+        DocumentModule.RenderPdfContext(ctx, fullPath);
+    }
+
 }

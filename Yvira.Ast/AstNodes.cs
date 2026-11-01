@@ -658,6 +658,23 @@ public class RealtimeExpressionNode : ExpressionNode
     }
 }
 
+// Diretiva @pdf("arquivo.pdf", [opcoes]) { ... } ou @pdf.fromView(...)
+public class PdfDirectiveStatementNode : StatementNode
+{
+    public string? Method { get; }
+    public ExpressionNode FilePathExpression { get; }
+    public IReadOnlyList<ExpressionNode> Arguments { get; }
+    public BlockStatementNode? Body { get; }
+
+    public PdfDirectiveStatementNode(string? method, ExpressionNode filePathExpression, IReadOnlyList<ExpressionNode> arguments, BlockStatementNode? body = null)
+    {
+        Method = method;
+        FilePathExpression = filePathExpression;
+        Arguments = arguments;
+        Body = body;
+    }
+}
+
 public class ProgramNode : AstNode
 {
     public IReadOnlyList<StatementNode> Statements { get; }

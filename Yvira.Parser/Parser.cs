@@ -211,6 +211,32 @@ public class Parser
             alias = aliasToken.Text;
         }
 
+        // Caso: @pdf("arquivo.pdf", [opcoes]) { ... } ou @pdf.fromView(...)
+        if (action == "pdf")
+        {
+            Match(TokenType.OpenParen);
+            var filePathExpr = ParseExpression();
+            var pdfArgs = new List<ExpressionNode>();
+            while (Current.Type == TokenType.Comma)
+            {
+                Advance(); // consome ','
+                pdfArgs.Add(ParseExpression());
+            }
+            Match(TokenType.CloseParen);
+
+            BlockStatementNode? pdfBody = null;
+            if (Current.Type == TokenType.OpenBrace)
+            {
+                pdfBody = ParseBlockStatement();
+            }
+            else if (Current.Type == TokenType.Semicolon)
+            {
+                Advance();
+            }
+
+            return new PdfDirectiveStatementNode(alias, filePathExpr, pdfArgs, pdfBody);
+        }
+
         // Caso 1: @db("uri") ou @db.alias("uri")
         if (action == "db")
         {

@@ -1,0 +1,72 @@
+print("=== TESTE DA DIRETIVA NATIVA @PDF COM AS 3 FONTES DE DADOS ===")
+
+# ==============================================================
+# FONTE 1: DIRETO DO BANCO DE DADOS (@db e @query)
+# ==============================================================
+print("\n[1] Configurando banco SQLite e inserindo dados...")
+@db("teste_relatorio.db")
+
+@exec("CREATE TABLE IF NOT EXISTS faturamento (id INTEGER PRIMARY KEY, cliente TEXT, plano TEXT, valor REAL, status TEXT)")
+@exec("DELETE FROM faturamento")
+
+@exec("INSERT INTO faturamento (cliente, plano, valor, status) VALUES ('Nubank Brasil', 'Enterprise Dedicated', 14500.00, 'Pago')")
+@exec("INSERT INTO faturamento (cliente, plano, valor, status) VALUES ('Itaú Unibanco', 'Cluster AI GPU', 28900.50, 'Pago')")
+@exec("INSERT INTO faturamento (cliente, plano, valor, status) VALUES ('Embraer Defesa', 'Segurança Militar P2P', 55000.00, 'Processando')")
+@exec("INSERT INTO faturamento (cliente, plano, valor, status) VALUES ('Petrobras Labs', 'Quantum Analytics Matrix', 42300.00, 'Pago')")
+
+# Consulta do banco retorna registros nativos do Yvira
+let registrosBanco = @query("SELECT id, cliente, plano, valor, status FROM faturamento WHERE valor > 10000")
+
+print("-> Gerando PDF direto da consulta @query...")
+@pdf("pdf_direto_do_banco.pdf", { "size": "A4" }) {
+    title("RELATÓRIO DE FATURAMENTO CORPORATIVO", { "color": "#0f766e", "align": "center" })
+    subtitle("Filtro: Contratos acima de R$ 10.000,00 extraídos em tempo real do @db")
+    text("Abaixo constam os registros extraídos via @query sem necessidade de criar JSON intermediário:")
+
+    # Ingestão Direta: o table consome o resultado do banco e cria as colunas sozinho!
+    table(registrosBanco, {
+        "headers": ["ID", "Empresa Contratante", "Plano Contratado", "Faturamento (R$)", "Situação"],
+        "color": "#0d9488"
+    })
+
+    footer("Yvira Data Engine • Módulo Oficial @pdf")
+}
+print("-> PDF do banco gerado com sucesso!")
+
+
+# ==============================================================
+# FONTE 2: A PARTIR DE DADOS JSON / API REST / MAPAS
+# ==============================================================
+print("\n[2] Gerando PDF a partir de dados JSON / API...")
+let pedidosJson = [
+    { "pedido": "#8091", "produto": "Servidor Yvira v2.2", "qtd": 2, "total": 5000.0 },
+    { "pedido": "#8092", "produto": "Módulo de Álgebra Linear", "qtd": 10, "total": 1500.0 },
+    { "pedido": "#8093", "produto": "Licença Compiler Standalone", "qtd": 5, "total": 2250.0 }
+]
+
+@pdf("pdf_origem_json.pdf") {
+    title("PEDIDOS DO E-COMMERCE", { "color": "#1e3a8a" })
+    subtitle("Originados via JSON / Payload REST")
+    text("Lista de pedidos consumida de estrutura JSON nativa:")
+    table(pedidosJson, { "theme": "dark" })
+    footer("Yvira Cloud • Pedidos")
+}
+print("-> PDF de JSON gerado com sucesso!")
+
+
+# ==============================================================
+# FONTE 3: A PARTIR DA PRÓPRIA VIEW / HTML RENDERIZADO
+# ==============================================================
+print("\n[3] Gerando PDF a partir de Template de View HTML...")
+let templateHtml = "<h1>CERTIFICADO DE CONCLUSAO</h1><p>Certificamos que o desenvolvedor <b>{{nome}}</b> dominou a arquitetura de compiladores e a linguagem Yvira com nota <b>{{nota}}</b>.</p>"
+import "fs" as fs
+fs.write("template_certificado.html", templateHtml)
+
+# Exporta direto via @pdf.fromView com injeção de dados
+@pdf.fromView("template_certificado.html", "pdf_da_view.pdf", {
+    "nome": "Santhyago Souza Ponciano",
+    "nota": "10.0"
+})
+print("-> PDF da View gerado com sucesso!")
+
+print("\n=== TODAS AS 3 ABORDAGENS TESTADAS COM SUCESSO ABSOLUTO! ===")
