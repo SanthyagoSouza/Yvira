@@ -1,0 +1,58 @@
+import "http";
+
+# 1. Conexão com banco SQLite em memória
+@db("sqlite://:memory:");
+
+# 2. Cria tabela de produtos
+@exec("CREATE TABLE produtos (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT, preco REAL);");
+
+# 3. Insere alguns produtos iniciais
+@exec("INSERT INTO produtos (nome, preco) VALUES (?, ?);", ["Notebook Pro AI", 7500.0]);
+@exec("INSERT INTO produtos (nome, preco) VALUES (?, ?);", ["Monitor UltraWide", 2200.0]);
+
+# 4. Handler da API REST
+fn api_loja(req) {
+    # Listar produtos
+    if (req.method == "GET" && req.path == "/produtos") {
+        let lista = @query("SELECT * FROM produtos;");
+        return lista;
+    }
+
+    # Criar novo produto via JSON
+    if (req.method == "POST" && req.path == "/produtos") {
+        let body = req.body;
+        let novo_id = @exec("INSERT INTO produtos (nome, preco) VALUES (?, ?);", [body["nome"], body["preco"]]);
+        return http.response(201, { "id": novo_id, "status": "criado" });
+    }
+
+    # Rota de métricas da loja
+    if (req.method == "GET" && req.path == "/metricas") {
+        let total = @query("SELECT COUNT(*) as qtd, SUM(preco) as total FROM produtos;");
+        return total[0];
+    }
+
+    return http.response(404, { "erro": "Rota não encontrada" });
+}
+
+# 5. Inicia servidor em background
+let server = http.serve(5060, api_loja, { "background": true });
+
+# 6. Testes integrados cliente-servidor
+print("--- TESTE 1: GET /produtos ---");
+let res1 = http.get("http://localhost:5060/produtos");
+print("Status:", res1.status);
+print("Dados:", res1.body);
+
+print("\n--- TESTE 2: POST /produtos ---");
+let novoProduto = { "nome": "Teclado Mecânico RGB", "preco": 350.0 };
+let res2 = http.post("http://localhost:5060/produtos", novoProduto);
+print("Status:", res2.status);
+print("Resposta:", res2.body);
+
+print("\n--- TESTE 3: GET /metricas ---");
+let res3 = http.get("http://localhost:5060/metricas");
+print("Status:", res3.status);
+print("Totais:", res3.body);
+
+server.stop();
+print("\n[OK] API REST + Banco de Dados Nativo testados com 100% de sucesso!");

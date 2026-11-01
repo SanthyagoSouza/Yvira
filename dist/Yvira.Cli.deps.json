@@ -1,0 +1,92 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "Yvira.Cli/1.0.0": {
+        "dependencies": {
+          "Yvira.Ast": "1.0.0",
+          "Yvira.Lexer": "1.0.0",
+          "Yvira.Parser": "1.0.0",
+          "Yvira.Vm": "1.0.0"
+        },
+        "runtime": {
+          "Yvira.Cli.dll": {}
+        }
+      },
+      "Yvira.Ast/1.0.0": {
+        "dependencies": {
+          "Yvira.Lexer": "1.0.0"
+        },
+        "runtime": {
+          "Yvira.Ast.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "Yvira.Lexer/1.0.0": {
+        "runtime": {
+          "Yvira.Lexer.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "Yvira.Parser/1.0.0": {
+        "dependencies": {
+          "Yvira.Ast": "1.0.0",
+          "Yvira.Lexer": "1.0.0"
+        },
+        "runtime": {
+          "Yvira.Parser.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "Yvira.Vm/1.0.0": {
+        "dependencies": {
+          "Yvira.Ast": "1.0.0",
+          "Yvira.Lexer": "1.0.0"
+        },
+        "runtime": {
+          "Yvira.Vm.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Yvira.Cli/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Yvira.Ast/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Yvira.Lexer/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Yvira.Parser/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Yvira.Vm/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

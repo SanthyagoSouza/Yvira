@@ -1,0 +1,132 @@
+# Agente de Aprendizado por Reforço (Q-Learning) para Trading no XAUUSD
+#
+# Ações Disponíveis (9 ações possíveis):
+#   0: FICAR_DE_FORA (Neutro / Caixa)
+#   1: COMPRAR 0.01 Lote (Long Leve)
+#   2: COMPRAR 0.02 Lotes (Long Médio)
+#   3: COMPRAR 0.03 Lotes (Long Pesado)
+#   4: VENDER 0.01 Lote (Short Leve)
+#   5: VENDER 0.02 Lotes (Short Médio)
+#   6: VENDER 0.03 Lotes (Short Pesado)
+#   7: FECHAR_LUCRO_ESTAGNADO (Fecha a mercado pois o preço estagnou / não anda mais)
+#   8: FECHAR_ZERO_A_ZERO (Protege a operação no Breakeven caso haja sinal de reversão)
+#
+# Estados Multi-Timeframe (H1 + M15):
+#   Discretização do mercado baseada em:
+#   - Tendência Macro H1 (SMA Rápida vs SMA Lenta H1): 0 = Alta, 1 = Baixa (2 estados)
+#   - RSI Macro H1: 0 = Sobrevendido (< 35), 1 = Neutro (35-65), 2 = Sobrecomprado (> 65) (3 estados)
+#   - Momentum Micro M15: 0 = Positivo (> 0), 1 = Negativo (<= 0) (2 estados)
+#   - Congruência H1 vs M15 (Filtro de Entrada Perfeita): 0 = Alinhados (Tendência H1 == Tendência M15), 1 = Divergentes (2 estados)
+#   Total de Estados: 2 x 3 x 2 x 2 = 24 estados estratégicos multi-timeframe
+
+let ACOES_TRADING = [
+    "NEUTRO", 
+    "COMPRA 0.01", "COMPRA 0.02", "COMPRA 0.03", 
+    "VENDA 0.01", "VENDA 0.02", "VENDA 0.03",
+    "FECHAR_ESTAGNADO", "FECHAR_ZERO_A_ZERO"
+];
+
+class TraderAgent {
+    fn init(alpha, gamma, epsilon, epsilonDecay) {
+        this.totalEstados = 24;
+        this.totalAcoes = 9;
+
+        this.alpha = alpha;
+        this.gamma = gamma;
+        this.epsilon = epsilon;
+        this.epsilonDecay = epsilonDecay;
+        this.epsilonMin = 0.05;
+
+        # Q-Table representada diretamente como Matriz nativa 24x9
+        this.qTable = zeros(this.totalEstados, this.totalAcoes);
+    }
+
+    # Codifica estado considerando a visão Macro (H1) e Micro de precisão (M15)
+    fn codificarEstadoMultiTimeframe(smaH1Fast, smaH1Slow, rsiH1, momM15, smaM15Fast, smaM15Slow) {
+        let trendH1 = 0;
+        if (smaH1Fast < smaH1Slow) trendH1 = 1; # 0: Alta H1, 1: Baixa H1
+
+        let rsiCatH1 = 1; # Neutro
+        if (rsiH1 < 35.0) rsiCatH1 = 0; # Sobrevendido H1
+        if (rsiH1 > 65.0) rsiCatH1 = 2; # Sobrecomprado H1
+
+        let momCatM15 = 0;
+        if (momM15 <= 0.0) momCatM15 = 1; # 0: Positivo M15, 1: Negativo M15
+
+        let trendM15 = 0;
+        if (smaM15Fast < smaM15Slow) trendM15 = 1; # 0: Alta M15, 1: Baixa M15
+
+        # Alinhamento dos dois tempos gráficos:
+        # Se H1 e M15 estão na mesma direção e o momentum confirma, confluência perfeita!
+        let alinhamento = 1; # Divergentes
+        if (trendH1 == trendM15 && trendH1 == momCatM15) {
+            alinhamento = 0; # Perfeitamente alinhados e confirmados pelo momentum!
+        }
+
+        # Índice do estado de 0 a 23:
+        let estadoIdx = (trendH1 * 12) + (rsiCatH1 * 4) + (momCatM15 * 2) + alinhamento;
+        return estadoIdx;
+    }
+
+    fn escolherAcao(estado, forcarMelhor) {
+        let sorteio = random(0, 1000) / 1000.0;
+
+        # Exploração aleatória
+        if (forcarMelhor != true && sorteio < this.epsilon) {
+            return random(0, this.totalAcoes - 1);
+        }
+
+        # Explotação: melhor ação segundo a Q-Table
+        let melhorAcao = 0;
+        let maiorQ = this.qTable[estado, 0];
+
+        let a = 1;
+        while (a < this.totalAcoes) {
+            let q = this.qTable[estado, a];
+            if (q > maiorQ) {
+                maiorQ = q;
+                melhorAcao = a;
+            }
+            a = a + 1;
+        }
+
+        return melhorAcao;
+    }
+
+    fn maxQ(estado) {
+        let maiorQ = this.qTable[estado, 0];
+        let a = 1;
+        while (a < this.totalAcoes) {
+            let q = this.qTable[estado, a];
+            if (q > maiorQ) maiorQ = q;
+            a = a + 1;
+        }
+        return maiorQ;
+    }
+
+    # Equação de Bellman com Penalização Assimétrica de Stop-Loss
+    fn aprender(estado, acao, recompensa, proximoEstado, terminou) {
+        let qAtual = this.qTable[estado, acao];
+        let rAjustada = recompensa;
+
+        # Se a operação tomou stop-loss, pune severamente na Q-Table para ensinar a evitar stops
+        if (recompensa < 0.0) {
+            rAjustada = recompensa * 1.8;
+        }
+
+        let alvo = rAjustada;
+        if (terminou == false) {
+            alvo = rAjustada + (this.gamma * this.maxQ(proximoEstado));
+        }
+
+        let delta = alvo - qAtual;
+        let novoQ = qAtual + (this.alpha * delta);
+        this.qTable[estado, acao] = novoQ;
+    }
+
+    fn decairEpsilon() {
+        if (this.epsilon > this.epsilonMin) {
+            this.epsilon = this.epsilon * this.epsilonDecay;
+        }
+    }
+}

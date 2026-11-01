@@ -1,0 +1,27 @@
+# Teste de Automacao com argumentos
+fn alertar_ativo(simbolo, preco_alvo) {
+    print("[ALERTA] Checando " + simbolo + " com preco alvo: " + preco_alvo);
+}
+
+fn monitor_simples() {
+    print("[MONITOR] Sistema operacional estavel.");
+}
+
+# Roda alertar_ativo("BTC", 95000) a cada 1 segundo
+@time.alertar_ativo(1, "BTC", 95000);
+
+# Roda monitor_simples() a cada 2 segundos
+@time.monitor_simples(2);
+
+let contador = 0;
+fn controle() {
+    contador = contador + 1;
+    if (contador >= 3) {
+        print("Finalizando todos os monitores!");
+        @stop.alertar_ativo();
+        @stop.monitor_simples();
+        @stop.controle();
+    }
+}
+
+@time.controle(1);

@@ -1,0 +1,24 @@
+﻿# 1. Testando importacao de .env como namespace (objeto)
+import ".env" as env
+
+print("--- Teste de Importacao .env como Namespace ---")
+print("Host:", env.HOST)
+print("Porta:", env.PORT)
+print("Debug ativo?:", env.DEBUG)
+print("Banco de dados:", env.DB_NAME)
+print("Chave da API:", env.API_KEY)
+print("Max Conexoes:", env.MAX_CONNECTIONS)
+
+# 2. Testando importacao direta no escopo
+import ".env"
+print("\n--- Teste de Importacao .env Direta ---")
+print("Acessando PORT diretamente:", PORT)
+print("Acessando DEBUG diretamente:", DEBUG)
+
+# 3. Testando importacao de .json
+import "config.json" as cfg
+print("\n--- Teste de Importacao config.json ---")
+print("Sistema:", cfg.nome)
+print("Versao:", cfg.versao)
+print("Config tentativas:", cfg.config.tentativas)
+print("Tags:", cfg.tags)

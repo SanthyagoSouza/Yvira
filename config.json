@@ -1,0 +1,9 @@
+﻿{
+  "nome": "Sistema Yvira",
+  "versao": "2.0.0",
+  "config": {
+    "ativo": true,
+    "tentativas": 3
+  },
+  "tags": ["ia", "compilador", "matrizes"]
+}

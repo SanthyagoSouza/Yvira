@@ -1,0 +1,31 @@
+# Controlador do Jogo (Intermediador entre Yvira e HTML/CSS)
+import "../core/partida.yv";
+
+let motorPartidaGlobal = SimuladorPartida();
+let appGlobal = null;
+
+fn on_simular_partida(dados) {
+    print("\n[Yvira Core]: Recebida solicitacao de simulacao de rodada!");
+    
+    # Simula Yvira FC (Força 82) vs Real Paulista (Força 80)
+    let resultado = motorPartidaGlobal.simular("Yvira FC", "Real Paulista", 82, 80);
+
+    print("[Yvira Core]: Placar final apurado: " + resultado["placar"]);
+
+    # Devolve o resultado processado para a View HTML
+    appGlobal.enviar_dados("resultadoPartida", resultado);
+}
+
+fn on_trocar_aba(dados) {
+    print("[Yvira Core]: O jogador navegou para a secao: " + dados);
+}
+
+class JogoController {
+    fn iniciar(app) {
+        appGlobal = app;
+
+        # Registra os handlers de eventos por nome de função
+        app.ao_evento("simular_partida", "on_simular_partida");
+        app.ao_evento("trocar_aba", "on_trocar_aba");
+    }
+}

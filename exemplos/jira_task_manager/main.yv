@@ -1,0 +1,68 @@
+# Ponto de Entrada da Aplicacao Jira Task Manager em Yvira
+# Sistema Desktop de Gestao de Tarefas Estilo Jira Kanban
+
+print("==================================================================");
+print("     INICIALIZANDO YVIRA JIRA TASK MANAGER - KANBAN DESKTOP       ");
+print("==================================================================\n");
+
+# 1. Cria a Janela Desktop com WebView2 e Estilo Dark Moderno
+let app = criar_janela({
+    "titulo": "Yvira Task Board - Jira Kanban",
+    "view": "views/index.html",
+    "largura": 1280,
+    "altura": 800,
+    "min_largura": 960,
+    "min_altura": 650,
+    "barra_customizada": true,
+    "redimensionavel": true,
+    "cor_fundo": "#07090e"
+});
+
+# 2. Handlers de Eventos IPC gerenciados 100% pelo Yvira
+fn onCarregarDados(dados) {
+    print("[Yvira Core]: Sincronizacao de dados solicitada pelo Board.");
+}
+
+fn onSalvarCard(dados) {
+    print("[Yvira Core]: Card salvo/atualizado com sucesso -> Titulo: '" + dados.titulo + "' | Etapa: " + dados.etapa_id);
+}
+
+fn onMoverCard(dados) {
+    # Processa movimentacao estilo Drag and Drop
+    print("[Yvira Core]: Evento de Drag and Drop recebido!");
+    print("              Card ID: " + dados.card_id + " -> Movido para Etapa: " + dados.nova_etapa_id);
+}
+
+fn onReordenarEtapas(dados) {
+    # Processa nova ordem das colunas do Kanban
+    print("[Yvira Core]: Ordem das colunas reordenada com sucesso no quadro.");
+}
+
+fn onExcluirCard(dados) {
+    print("[Yvira Core]: Card removido do quadro -> ID: " + dados.id);
+}
+
+fn onSalvarEtapas(dados) {
+    print("[Yvira Core]: Estrutura de etapas/colunas do Kanban atualizada.");
+}
+
+fn onSalvarTodosCards(dados) {
+    print("[Yvira Core]: Sincronizacao em lote de cards concluida.");
+}
+
+# 3. Registra os ouvintes de eventos da janela
+app.ao_evento("carregar_dados", onCarregarDados);
+app.ao_evento("salvar_card", onSalvarCard);
+app.ao_evento("mover_card", onMoverCard);
+app.ao_evento("reordenar_etapas", onReordenarEtapas);
+app.ao_evento("excluir_card", onExcluirCard);
+app.ao_evento("salvar_etapas", onSalvarEtapas);
+app.ao_evento("salvar_todos_cards", onSalvarTodosCards);
+
+print("[Janela]: Quadro Kanban carregado com Drag and Drop, Reordenacao e Modais animados!");
+
+# 4. Exibe a janela e mantem o ciclo de vida da aplicacao
+app.exibir();
+app.esperar();
+
+print("\n[Jira Task Manager]: Sessao finalizada com sucesso.");

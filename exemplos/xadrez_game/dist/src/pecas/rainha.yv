@@ -1,0 +1,72 @@
+# Regras de Movimentação da Rainha/Dama no Xadrez (Queen Rules)
+
+class Rainha {
+    fn init(cor) {
+        this.cor = cor; # "brancas" ou "pretas"
+        this.tipo = "rainha";
+        this.simbolo = cor == "brancas" ? "♕" : "♛";
+    }
+
+    # A Rainha é a peça mais poderosa do xadrez:
+    # Combina a movimentação da Torre (ortogonal) e do Bispo (diagonal)
+    # 8 direções contínuas de longo alcance:
+    # Cima (-1, 0), Baixo (+1, 0), Esquerda (0, -1), Direita (0, +1)
+    # Cima-Esquerda (-1, -1), Cima-Direita (-1, +1), Baixo-Esquerda (+1, -1), Baixo-Direita (+1, +1)
+    fn obterMovimentosValidos(linha, coluna, matriz) {
+        let movimentos = [];
+
+        let direcoes = [
+            [-1, 0],  # Cima
+            [1, 0],   # Baixo
+            [0, -1],  # Esquerda
+            [0, 1],   # Direita
+            [-1, -1], # Cima-Esquerda
+            [-1, 1],  # Cima-Direita
+            [1, -1],  # Baixo-Esquerda
+            [1, 1]    # Baixo-Direita
+        ];
+
+        let d = 0;
+        while (d < len(direcoes)) {
+            let dir = direcoes[d];
+            let dLinha = dir[0];
+            let dColuna = dir[1];
+
+            let r = linha + dLinha;
+            let c = coluna + dColuna;
+
+            # Avança na direção até a borda do tabuleiro ou encontrar um obstáculo
+            while (r >= 0 && r < 8 && c >= 0 && c < 8) {
+                let pecaDestino = matriz[r][c];
+
+                if (pecaDestino == null || pecaDestino == "") {
+                    # Casa livre: movimento válido
+                    movimentos.push({
+                        "paraLinha": r,
+                        "paraColuna": c,
+                        "tipo": "normal"
+                    });
+                } else {
+                    # Colisão com peça
+                    if (pecaDestino["cor"] != this.cor) {
+                        # Peça inimiga: captura permitida!
+                        movimentos.push({
+                            "paraLinha": r,
+                            "paraColuna": c,
+                            "tipo": "captura"
+                        });
+                    }
+                    # O raio de visão da Rainha é bloqueado pela peça
+                    break;
+                }
+
+                r = r + dLinha;
+                c = c + dColuna;
+            }
+
+            d = d + 1;
+        }
+
+        return movimentos;
+    }
+}

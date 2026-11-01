@@ -1,0 +1,354 @@
+/* ==========================================================================
+   YVIRA WINDOW SHELL & TAB ENGINE (Padrao Nativo de Janela do Yvira)
+   Estilo Cyber Glassmorphism, Abas Dinamicas e Botoes de Controle
+   ========================================================================== */
+
+:root {
+  --yv-bg-desktop: #07080d;
+  --yv-glass: rgba(22, 24, 36, 0.72);
+  --yv-glass-strong: rgba(30, 33, 48, 0.92);
+  --yv-stroke: rgba(255, 255, 255, 0.09);
+  --yv-stroke-strong: rgba(255, 255, 255, 0.16);
+  --yv-text: #e8eaf3;
+  --yv-muted: #8a90a8;
+  --yv-accent: #7c5cff;
+  --yv-accent-2: #22d3ee;
+  --yv-min: #fbbf24;
+  --yv-max: #34d399;
+  --yv-close: #ff4d6d;
+  --yv-radius: 14px;
+  --yv-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  font-family: Inter, "Segoe UI Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--yv-bg-desktop);
+  color: var(--yv-text);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Container de Janela Yvira */
+.yvira-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  background: var(--yv-glass);
+  backdrop-filter: blur(28px) saturate(1.6);
+  -webkit-backdrop-filter: blur(28px) saturate(1.6);
+  border: 1px solid var(--yv-stroke);
+  overflow: hidden;
+}
+
+/* ==========================================================================
+   BARRA DE TITULO COM ABAS DINAMICAS E BOTOES DE CONTROLE (Arrastavel)
+   ========================================================================== */
+.yvira-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 10px 0 14px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent);
+  border-bottom: 1px solid var(--yv-stroke);
+  cursor: default;
+  touch-action: none;
+  flex: none;
+}
+
+/* Icone da Aplicacao Yvira */
+.yvira-app-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--yv-accent), var(--yv-accent-2));
+  box-shadow: 0 4px 14px -2px rgba(124, 92, 255, 0.7);
+  font-size: 13px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+/* Trilho de Abas */
+.yvira-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding-top: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.yvira-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.yvira-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 200px;
+  min-width: 90px;
+  flex: 0 1 200px;
+  height: 100%;
+  padding: 0 10px 0 12px;
+  border-radius: 9px 9px 0 0;
+  font-size: 12px;
+  color: var(--yv-muted);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+
+.yvira-tab:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--yv-text);
+}
+
+.yvira-tab.active {
+  background: var(--yv-glass-strong);
+  color: var(--yv-text);
+  box-shadow: inset 0 1px 0 var(--yv-stroke-strong);
+}
+
+.yvira-tab.active::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 0;
+  height: 2px;
+  border-radius: 0 0 3px 3px;
+  background: linear-gradient(90deg, var(--yv-accent), var(--yv-accent-2));
+}
+
+.yvira-tab .yv-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--yv-accent-2);
+  flex: none;
+  box-shadow: 0 0 8px var(--yv-accent-2);
+}
+
+.yvira-tab .yv-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.yvira-tab .yv-close-tab {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  opacity: 0.5;
+  transition: 0.15s;
+}
+
+.yvira-tab .yv-close-tab:hover {
+  background: rgba(255, 255, 255, 0.15);
+  opacity: 1;
+}
+
+/* Botao de Nova Aba (+) */
+.yvira-new-tab {
+  width: 26px;
+  height: 26px;
+  margin-bottom: 5px;
+  border-radius: 7px;
+  border: 0;
+  background: none;
+  color: var(--yv-muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: 0.2s;
+  flex: none;
+}
+
+.yvira-new-tab:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--yv-text);
+  transform: rotate(90deg);
+}
+
+/* ==========================================================================
+   BOTOES DA JANELA (Minimizar, Maximizar, Fechar com Glow e Ondulacao)
+   ========================================================================== */
+.yvira-controls {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  flex: none;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--yv-stroke);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.yvira-btn {
+  --c: var(--yv-muted);
+  position: relative;
+  width: 36px;
+  height: 26px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--c);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  transition: background 0.2s, color 0.2s, box-shadow 0.25s, transform 0.15s var(--yv-ease);
+}
+
+.yvira-btn svg {
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.3s var(--yv-ease);
+}
+
+.yvira-btn:hover {
+  transform: translateY(-1px);
+}
+
+.yvira-btn:active {
+  transform: scale(0.92);
+}
+
+.yvira-btn.min:hover {
+  --c: #1a1203;
+  background: linear-gradient(135deg, #fde68a, var(--yv-min));
+  box-shadow: 0 0 16px -2px rgba(251, 191, 36, 0.8);
+}
+
+.yvira-btn.max:hover {
+  --c: #03150e;
+  background: linear-gradient(135deg, #a7f3d0, var(--yv-max));
+  box-shadow: 0 0 16px -2px rgba(52, 211, 153, 0.8);
+}
+
+.yvira-btn.close:hover {
+  --c: #ffffff;
+  background: linear-gradient(135deg, #ff8fa3, var(--yv-close));
+  box-shadow: 0 0 18px -2px rgba(255, 77, 109, 0.9);
+}
+
+.yvira-btn.min:hover svg { transform: translateY(2px); }
+.yvira-btn.max:hover svg { transform: scale(1.15); }
+.yvira-btn.close:hover svg { transform: rotate(90deg); }
+
+/* Ondulacao de Clique */
+.yvira-btn .ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  transform: scale(0);
+  animation: yv-ripple 0.55s ease-out;
+  pointer-events: none;
+}
+
+@keyframes yv-ripple {
+  to { transform: scale(3.2); opacity: 0; }
+}
+
+/* ==========================================================================
+   VIEWPORT: ONDE O APP/JOGO REAL RENDERIZA
+   ========================================================================== */
+.yvira-viewport {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  background: rgba(10, 11, 18, 0.55);
+}
+
+.yvira-pane {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+  overflow: auto;
+}
+
+.yvira-pane.active {
+  display: block;
+}
+
+
+/* ==========================================================================
+   ANIMACOES NATIVAS DE JANELA (Abertura, Fechamento, Minimizar, Maximizar)
+   ========================================================================== */
+
+/* Animacao de Abertura */
+.janela-container {
+  transform-origin: 50% 100%;
+  animation: open 0.45s var(--yv-ease) forwards;
+  transition:
+    opacity 0.3s var(--yv-ease),
+    transform 0.4s var(--yv-ease),
+    filter 0.3s var(--yv-ease),
+    border-radius 0.35s var(--yv-ease);
+}
+
+/* Animacao fiel ao janela-yvira.html: transform-origin no rodape + escala + translacao */
+@keyframes open {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Fechar (.win.closing): opacity: 0; transform: scale(.92); pointer-events: none */
+.janela-container.janela-fechando {
+  opacity: 0 !important;
+  transform: scale(0.92) !important;
+  pointer-events: none !important;
+}
+
+/* Minimizar (.win.minimized): opacity: 0; transform: translateY(40vh) scale(.25); pointer-events: none */
+.janela-container.janela-minimizando {
+  opacity: 0 !important;
+  transform: translateY(40vh) scale(0.25) !important;
+  pointer-events: none !important;
+}
+
+/* Maximizar / Restaurar */
+.janela-container.janela-maximizando {
+  animation: yv-expand 0.35s var(--yv-ease);
+}
+
+@keyframes yv-expand {
+  0% { transform: scale(0.985); }
+  50% { transform: scale(1.008); }
+  100% { transform: none; }
+}

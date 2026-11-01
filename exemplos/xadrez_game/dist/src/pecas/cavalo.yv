@@ -1,0 +1,62 @@
+# Regras de Movimentação do Cavalo no Xadrez (Knight Rules)
+
+class Cavalo {
+    fn init(cor) {
+        this.cor = cor; # "brancas" ou "pretas"
+        this.tipo = "cavalo";
+        this.simbolo = cor == "brancas" ? "♘" : "♞";
+    }
+
+    # O Cavalo se move em formato de "L":
+    # 2 casas em uma direção e 1 casa perpendicularmente.
+    # Possui 8 saltos possíveis e PODE PULAR peças no caminho.
+    fn obterMovimentosValidos(linha, coluna, matriz) {
+        let movimentos = [];
+
+        # 8 saltos em "L": [dLinha, dColuna]
+        let saltos = [
+            [-2, -1],
+            [-2, 1],
+            [-1, -2],
+            [-1, 2],
+            [1, -2],
+            [1, 2],
+            [2, -1],
+            [2, 1]
+        ];
+
+        let i = 0;
+        while (i < len(saltos)) {
+            let salto = saltos[i];
+            let r = linha + salto[0];
+            let c = coluna + salto[1];
+
+            # Verifica se está dentro dos limites do tabuleiro 8x8
+            if (r >= 0 && r < 8 && c >= 0 && c < 8) {
+                let pecaDestino = matriz[r][c];
+
+                if (pecaDestino == null || pecaDestino == "") {
+                    # Casa vazia: movimento normal permitido
+                    movimentos.push({
+                        "paraLinha": r,
+                        "paraColuna": c,
+                        "tipo": "normal"
+                    });
+                } else {
+                    # Peça no destino: captura se for de cor diferente
+                    if (pecaDestino["cor"] != this.cor) {
+                        movimentos.push({
+                            "paraLinha": r,
+                            "paraColuna": c,
+                            "tipo": "captura"
+                        });
+                    }
+                }
+            }
+
+            i = i + 1;
+        }
+
+        return movimentos;
+    }
+}

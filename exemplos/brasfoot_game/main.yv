@@ -1,0 +1,31 @@
+# Ponto de Entrada do Jogo Brasfoot Yvira 2026
+import "src/controllers/jogo_controller.yv";
+
+print("=================================================");
+print("   INICIALIZANDO MOTOR GRAFICO BRASFOOT YVIRA   ");
+print("=================================================\n");
+
+# 1. Configura e Cria a Janela com a Arquitetura Proposta
+let app = criar_janela({
+    "titulo": "Brasfoot Yvira 2026",
+    "view": "views/index.html",
+    "largura": 1100,
+    "altura": 720,
+    "min_largura": 900,
+    "min_altura": 600,
+    "barra_customizada": true,
+    "redimensionavel": true,
+    "cor_fundo": "#121418"
+});
+
+# 2. Conecta a Lógica de Controle do Jogo
+let controller = JogoController();
+controller.iniciar(app);
+
+print("[Janela]: Exibindo interface grafica baseada em Views e CSS...");
+
+# 3. Abre a janela do jogo e mantém o loop vivo
+app.exibir();
+app.esperar();
+
+print("\n[Jogo]: Janela fechada. Sessao finalizada.");

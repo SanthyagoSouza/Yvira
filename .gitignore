@@ -1,0 +1,28 @@
+# Arquivos de Build e Compilação do .NET
+bin/
+obj/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+
+# Build de Distribuição e Binários Locais
+dist/bin/
+dist/*.exe
+*.exe
+*.dll
+*.pdb
+
+# Pacotes e Diretórios Temporários
+.yvira/
+.vs/
+.vscode/.ropeproject
+test-results/
+*.log
+
+# Caches de IDEs e Editores
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db

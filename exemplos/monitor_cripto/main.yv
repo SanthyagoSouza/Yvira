@@ -1,0 +1,89 @@
+﻿import "http" as http
+import "fs" as fs
+import ".env" as env
+
+print("==========================================================")
+print("     MONITOR FINANCEIRO & CRIPTOATIVOS EM TEMPO REAL      ")
+print("               Desenvolvido na Linguagem Yvira            ")
+print("==========================================================\n")
+
+print("[Config] Moeda Base :", env.MOEDA_BASE)
+print("[Config] Provedor   :", env.API_PROVIDER)
+print("[Config] Relatorio  :", env.OUTPUT_RELATORIO, "\n")
+
+# 1. Classe de Ativo Cripto
+class CriptoAtivo {
+    fn init(nome, simbolo, precoUsd, precoBrl, variacao24h) {
+        this.nome = nome
+        this.simbolo = simbolo
+        this.precoUsd = precoUsd
+        this.precoBrl = precoBrl
+        this.variacao24h = variacao24h
+    }
+
+    fn formatarLinha() {
+        let sinal = "+"
+        if (this.variacao24h < 0) {
+            sinal = ""
+        }
+        return this.nome + " (" + this.simbolo + ") | US$ " + this.precoUsd + " | R$ " + this.precoBrl + " | 24h: " + sinal + this.variacao24h + "%"
+    }
+}
+
+# 2. Consultar API Externa com modulo http
+print("[1/4] Consultando API publica do CoinGecko via modulo http...")
+let url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd,brl&include_24hr_change=true"
+
+try {
+    let res = http.get(url)
+
+    if (not res.ok) {
+        throw "Falha ao obter dados: Codigo HTTP " + res.status
+    }
+
+    print("[1/4] Dados recebidos com sucesso (Status: " + res.status + " OK)!\n")
+
+    # 3. Processar JSON retornado
+    print("[2/4] Processando e instanciando objetos dos ativos...")
+    let dados = res.json()
+
+    let btc = CriptoAtivo("Bitcoin", "BTC", dados.bitcoin.usd, dados.bitcoin.brl, dados.bitcoin.usd_24h_change)
+    let eth = CriptoAtivo("Ethereum", "ETH", dados.ethereum.usd, dados.ethereum.brl, dados.ethereum.usd_24h_change)
+    let sol = CriptoAtivo("Solana", "SOL", dados.solana.usd, dados.solana.brl, dados.solana.usd_24h_change)
+
+    print("  -> " + btc.formatarLinha())
+    print("  -> " + eth.formatarLinha())
+    print("  -> " + sol.formatarLinha())
+
+    # 4. Analise Estatistica com Matrizes Nativas de Yvira
+    print("\n[3/4] Construindo matriz vetorial de precos e calculando estatisticas...")
+
+    # Matriz com colunas [Preco_USD, Preco_BRL, Variacao_Pct]
+    let M_precos = [
+        [btc.precoUsd, btc.precoBrl, btc.variacao24h],
+        [eth.precoUsd, eth.precoBrl, eth.variacao24h],
+        [sol.precoUsd, sol.precoBrl, sol.variacao24h]
+    ]
+
+    print("Matriz financeira (3 ativos x 3 metricas):")
+    print(M_precos)
+
+    # Calculo das variacoes
+    let variacoes = [btc.variacao24h, eth.variacao24h, sol.variacao24h]
+    let mediaVariacao = (btc.variacao24h + eth.variacao24h + sol.variacao24h) / 3.0
+    print("Variacao media da cesta de criptoativos nas ultimas 24h: " + mediaVariacao + "%")
+
+    # 5. Salvar Relatorio em Disco via modulo fs
+    print("\n[4/4] Gravando relatorio de fechamento no arquivo '" + env.OUTPUT_RELATORIO + "'...")
+    fs.writeCsv(env.OUTPUT_RELATORIO, M_precos)
+
+    # Registro de log de auditoria
+    let logTexto = "Auditoria Yvira: Consulta realizada com sucesso em 3 ativos. Media 24h: " + mediaVariacao + "%\n"
+    fs.append("auditoria.log", logTexto)
+
+    print("Relatorio e log gravados com sucesso via modulo fs!")
+    print("==========================================================")
+
+} catch (erro) {
+    print("Erro durante execucao do monitor:", erro)
+}

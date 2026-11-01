@@ -1,0 +1,117 @@
+/* Reset e Variáveis do Jogo de Xadrez */
+:root {
+    --bg-janela: #0d1117;
+    --bg-card: #161b22;
+    --bg-card-hover: #21262d;
+    --borda: #30363d;
+    --cor-dourada: #e3b341;
+    --cor-dourada-hover: #f0c654;
+    --cor-texto: #c9d1d9;
+    --cor-texto-brilhante: #f0f6fc;
+    --cor-texto-mutado: #8b949e;
+    --fonte: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-janela);
+    color: var(--cor-texto);
+    font-family: var(--fonte);
+    height: 100vh;
+    overflow: hidden;
+    user-select: none;
+}
+
+.janela-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    border: 1px solid var(--borda);
+}
+
+/* 1. Barra de Título Customizada */
+.titlebar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 38px;
+    background: #090d13;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--borda);
+    cursor: grab;
+}
+
+.titlebar-marca {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    color: var(--cor-texto-brilhante);
+}
+
+.icone-peca {
+    color: var(--cor-dourada);
+    font-size: 18px;
+}
+
+.badge-versao {
+    background: rgba(227, 179, 65, 0.2);
+    color: var(--cor-dourada);
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 700;
+}
+
+.controles-janela {
+    display: flex;
+    align-items: center;
+}
+
+.btn-janela {
+    background: transparent;
+    border: none;
+    color: var(--cor-texto-mutado);
+    width: 38px;
+    height: 38px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-janela:hover {
+    background: var(--bg-card-hover);
+    color: #fff;
+}
+
+.btn-fechar:hover {
+    background: #da3633 !important;
+    color: #fff !important;
+}
+
+.corpo-aplicacao {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+}
+
+.tela-ativa {
+    display: flex;
+    flex: 1;
+    width: 100%;
+    height: 100%;
+}
+
+.tela-oculta {
+    display: none !important;
+}

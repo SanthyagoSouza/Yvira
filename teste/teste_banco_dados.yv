@@ -1,0 +1,44 @@
+# Teste Completo do Modulo DB Nativo no Yvira:
+# 1. Conexao padrao SQLite (em memoria para o teste rapido)
+@db("sqlite://:memory:");
+
+# 2. Conexao secundaria de logs/analytics
+@db.analytics("sqlite://:memory:");
+
+print("=== 1. Criando Tabelas ===");
+@exec("CREATE TABLE usuarios (id INTEGER PRIMARY KEY, nome TEXT, email TEXT, saldo REAL);");
+@exec.analytics("CREATE TABLE logs (id INTEGER PRIMARY KEY, evento TEXT, timestamp TEXT);");
+
+print("=== 2. Inserindo Dados com Parametrizacao Segura (Anti-SQL Injection) ===");
+fn cadastrar_usuario(nome, email, saldo) {
+    let id = @exec("INSERT INTO usuarios (nome, email, saldo) VALUES (?, ?, ?);", [nome, email, saldo]);
+    @exec.analytics("INSERT INTO logs (evento, timestamp) VALUES (?, ?);", ["Usuario criado: " + nome, "2026-10-27"]);
+    return id;
+}
+
+let id1 = cadastrar_usuario("Santhyago", "santhyago@yvira.dev", 15000.0);
+let id2 = cadastrar_usuario("Alice Dev", "alice@ia.ai", 8200.0);
+let id3 = cadastrar_usuario("Bob Quant", "bob@trading.com", 24000.0);
+
+print("Usuarios cadastrados com IDs: " + id1 + ", " + id2 + ", " + id3);
+
+print("\n=== 3. Consultando com @query (Filtro por Saldo) ===");
+fn buscar_ricos(saldo_corte) {
+    return @query("SELECT id, nome, email, saldo FROM usuarios WHERE saldo >= ? ORDER BY saldo DESC;", [saldo_corte]);
+}
+
+let clientes_vip = buscar_ricos(10000.0);
+foreach (u in clientes_vip) {
+    print("Cliente VIP: " + u["nome"] + " | Saldo: R$ " + u["saldo"] + " | Email: " + u["email"]);
+}
+
+print("\n=== 4. Consultando o Banco Secundario com @query.analytics ===");
+let registros = @query.analytics("SELECT * FROM logs;");
+foreach (r in registros) {
+    print("[LOG EVENTO] " + r["evento"] + " as " + r["timestamp"]);
+}
+
+print("\n=== 5. Teste de Protecao Anti-SQL Injection ===");
+let ataque = "'; DROP TABLE usuarios; --";
+let busca_segura = @query("SELECT * FROM usuarios WHERE nome = ?;", [ataque]);
+print("Resultado da busca com SQL malicioso: " + busca_segura.length() + " registros retornados (Nenhuma tabela apagada!)");

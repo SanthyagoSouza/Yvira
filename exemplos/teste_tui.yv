@@ -1,0 +1,24 @@
+# Demonstracao de Recursos Visuais e TUI na Linguagem Yvira
+
+limpar_tela();
+
+caixa("SISTEMA QUANTITATIVO YVIRA", "Status: Operacional\nAtivo: XAU/USD (Gold Spot)\nVersao: 2.2 TUI Edition");
+
+print("\nExibindo Tabela de Ativos Financeiros:");
+let cabecalhos = ["Ativo", "Preco Spot", "Spread", "Status"];
+let linhas = [
+    ["XAU/USD", "2734.50", "31 pts", "Ativo"],
+    ["EUR/USD", "1.0845", "12 pts", "Monitorando"],
+    ["BTC/USD", "68120.00", "50 pts", "Pausado"]
+];
+tabela(cabecalhos, linhas);
+
+print("\nSimulando Processamento em Barra de Progresso:");
+let i = 0;
+while (i <= 100) {
+    barra_progresso(i, 100, "Treinando IA:");
+    dormir(50);
+    i = i + 20;
+}
+
+print("\n\nTeste de TUI concluido com sucesso!");

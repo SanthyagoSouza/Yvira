@@ -1,0 +1,42 @@
+# Motor de Simulação de Partidas de Futebol em Yvira
+
+class SimuladorPartida {
+    fn simular(timeCasa, timeVisitante, forcaCasa, forcaVisitante) {
+        let fatorSorte = random(0, 10);
+        let diferenca = forcaCasa - forcaVisitante;
+
+        let golsCasa = 0;
+        let golsVisitante = 0;
+
+        if (diferenca > 10) {
+            golsCasa = round(random(1, 4), 0);
+            golsVisitante = round(random(0, 1), 0);
+        } else if (diferenca < -10) {
+            golsCasa = round(random(0, 1), 0);
+            golsVisitante = round(random(1, 4), 0);
+        } else {
+            golsCasa = round(random(0, 2), 0);
+            golsVisitante = round(random(0, 2), 0);
+        }
+
+        let placar = timeCasa + " " + golsCasa + " x " + golsVisitante + " " + timeVisitante;
+        
+        let msg = "";
+        if (golsCasa > golsVisitante) {
+            msg = "Vitoria expressiva do " + timeCasa + "! A torcida fez a festa no estadio.";
+        } else if (golsCasa < golsVisitante) {
+            msg = "Derrota amarga em casa. O time adversario soube aproveitar as chances.";
+        } else {
+            msg = "Empate disputado ate os acrescimos. Jogo truncado no meio de campo.";
+        }
+
+        let res = {
+            "placar": placar,
+            "golsCasa": golsCasa,
+            "golsVisitante": golsVisitante,
+            "mensagem": msg
+        };
+
+        return res;
+    }
+}

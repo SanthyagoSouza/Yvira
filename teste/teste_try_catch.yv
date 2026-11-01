@@ -1,0 +1,44 @@
+﻿# Teste de Tratamento de Erros em Yvira
+
+print("--- Teste 1: Captura de erro em tempo de execução ---")
+try {
+    let A = [
+        [1, 2],
+        [3, 4]
+    ]
+    # Matriz 2x2 com vetor 3x1 deve gerar erro de dimensão
+    let B = [[1], [2], [3]]
+    let C = A * B
+} catch (erro) {
+    print("Erro capturado com sucesso:", erro)
+} finally {
+    print("Bloco finally executado!")
+}
+
+print("\n--- Teste 2: Lançando exceção com throw customizado ---")
+fn validarIdade(idade) {
+    if (idade < 0) {
+        throw "Idade não pode ser negativa!"
+    }
+    if (idade < 18) {
+        throw "Acesso restrito para menores de 18 anos."
+    }
+    return "Acesso concedido!"
+}
+
+try {
+    print(validarIdade(25))
+    print(validarIdade(-5))
+} catch (motivo) {
+    print("Bloqueio de validação capturado:", motivo)
+}
+
+print("\n--- Teste 3: Try/Catch sem variável no catch ---")
+try {
+    let lista = [1, 2, 3]
+    print(lista[10]) # Fora do índice
+} catch {
+    print("Capturou acesso inválido sem precisar nomear a variável de erro!")
+}
+
+print("\nFim dos testes de erro com sucesso!")

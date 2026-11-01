@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yvira Jira Task Manager</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+  <!-- Custom Titlebar para Yvira Desktop -->
+  <header class="titlebar" data-arrastavel="true">
+    <div class="brand">
+      <div class="logo-badge">YV</div>
+      <span class="project-title">Yvira Task Board</span>
+      <span class="badge-version">Kanban v1.0</span>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" onclick="abrirModalNovo()">+ Novo Card</button>
+      <button class="btn btn-outline" onclick="abrirModalEtapas()">⚙ Etapas</button>
+      <div class="window-controls">
+        <button class="win-btn" onclick="minJanela()" title="Minimizar">&#8211;</button>
+        <button class="win-btn" onclick="maxJanela()" title="Maximizar">&#9633;</button>
+        <button class="win-btn btn-close" onclick="fecharJanela()" title="Fechar">&#10005;</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Filtro e Estatísticas Rápidas -->
+  <section class="toolbar">
+    <div class="filter-box">
+      <input type="text" id="filtroTexto" placeholder="🔍 Buscar card pelo título ou descrição..." oninput="filtrarCards()">
+    </div>
+    <div class="quick-stats" id="statsContainer">
+      <span>Total: <b id="statTotal">0</b></span>
+      <span class="dot-sep">•</span>
+      <span>Concluídas: <b id="statConcluidas" style="color: var(--status-done);">0</b></span>
+    </div>
+  </section>
+
+  <!-- Kanban Board Columns com Suporte a Drag and Drop Nativo -->
+  <main class="kanban-board" id="kanbanBoard">
+    <!-- Renderizado dinamicamente pelo Yvira -->
+  </main>
+
+  <!-- MODAL: Criar / Editar Card com Animação -->
+  <div class="modal-overlay" id="modalCardOverlay" onclick="tratarCliqueForaModal(event, 'modalCardOverlay')">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modalCardTitulo">Novo Card</h3>
+        <button class="modal-close" onclick="fecharModalComAnimacao('modalCardOverlay')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="cardId">
+
+        <div class="form-group">
+          <label for="cardTitulo">Título do Card <span class="req">*</span></label>
+          <input type="text" id="cardTitulo" placeholder="Ex: Integrar autenticação OAuth2">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="cardEtapa">Etapa / Coluna</label>
+            <select id="cardEtapa">
+              <!-- Populado com as colunas atuais -->
+            </select>
+          </div>
+          <div class="form-group flex-1">
+            <label for="cardPrioridade">Prioridade</label>
+            <select id="cardPrioridade">
+              <option value="baixa">Baixa</option>
+              <option value="media" selected>Média</option>
+              <option value="alta">Alta</option>
+              <option value="urgente">Urgente</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="cardDescricao">Descrição Detalhada</label>
+          <textarea id="cardDescricao" rows="4" placeholder="Descreva os requisitos técnicos, regras de negócio ou notas adicionais..."></textarea>
+        </div>
+
+        <!-- Checklist de Subtarefas -->
+        <div class="checklist-section">
+          <div class="checklist-header">
+            <h4>Checklist de Subtarefas</h4>
+            <span class="checklist-counter" id="checklistContador">0/0</span>
+          </div>
+
+          <div class="checklist-input-group">
+            <input type="text" id="novoItemChecklist" placeholder="Adicionar subtarefa e tecle Enter..." onkeydown="if(event.key==='Enter') adicionarItemChecklist()">
+            <button class="btn btn-outline" type="button" onclick="adicionarItemChecklist()">+ Adicionar</button>
+          </div>
+
+          <ul class="checklist-items" id="listaChecklist">
+            <!-- Renderizado dinamicamente -->
+          </ul>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-danger btn-left" id="btnExcluirCard" style="display:none;" onclick="solicitarExcluirCard()">Excluir</button>
+        <button class="btn btn-secondary" onclick="fecharModalComAnimacao('modalCardOverlay')">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarCard()">Salvar Card</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Gerenciar e Reordenar Etapas / Colunas -->
+  <div class="modal-overlay" id="modalEtapasOverlay" onclick="tratarCliqueForaModal(event, 'modalEtapasOverlay')">
+    <div class="modal-box modal-box-sm">
+      <div class="modal-header">
+        <h3>Gerenciar Ordem e Etapas</h3>
+        <button class="modal-close" onclick="fecharModalComAnimacao('modalEtapasOverlay')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted">Altere a ordem das colunas pelas setas (← / →), renomeie ou crie novas etapas:</p>
+
+        <div class="checklist-input-group" style="margin-top: 10px;">
+          <input type="text" id="novaEtapaNome" placeholder="Nome da nova coluna..." onkeydown="if(event.key==='Enter') adicionarEtapa()">
+          <button class="btn btn-outline" type="button" onclick="adicionarEtapa()">+ Coluna</button>
+        </div>
+
+        <ul class="etapas-list" id="listaEtapas">
+          <!-- Renderizado dinamicamente com botões de reordenação -->
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="fecharModalComAnimacao('modalEtapasOverlay')">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script de Camada Visual e Repasse IPC para o Yvira -->
+  <script>
+    let dadosBoard = {
+      etapas: [
+        { id: "todo", titulo: "A Fazer", cor: "#8b949e" },
+        { id: "progresso", titulo: "Em Progresso", cor: "#58a6ff" },
+        { id: "revisao", titulo: "Em Revisão", cor: "#d29922" },
+        { id: "concluido", titulo: "Concluído", cor: "#10b981" }
+      ],
+      cards: [
+        {
+          id: "card_1",
+          codigo: "YV-101",
+          titulo: "Arquitetura do Painel Kanban",
+          descricao: "Estruturar o layout das colunas de tarefas com modais integrados.",
+          etapa_id: "concluido",
+          prioridade: "alta",
+          checklist: [
+            { id: "c1", texto: "Definir paleta escura do Jira", feito: true },
+            { id: "c2", texto: "Implementar grid das colunas", feito: true }
+          ]
+        },
+        {
+          id: "card_2",
+          codigo: "YV-102",
+          titulo: "Comunicação Bridge Yvira",
+          descricao: "Conectar eventos de salvar, editar e excluir cards com o backend em Yvira.",
+          etapa_id: "progresso",
+          prioridade: "urgente",
+          checklist: [
+            { id: "c3", texto: "Configurar ao_evento e emitir", feito: true },
+            { id: "c4", texto: "Sincronizar persistência em JSON", feito: true }
+          ]
+        },
+        {
+          id: "card_3",
+          codigo: "YV-103",
+          titulo: "Checklist de Subtarefas dentro do Card",
+          descricao: "Permitir adicionar, marcar e remover itens de checklist diretamente no modal de edição.",
+          etapa_id: "todo",
+          prioridade: "media",
+          checklist: [
+            { id: "c5", texto: "Input para novas subtarefas", feito: true },
+            { id: "c6", texto: "Barra de progresso percentual no card", feito: false }
+          ]
+        }
+      ]
+    };
+
+    let itensChecklistTemporarios = [];
+    let idCardSendoArrastado = null;
+
+    // Janela Desktop Nativa
+    function minJanela() {
+      if (window.yvira && window.yvira.minimizar) window.yvira.minimizar();
+    }
+    function maxJanela() {
+      if (window.yvira && window.yvira.maximizar) window.yvira.maximizar();
+    }
+    function fecharJanela() {
+      if (window.yvira && window.yvira.fechar) window.yvira.fechar();
+    }
+
+    // Callback de atualização emitido pelo Yvira
+    window.atualizar_board = function(dados) {
+      if (!dados) return;
+      dadosBoard = typeof dados === "string" ? JSON.parse(dados) : dados;
+      renderizarBoard();
+    };
+
+    // Inicialização
+    window.addEventListener("DOMContentLoaded", () => {
+      renderizarBoard();
+      if (window.yvira && window.yvira.emit) {
+        window.yvira.emit("carregar_dados", {});
+      }
+    });
+
+    // Renderizar o Kanban Completo
+    function renderizarBoard() {
+      const board = document.getElementById("kanbanBoard");
+      board.innerHTML = "";
+
+      let totalCards = dadosBoard.cards ? dadosBoard.cards.length : 0;
+      let totalConcluidos = 0;
+
+      if (!dadosBoard.etapas) dadosBoard.etapas = [];
+      if (!dadosBoard.cards) dadosBoard.cards = [];
+
+      dadosBoard.etapas.forEach((etapa, idx) => {
+        const colunaCards = dadosBoard.cards.filter(c => c.etapa_id === etapa.id);
+        if (etapa.id === "concluido" || etapa.titulo.toLowerCase().includes("conclu")) {
+          totalConcluidos += colunaCards.length;
+        }
+
+        const colEl = document.createElement("div");
+        colEl.className = "kanban-column";
+        colEl.setAttribute("data-etapa-id", etapa.id);
+
+        // Suporte Drag and Drop na coluna
+        colEl.ondragover = (e) => {
+          e.preventDefault();
+          colEl.classList.add("drag-over");
+        };
+        colEl.ondragleave = (e) => {
+          colEl.classList.remove("drag-over");
+        };
+        colEl.ondrop = (e) => {
+          e.preventDefault();
+          colEl.classList.remove("drag-over");
+          if (idCardSendoArrastado) {
+            solicitarMoverCardYvira(idCardSendoArrastado, etapa.id);
+            idCardSendoArrastado = null;
+          }
+        };
+
+        const isPrimeira = idx === 0;
+        const isUltima = idx === dadosBoard.etapas.length - 1;
+
+        colEl.innerHTML = `
+          <div class="column-header">
+            <div class="col-info">
+              <span class="col-pill" style="color: ${etapa.cor || '#58a6ff'}; background-color: ${etapa.cor || '#58a6ff'}"></span>
+              <span class="col-title">${escapeHtml(etapa.titulo)}</span>
+            </div>
+            <div class="col-header-right">
+              ${!isPrimeira ? `<button class="btn-reorder-col" onclick="solicitarMoverEtapaYvira(${idx}, -1)" title="Mover Coluna para Esquerda">◀</button>` : ''}
+              ${!isUltima ? `<button class="btn-reorder-col" onclick="solicitarMoverEtapaYvira(${idx}, 1)" title="Mover Coluna para Direita">▶</button>` : ''}
+              <span class="col-count">${colunaCards.length}</span>
+            </div>
+          </div>
+          <div class="column-cards" id="coluna-${etapa.id}">
+            ${colunaCards.map(c => gerarHtmlCard(c)).join("")}
+          </div>
+          <button class="btn-col-add" onclick="abrirModalNovo('${etapa.id}')">+ Criar Card</button>
+        `;
+
+        board.appendChild(colEl);
+      });
+
+      document.getElementById("statTotal").innerText = totalCards;
+      document.getElementById("statConcluidas").innerText = totalConcluidos;
+    }
+
+    function gerarHtmlCard(card) {
+      const totalChecks = card.checklist ? card.checklist.length : 0;
+      const concluidosChecks = card.checklist ? card.checklist.filter(i => i.feito).length : 0;
+      const temChecklist = totalChecks > 0;
+      const percentual = temChecklist ? Math.round((concluidosChecks / totalChecks) * 100) : 0;
+
+      return `
+        <div class="task-card" 
+             id="elem-${card.id}" 
+             draggable="true" 
+             ondragstart="iniciarArrastoCard(event, '${card.id}')"
+             ondragend="finalizarArrastoCard(event, '${card.id}')"
+             onclick="abrirModalEditar('${card.id}')">
+          <div class="card-top">
+            <span class="card-key">${card.codigo || 'YV-' + String(card.id).slice(-3)}</span>
+            <span class="card-prio prio-${card.prioridade || 'media'}">${(card.prioridade || 'media').toUpperCase()}</span>
+          </div>
+          <h4 class="card-title">${escapeHtml(card.titulo)}</h4>
+          ${card.descricao ? `<p class="card-desc-preview">${escapeHtml(card.descricao)}</p>` : ''}
+          ${temChecklist ? `
+            <div class="card-checklist-meter">
+              <div class="meter-bar">
+                <div class="meter-progress" style="width: ${percentual}%"></div>
+              </div>
+              <span class="meter-text">☑ ${concluidosChecks}/${totalChecks}</span>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    // Drag and Drop: Captura o ID e notifica a lógica do Yvira
+    function iniciarArrastoCard(e, id) {
+      idCardSendoArrastado = id;
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", id);
+      setTimeout(() => {
+        const el = document.getElementById("elem-" + id);
+        if (el) el.classList.add("dragging");
+      }, 0);
+    }
+
+    function finalizarArrastoCard(e, id) {
+      const el = document.getElementById("elem-" + id);
+      if (el) el.classList.remove("dragging");
+    }
+
+    function solicitarMoverCardYvira(cardId, novaEtapaId) {
+      // Atualização imediata
+      const card = dadosBoard.cards.find(c => c.id === cardId);
+      if (card && card.etapa_id !== novaEtapaId) {
+        card.etapa_id = novaEtapaId;
+        renderizarBoard();
+
+        // Repassa evento de movimentação para o motor Yvira
+        if (window.yvira && window.yvira.emit) {
+          window.yvira.emit("mover_card", { card_id: cardId, nova_etapa_id: novaEtapaId });
+        }
+      }
+    }
+
+    // Reordenação de Colunas/Etapas comandada no Yvira
+    function solicitarMoverEtapaYvira(indexAtual, direcao) {
+      const novoIndex = indexAtual + direcao;
+      if (novoIndex < 0 || novoIndex >= dadosBoard.etapas.length) return;
+
+      // Troca os elementos de posição
+      const temp = dadosBoard.etapas[indexAtual];
+      dadosBoard.etapas[indexAtual] = dadosBoard.etapas[novoIndex];
+      dadosBoard.etapas[novoIndex] = temp;
+
+      renderizarBoard();
+      renderizarListaEtapas();
+
+      // Notifica o Yvira para persistir a nova ordem
+      if (window.yvira && window.yvira.emit) {
+        window.yvira.emit("reordenar_etapas", { etapas: dadosBoard.etapas });
+      }
+    }
+
+    // ============================================================
+    // CONTROLE DE ANIMAÇÕES DOS MODAIS (ABERTURA & FECHAMENTO SUAVE)
+    // ============================================================
+    function abrirModalComAnimacao(idOverlay) {
+      const overlay = document.getElementById(idOverlay);
+      overlay.classList.remove("fechando");
+      overlay.classList.add("ativo");
+    }
+
+    function fecharModalComAnimacao(idOverlay) {
+      const overlay = document.getElementById(idOverlay);
+      overlay.classList.add("fechando");
+      setTimeout(() => {
+        overlay.classList.remove("ativo");
+        overlay.classList.remove("fechando");
+      }, 250);
+    }
+
+    function tratarCliqueForaModal(e, idOverlay) {
+      if (e.target && e.target.id === idOverlay) {
+        fecharModalComAnimacao(idOverlay);
+      }
+    }
+
+    // Modal Card
+    function abrirModalNovo(etapaPadrao = null) {
+      document.getElementById("modalCardTitulo").innerText = "Novo Card";
+      document.getElementById("cardId").value = "";
+      document.getElementById("cardTitulo").value = "";
+      document.getElementById("cardDescricao").value = "";
+      document.getElementById("cardPrioridade").value = "media";
+      document.getElementById("btnExcluirCard").style.display = "none";
+      itensChecklistTemporarios = [];
+
+      atualizarSelectEtapas(etapaPadrao || (dadosBoard.etapas[0] ? dadosBoard.etapas[0].id : ""));
+      renderizarChecklistModal();
+      abrirModalComAnimacao("modalCardOverlay");
+      setTimeout(() => document.getElementById("cardTitulo").focus(), 80);
+    }
+
+    function abrirModalEditar(id) {
+      const card = dadosBoard.cards.find(c => c.id === id);
+      if (!card) return;
+
+      document.getElementById("modalCardTitulo").innerText = `Editar Card ${card.codigo || ''}`;
+      document.getElementById("cardId").value = card.id;
+      document.getElementById("cardTitulo").value = card.titulo;
+      document.getElementById("cardDescricao").value = card.descricao || "";
+      document.getElementById("cardPrioridade").value = card.prioridade || "media";
+      document.getElementById("btnExcluirCard").style.display = "inline-flex";
+
+      itensChecklistTemporarios = card.checklist ? JSON.parse(JSON.stringify(card.checklist)) : [];
+
+      atualizarSelectEtapas(card.etapa_id);
+      renderizarChecklistModal();
+      abrirModalComAnimacao("modalCardOverlay");
+    }
+
+    function fecharModalCard() {
+      fecharModalComAnimacao("modalCardOverlay");
+    }
+
+    function atualizarSelectEtapas(selecionado) {
+      const select = document.getElementById("cardEtapa");
+      select.innerHTML = "";
+      dadosBoard.etapas.forEach(e => {
+        const opt = document.createElement("option");
+        opt.value = e.id;
+        opt.innerText = e.titulo;
+        if (e.id === selecionado) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+
+    // Checklist dentro do Modal
+    function renderizarChecklistModal() {
+      const lista = document.getElementById("listaChecklist");
+      lista.innerHTML = "";
+      const total = itensChecklistTemporarios.length;
+      const concluidos = itensChecklistTemporarios.filter(i => i.feito).length;
+      document.getElementById("checklistContador").innerText = `${concluidos}/${total}`;
+
+      itensChecklistTemporarios.forEach((item, index) => {
+        const li = document.createElement("li");
+        li.className = "checklist-item" + (item.feito ? " checked" : "");
+        li.innerHTML = `
+          <input type="checkbox" ${item.feito ? "checked" : ""} onchange="alternarChecklistItem(${index})">
+          <span class="checklist-item-texto" onclick="alternarChecklistItem(${index})">${escapeHtml(item.texto)}</span>
+          <button class="btn-item-del" type="button" onclick="removerChecklistItem(${index})" title="Remover item">&times;</button>
+        `;
+        lista.appendChild(li);
+      });
+    }
+
+    function adicionarItemChecklist() {
+      const input = document.getElementById("novoItemChecklist");
+      const texto = input.value.trim();
+      if (!texto) return;
+      itensChecklistTemporarios.push({
+        id: "chk_" + Date.now() + "_" + Math.floor(Math.random()*1000),
+        texto: texto,
+        feito: false
+      });
+      input.value = "";
+      renderizarChecklistModal();
+      input.focus();
+    }
+
+    function alternarChecklistItem(index) {
+      if (itensChecklistTemporarios[index]) {
+        itensChecklistTemporarios[index].feito = !itensChecklistTemporarios[index].feito;
+        renderizarChecklistModal();
+      }
+    }
+
+    function removerChecklistItem(index) {
+      itensChecklistTemporarios.splice(index, 1);
+      renderizarChecklistModal();
+    }
+
+    // Salvar / Excluir Card no Yvira
+    function salvarCard() {
+      const id = document.getElementById("cardId").value;
+      const titulo = document.getElementById("cardTitulo").value.trim();
+      const descricao = document.getElementById("cardDescricao").value.trim();
+      const etapa_id = document.getElementById("cardEtapa").value;
+      const prioridade = document.getElementById("cardPrioridade").value;
+
+      if (!titulo) {
+        alert("Por favor, preencha o título do card.");
+        return;
+      }
+
+      const payload = {
+        id: id || null,
+        titulo: titulo,
+        descricao: descricao,
+        etapa_id: etapa_id,
+        prioridade: prioridade,
+        checklist: itensChecklistTemporarios
+      };
+
+      if (id) {
+        const idx = dadosBoard.cards.findIndex(c => c.id === id);
+        if (idx !== -1) {
+          dadosBoard.cards[idx] = { ...dadosBoard.cards[idx], ...payload };
+        }
+      } else {
+        payload.id = "card_" + Date.now();
+        payload.codigo = "YV-" + (dadosBoard.cards.length + 101);
+        dadosBoard.cards.push(payload);
+      }
+      renderizarBoard();
+
+      if (window.yvira && window.yvira.emit) {
+        window.yvira.emit("salvar_card", payload);
+      }
+
+      fecharModalComAnimacao("modalCardOverlay");
+    }
+
+    function solicitarExcluirCard() {
+      const id = document.getElementById("cardId").value;
+      if (!id) return;
+      if (confirm("Deseja realmente excluir este card?")) {
+        dadosBoard.cards = dadosBoard.cards.filter(c => c.id !== id);
+        renderizarBoard();
+
+        if (window.yvira && window.yvira.emit) {
+          window.yvira.emit("excluir_card", { id: id });
+        }
+        fecharModalComAnimacao("modalCardOverlay");
+      }
+    }
+
+    // Modal de Etapas
+    function abrirModalEtapas() {
+      renderizarListaEtapas();
+      abrirModalComAnimacao("modalEtapasOverlay");
+    }
+
+    function fecharModalEtapas() {
+      fecharModalComAnimacao("modalEtapasOverlay");
+    }
+
+    function renderizarListaEtapas() {
+      const ul = document.getElementById("listaEtapas");
+      ul.innerHTML = "";
+      dadosBoard.etapas.forEach((etapa, idx) => {
+        const isPrimeira = idx === 0;
+        const isUltima = idx === dadosBoard.etapas.length - 1;
+
+        const li = document.createElement("li");
+        li.className = "etapa-row";
+        li.innerHTML = `
+          <div class="etapa-info">
+            <span class="col-pill" style="color: ${etapa.cor || '#58a6ff'}; background-color: ${etapa.cor || '#58a6ff'};"></span>
+            <input type="text" class="input-etapa-nome" value="${escapeHtml(etapa.titulo)}" onchange="renomearEtapa(${idx}, this.value)">
+          </div>
+          <div class="etapa-actions">
+            <button class="btn-reorder-col" ${isPrimeira ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : ''} onclick="solicitarMoverEtapaYvira(${idx}, -1)" title="Subir / Mover para Esquerda">▲</button>
+            <button class="btn-reorder-col" ${isUltima ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : ''} onclick="solicitarMoverEtapaYvira(${idx}, 1)" title="Descer / Mover para Direita">▼</button>
+            <button class="btn-item-del" onclick="removerEtapa(${idx})" title="Excluir Coluna">&times;</button>
+          </div>
+        `;
+        ul.appendChild(li);
+      });
+    }
+
+    function adicionarEtapa() {
+      const input = document.getElementById("novaEtapaNome");
+      const nome = input.value.trim();
+      if (!nome) return;
+
+      const cores = ["#58a6ff", "#3fb950", "#d29922", "#f85149", "#a371f7", "#38bdf8"];
+      const novaEtapa = {
+        id: "etapa_" + Date.now(),
+        titulo: nome,
+        cor: cores[dadosBoard.etapas.length % cores.length]
+      };
+
+      dadosBoard.etapas.push(novaEtapa);
+      input.value = "";
+      renderizarListaEtapas();
+      renderizarBoard();
+
+      if (window.yvira && window.yvira.emit) {
+        window.yvira.emit("salvar_etapas", { etapas: dadosBoard.etapas });
+      }
+    }
+
+    function renomearEtapa(idx, novoNome) {
+      if (dadosBoard.etapas[idx] && novoNome.trim()) {
+        dadosBoard.etapas[idx].titulo = novoNome.trim();
+        renderizarBoard();
+        if (window.yvira && window.yvira.emit) {
+          window.yvira.emit("salvar_etapas", { etapas: dadosBoard.etapas });
+        }
+      }
+    }
+
+    function removerEtapa(idx) {
+      if (dadosBoard.etapas.length <= 1) {
+        alert("O Kanban deve possuir ao menos 1 etapa.");
+        return;
+      }
+      const etapaRemovida = dadosBoard.etapas[idx];
+      const cardsNaEtapa = dadosBoard.cards.filter(c => c.etapa_id === etapaRemovida.id);
+      if (cardsNaEtapa.length > 0) {
+        if (!confirm(`A etapa "${etapaRemovida.titulo}" contém ${cardsNaEtapa.length} card(s). Eles serão movidos para a primeira coluna.`)) {
+          return;
+        }
+        const primeiraEtapaId = dadosBoard.etapas[0].id === etapaRemovida.id ? dadosBoard.etapas[1].id : dadosBoard.etapas[0].id;
+        cardsNaEtapa.forEach(c => c.etapa_id = primeiraEtapaId);
+      }
+
+      dadosBoard.etapas.splice(idx, 1);
+      renderizarListaEtapas();
+      renderizarBoard();
+
+      if (window.yvira && window.yvira.emit) {
+        window.yvira.emit("salvar_etapas", { etapas: dadosBoard.etapas });
+        window.yvira.emit("salvar_todos_cards", { cards: dadosBoard.cards });
+      }
+    }
+
+    // Filtragem em tempo real
+    function filtrarCards() {
+      const termo = document.getElementById("filtroTexto").value.toLowerCase();
+      const cards = document.querySelectorAll(".task-card");
+      cards.forEach(c => {
+        const texto = c.innerText.toLowerCase();
+        if (texto.includes(termo)) {
+          c.style.display = "block";
+        } else {
+          c.style.display = "none";
+        }
+      });
+    }
+
+    function escapeHtml(text) {
+      if (!text) return "";
+      return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+  </script>
+</body>
+</html>

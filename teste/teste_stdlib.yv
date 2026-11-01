@@ -1,0 +1,18 @@
+print("--- TESTE DE BIBLIOTECA PADRAO YVIRA ---");
+
+let inicio = clock();
+
+# Teste de random e conversao
+let num1 = random(10, 50);
+let numStr = toString(num1);
+let numConvertido = toNumber(numStr);
+
+print("Numero aleatorio gerado:", num1);
+print("Convertido para String:", numStr);
+print("Convertido de volta para Numero:", numConvertido);
+print("Soma com +100:", numConvertido + 100);
+
+let fim = clock();
+let duracao = fim - inicio;
+print("Tempo de execucao (ms):", duracao);
+print("Biblioteca padrao operacional com sucesso!");

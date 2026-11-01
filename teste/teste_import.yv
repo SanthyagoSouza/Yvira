@@ -1,0 +1,13 @@
+﻿# Teste de import direto (carrega funções e variáveis diretamente)
+import "modulo_matematica.yv"
+
+print("Versão importada diretamente:", versao)
+let resultado1 = somar(15, 25)
+print("Resultado somar:", resultado1)
+
+# Teste de import com alias / namespace
+import "modulo_matematica" as mat
+
+print("Versão via namespace:", mat.versao)
+let resultado2 = mat.multiplicar(6, 7)
+print("Resultado multiplicar via namespace:", resultado2)

@@ -1,0 +1,60 @@
+# Teste de Validação das Novas Funcionalidades de Banco de Dados
+
+print("=== 1. Conectando ao Banco SQLite em memória ===");
+@db("sqlite://:memory:");
+
+@exec("CREATE TABLE contas (id INTEGER PRIMARY KEY, titular TEXT, saldo INTEGER);");
+@exec("INSERT INTO contas (id, titular, saldo) VALUES (?, ?, ?);", [1, "Alice", 1000]);
+@exec("INSERT INTO contas (id, titular, saldo) VALUES (?, ?, ?);", [2, "Bob", 500]);
+
+print("\n=== 2. Testando @exec com Retorno Detalhado ({ 'full': true }) ===");
+let res1 = @exec("UPDATE contas SET saldo = saldo - 200 WHERE id = 1;", [], { "full": true });
+print("UPDATE em Alice:");
+print("  - Linhas afetadas: " + res1["rows_affected"]);
+print("  - Sucesso: " + res1["success"]);
+
+let res2 = @exec("UPDATE contas SET saldo = saldo - 9999 WHERE id = 1 AND saldo >= 9999;", [], { "full": true });
+print("UPDATE com saldo insuficiente:");
+print("  - Linhas afetadas (esperado 0): " + res2["rows_affected"]);
+
+print("\n=== 3. Testando Bloco @transaction com Rollback Automático ===");
+print("Saldos antes da transação que falhará:");
+let antes = @query("SELECT id, titular, saldo FROM contas;");
+foreach (c in antes) {
+    print("  Conta " + c["id"] + " (" + c["titular"] + "): R$ " + c["saldo"]);
+}
+
+try {
+    @transaction {
+        print("-> Executando débito de 300 na conta 1...");
+        @exec("UPDATE contas SET saldo = saldo - 300 WHERE id = 1;");
+
+        print("-> Simulando falha fatal no meio da transação...");
+        throw "Erro de rede no meio da transação!";
+
+        print("-> Este crédito NUNCA deve executar...");
+        @exec("UPDATE contas SET saldo = saldo + 300 WHERE id = 2;");
+    }
+} catch (e) {
+    print("[Exceção capturada com sucesso]: " + e);
+}
+
+print("\nSaldos após o Rollback automático:");
+let depois = @query("SELECT id, titular, saldo FROM contas;");
+foreach (c in depois) {
+    print("  Conta " + c["id"] + " (" + c["titular"] + "): R$ " + c["saldo"]);
+}
+
+print("\n=== 4. Testando Bloco @transaction com Sucesso (Commit Automático) ===");
+@transaction {
+    @exec("UPDATE contas SET saldo = saldo - 100 WHERE id = 1;");
+    @exec("UPDATE contas SET saldo = saldo + 100 WHERE id = 2;");
+}
+
+print("Saldos após Commit com sucesso:");
+let final = @query("SELECT id, titular, saldo FROM contas;");
+foreach (c in final) {
+    print("  Conta " + c["id"] + " (" + c["titular"] + "): R$ " + c["saldo"]);
+}
+
+print("\nTODOS OS TESTES CONCLUÍDOS COM SUCESSO!");

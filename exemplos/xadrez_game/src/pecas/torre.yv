@@ -1,0 +1,67 @@
+# Regras de Movimentação da Torre no Xadrez (Rook Rules)
+
+class Torre {
+    fn init(cor) {
+        this.cor = cor; # "brancas" ou "pretas"
+        this.tipo = "torre";
+        this.simbolo = cor == "brancas" ? "♖" : "♜";
+    }
+
+    # Calcula os movimentos válidos para a Torre na posição (linha, coluna)
+    # A Torre se move em linha reta (ortogonal) pelas 4 direções:
+    # Cima (-1, 0), Baixo (+1, 0), Esquerda (0, -1), Direita (0, +1)
+    fn obterMovimentosValidos(linha, coluna, matriz) {
+        let movimentos = [];
+
+        # Direções ortogonais: [dLinha, dColuna]
+        let direcoes = [
+            [-1, 0], # Cima
+            [1, 0],  # Baixo
+            [0, -1], # Esquerda
+            [0, 1]   # Direita
+        ];
+
+        let d = 0;
+        while (d < len(direcoes)) {
+            let dir = direcoes[d];
+            let dLinha = dir[0];
+            let dColuna = dir[1];
+
+            let r = linha + dLinha;
+            let c = coluna + dColuna;
+
+            # Avança na direção até atingir a borda ou colidir com outra peça
+            while (r >= 0 && r < 8 && c >= 0 && c < 8) {
+                let pecaDestino = matriz[r][c];
+
+                if (pecaDestino == null || pecaDestino == "") {
+                    # Casa vazia: movimento normal válido
+                    movimentos.push({
+                        "paraLinha": r,
+                        "paraColuna": c,
+                        "tipo": "normal"
+                    });
+                } else {
+                    # Colidiu com uma peça
+                    if (pecaDestino["cor"] != this.cor) {
+                        # Peça adversária: captura permitida!
+                        movimentos.push({
+                            "paraLinha": r,
+                            "paraColuna": c,
+                            "tipo": "captura"
+                        });
+                    }
+                    # O raio de visão da Torre é bloqueado pela peça
+                    break;
+                }
+
+                r = r + dLinha;
+                c = c + dColuna;
+            }
+
+            d = d + 1;
+        }
+
+        return movimentos;
+    }
+}

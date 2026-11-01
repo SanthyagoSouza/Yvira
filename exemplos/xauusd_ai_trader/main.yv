@@ -1,0 +1,272 @@
+import "dados_xauusd.yv";
+import "indicadores.yv";
+import "agente_trader.yv";
+import "simulador_forex.yv";
+
+print("=================================================================");
+print("   YVIRA QUANT LAB: IA TRADER DE ALTA FREQUÊNCIA NO XAUUSD (OURO)");
+print("=================================================================\n");
+
+# 1. Carregamento de Dados Multi-Timeframe Reais do XAUUSD (H1 + M15)
+let loader = XauusdDataLoader();
+let candlesH1 = loader.carregarTimeframe("1h", 60);
+let candlesM15 = loader.carregarTimeframe("15m", 60);
+
+let totalH1 = len(candlesH1);
+let totalM15 = len(candlesM15);
+
+print("\n--- Resumo dos Dados Carregados ---");
+print("Timeframe Macro (H1) : " + totalH1 + " candles");
+print("Timeframe Micro (M15): " + totalM15 + " candles");
+
+let primeiroH1 = candlesH1[0];
+let ultimoH1 = candlesH1[totalH1 - 1];
+print("Faixa de Preço do Ouro: $" + primeiroH1["close"] + " -> $" + ultimoH1["close"] + "\n");
+
+# Alinhamento por granularidade M15 com busca por Timestamp Real (Sem look-ahead)
+let totalCandles = totalM15;
+let splitIdx = to_int(totalCandles * 0.75);
+let splitH1 = to_int(totalH1 * 0.75);
+
+print("Split de Dados Multi-Timeframe Sincronizado por Timestamp:");
+print("  - Treino (Passado H1+M15 para IA aprender): " + splitIdx + " períodos de 15m");
+print("  - Teste  (Futuro cego para validar se lucra): " + (totalCandles - splitIdx) + " períodos de 15m\n");
+
+# 2. Inicialização do Agente e Simulador
+let indic = IndicadoresOuro();
+let agente = TraderAgent(0.2, 0.95, 1.0, 0.98); # Alpha=0.2, Gamma=0.95, Epsilon=1.0, Decay=0.98
+let simulador = ForexSimulator(1000.0, 100, 0.31); # Banca de $1.000,00 e 31 pontos de spread
+
+# 3. Fase de Treinamento por Reforço Multi-Timeframe (H1 + M15) com Timestamp Real
+let EPISODIOS_TREINO = 40;
+if (len(args) > 0) {
+    EPISODIOS_TREINO = to_int(args[0]);
+}
+print(">>> INICIANDO O TREINAMENTO MULTI-TIMEFRAME SINCRONIZADO (" + EPISODIOS_TREINO + " EPISÓDIOS)...");
+let tInicioTreino = time();
+
+let ep = 1;
+while (ep <= EPISODIOS_TREINO) {
+    simulador.reset();
+
+    let m = 15;
+    let hCursor = 0;
+    while (m < splitIdx) {
+        let preco = candlesM15[m]["close"];
+        let tsMClose = candlesM15[m]["timestamp"] + 900; # Fechamento do candle M15
+
+        # Avança hCursor até o último candle H1 completamente fechado antes ou junto a tsMClose
+        while (hCursor + 1 < splitH1 && (candlesH1[hCursor + 1]["timestamp"] + 3600) <= tsMClose) {
+            hCursor = hCursor + 1;
+        }
+
+        # Análise Macro (H1) sem look-ahead
+        let smaH1Fast = indic.sma(candlesH1, 5, hCursor);
+        let smaH1Slow = indic.sma(candlesH1, 15, hCursor);
+        let rsiH1 = indic.rsi(candlesH1, 14, hCursor);
+
+        # Análise Micro (M15)
+        let momM15 = indic.momentum(candlesM15, 5, m);
+        let smaM15Fast = indic.sma(candlesM15, 5, m);
+        let smaM15Slow = indic.sma(candlesM15, 15, m);
+        let atrVal = indic.atr(candlesM15, 14, m);
+
+        let estado = agente.codificarEstadoMultiTimeframe(smaH1Fast, smaH1Slow, rsiH1, momM15, smaM15Fast, smaM15Slow);
+        let acao = agente.escolherAcao(estado, false);
+
+        # Executa no mercado simulado
+        let execRes = simulador.executarAcao(acao, preco, atrVal);
+
+        # Próximo estado
+        let mProx = m + 1;
+        let terminou = (mProx >= splitIdx);
+        let proxEstado = estado;
+
+        if (terminou == false) {
+            let tsMPClose = candlesM15[mProx]["timestamp"] + 900;
+            let hPCursor = hCursor;
+            while (hPCursor + 1 < splitH1 && (candlesH1[hPCursor + 1]["timestamp"] + 3600) <= tsMPClose) {
+                hPCursor = hPCursor + 1;
+            }
+
+            let proxSmaH1Fast = indic.sma(candlesH1, 5, hPCursor);
+            let proxSmaH1Slow = indic.sma(candlesH1, 15, hPCursor);
+            let proxRsiH1 = indic.rsi(candlesH1, 14, hPCursor);
+
+            let proxMomM15 = indic.momentum(candlesM15, 5, mProx);
+            let proxSmaM15Fast = indic.sma(candlesM15, 5, mProx);
+            let proxSmaM15Slow = indic.sma(candlesM15, 15, mProx);
+
+            proxEstado = agente.codificarEstadoMultiTimeframe(proxSmaH1Fast, proxSmaH1Slow, proxRsiH1, proxMomM15, proxSmaM15Fast, proxSmaM15Slow);
+        }
+
+        # Atualização Q-Learning Bellman com aversão a Stop
+        agente.aprender(estado, acao, execRes["recompensa"], proxEstado, terminou);
+
+        m = m + 1;
+    }
+
+    agente.decairEpsilon();
+
+    let passoPrint = to_int(EPISODIOS_TREINO / 4);
+    if (passoPrint == 0) passoPrint = 1;
+    if (ep % passoPrint == 0 || ep == EPISODIOS_TREINO) {
+        print("  [Episódio " + ep + "/" + EPISODIOS_TREINO + "] -> Epsilon: " + agente.epsilon + " | Saldo Treino: $" + simulador.saldo + " (PnL: $" + simulador.lucroTotal + ")");
+    }
+
+    ep = ep + 1;
+}
+
+let tFimTreino = time();
+let duracaoTreino = tFimTreino - tInicioTreino;
+print("\n>>> [TREINAMENTO CONCLUÍDO] em " + duracaoTreino + " ms!");
+
+# 4. Fase de Validação no FUTURO (Out-of-sample / Teste Cego com 0% de exploração aleatória)
+print("\n=================================================================");
+print("   FASE DE TESTE: EXECUTANDO A IA EM DADOS FUTUROS DESCONHECIDOS  ");
+print("=================================================================\n");
+
+simulador.reset();
+let tTeste = splitIdx;
+let saldoInicialTeste = simulador.saldo;
+
+let hCursorTeste = splitH1;
+while (hCursorTeste > 0 && (candlesH1[hCursorTeste]["timestamp"] + 3600) > (candlesM15[tTeste]["timestamp"] + 900)) {
+    hCursorTeste = hCursorTeste - 1;
+}
+
+while (tTeste < totalCandles) {
+    let candle = candlesM15[tTeste];
+    let preco = candle["close"];
+    let tsMClose = candle["timestamp"] + 900;
+
+    while (hCursorTeste + 1 < totalH1 && (candlesH1[hCursorTeste + 1]["timestamp"] + 3600) <= tsMClose) {
+        hCursorTeste = hCursorTeste + 1;
+    }
+
+    let smaH1Fast = indic.sma(candlesH1, 5, hCursorTeste);
+    let smaH1Slow = indic.sma(candlesH1, 15, hCursorTeste);
+    let rsiH1 = indic.rsi(candlesH1, 14, hCursorTeste);
+
+    let momM15 = indic.momentum(candlesM15, 5, tTeste);
+    let smaM15Fast = indic.sma(candlesM15, 5, tTeste);
+    let smaM15Slow = indic.sma(candlesM15, 15, tTeste);
+    let atrVal = indic.atr(candlesM15, 14, tTeste);
+
+    let estado = agente.codificarEstadoMultiTimeframe(smaH1Fast, smaH1Slow, rsiH1, momM15, smaM15Fast, smaM15Slow);
+
+    # Força a IA a usar exclusivamente o que aprendeu (sem exploração aleatória)
+    let acaoDecidida = agente.escolherAcao(estado, true);
+    let nomeAcao = ACOES_TRADING[acaoDecidida];
+
+    let res = simulador.executarAcao(acaoDecidida, preco, atrVal);
+
+    if (res["pnl"] != 0) {
+        let tag = "🔴 LOSS";
+        if (res["pnl"] > 0) {
+            tag = "🟢 GAIN";
+        } else if (res["pnl"] == 0.0) {
+            tag = "⚪ ZERO A ZERO";
+        }
+        let infoMotivo = "";
+        if (res["motivo"] != null && res["motivo"] != "") {
+            infoMotivo = " (" + res["motivo"] + ")";
+        }
+        print("Candle #" + tTeste + " ($" + preco + ") -> Fechou Trade com PnL: $" + res["pnl"] + " [" + tag + infoMotivo + "] | Saldo: $" + res["saldoAtual"]);
+    }
+
+    tTeste = tTeste + 1;
+}
+
+# Força fechamento de posição aberta no último candle
+if (simulador.posicaoAberta != 0) {
+    let ultimoP = candlesM15[totalCandles - 1]["close"];
+    simulador.executarAcao(0, ultimoP, 5.0);
+}
+
+let saldoFinal = simulador.saldo;
+let lucroLiquido = saldoFinal - saldoInicialTeste;
+let rentabilidadePct = (lucroLiquido / saldoInicialTeste) * 100.0;
+let winRate = 0.0;
+if (simulador.totalTrades > 0) {
+    winRate = (simulador.tradesVencedores / to_number(simulador.totalTrades)) * 100.0;
+}
+
+# Cálculo das métricas avançadas solicitadas:
+# - Risco médio por operação
+# - Maior sequência de Win consecutiva
+# - Maior sequência de Loss consecutiva
+# - Distribuição de fechamentos (Stop, Take, Estagnado, Zero a Zero)
+let somaRisco = 0.0;
+let maxWinSeq = 0;
+let curWinSeq = 0;
+let maxLossSeq = 0;
+let curLossSeq = 0;
+let countZeroAZero = 0;
+let countEstagnado = 0;
+let countStops = 0;
+let countTakes = 0;
+
+let hIdx = 0;
+let totalH = len(simulador.historicoTrades);
+while (hIdx < totalH) {
+    let tObj = simulador.historicoTrades[hIdx];
+    somaRisco = somaRisco + tObj["risco"];
+
+    let mot = tObj["motivo"];
+    if (mot == "STOP_LOSS") countStops = countStops + 1;
+    if (mot == "TAKE_PROFIT") countTakes = countTakes + 1;
+    if (mot == "LUCRO_ESTAGNADO") countEstagnado = countEstagnado + 1;
+    if (mot == "ZERO_A_ZERO") countZeroAZero = countZeroAZero + 1;
+
+    let pnl = tObj["pnl"];
+    if (pnl > 0) {
+        curWinSeq = curWinSeq + 1;
+        curLossSeq = 0;
+        if (curWinSeq > maxWinSeq) maxWinSeq = curWinSeq;
+    } else if (pnl < 0) {
+        curLossSeq = curLossSeq + 1;
+        curWinSeq = 0;
+        if (curLossSeq > maxLossSeq) maxLossSeq = curLossSeq;
+    } else {
+        curLossSeq = 0;
+        curWinSeq = 0;
+    }
+
+    hIdx = hIdx + 1;
+}
+
+let riscoMedio = 0.0;
+if (totalH > 0) {
+    riscoMedio = somaRisco / to_number(totalH);
+}
+
+print("\n=================================================================");
+print("               RELATÓRIO DE PERFORMANCE QUANTITATIVA             ");
+print("=================================================================");
+print("  Ativo Analisado              : XAU/USD (Forex Gold Spot)");
+print("  Capital Inicial da Conta     : $ " + saldoInicialTeste);
+print("  Saldo Final da Conta         : $ " + saldoFinal);
+print("  Lucro Líquido Realizado (PnL): $ " + lucroLiquido);
+print("  Rentabilidade Obtida         : " + rentabilidadePct + " %");
+print("-----------------------------------------------------------------");
+print("  Total de Trades Fechados     : " + simulador.totalTrades);
+print("  Trades Vencedores (Gain)     : " + simulador.tradesVencedores);
+print("  Trades Perdedores (Loss)     : " + simulador.tradesPerdedores);
+print("  Operações no Zero a Zero     : " + countZeroAZero);
+print("  Taxa de Acerto (Win Rate)    : " + winRate + " %");
+print("-----------------------------------------------------------------");
+print("  MÉTRICAS AVANÇADAS DE GESTÃO DE RISCO:");
+print("  - Risco Médio por Operação   : $ " + round(riscoMedio, 2) + " (" + round((riscoMedio / saldoInicialTeste) * 100.0, 2) + "% da banca)");
+print("  - Maior Sequência de Win     : " + maxWinSeq + " trades seguidos");
+print("  - Maior Sequência de Loss    : " + maxLossSeq + " trades seguidos");
+print("  - Saídas por Lucro Estagnado : " + countEstagnado);
+print("  - Saídas por Breakeven/0x0   : " + countZeroAZero);
+print("  - Total de Stops Evitados    : " + (countEstagnado + countZeroAZero));
+print("-----------------------------------------------------------------");
+if (lucroLiquido > 0) {
+    print("  🏆 [SUCESSO]: A IA foi LUCRATIVA protegendo a banca no futuro!");
+} else {
+    print("  ⚠️ [ALERTA]: O mercado mudou de regime ou exigirá mais episódios de calibração.");
+}
+print("=================================================================\n");

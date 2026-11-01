@@ -1,0 +1,7 @@
+{
+  "name": "api_pipeline_ia",
+  "version": "1.0.0",
+  "description": "Pipeline de Backend, Banco de Dados, Ingestao de API e Classificador de IA em Yvira",
+  "entry": "main.yv",
+  "author": "Santhyago Souza Ponciano"
+}

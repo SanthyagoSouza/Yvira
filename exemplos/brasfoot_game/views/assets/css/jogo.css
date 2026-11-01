@@ -1,0 +1,219 @@
+/* Estilos Específicos do Jogo */
+.conteudo-principal {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 240px;
+    background: #15181e;
+    border-right: 1px solid var(--borda);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 14px;
+    gap: 20px;
+}
+
+.perfil-clube {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--borda);
+}
+
+.escudo {
+    font-size: 40px;
+    margin-bottom: 8px;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+}
+
+.nome-clube {
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.divisao-clube {
+    font-size: 11px;
+    color: var(--cor-texto-mutado);
+    margin-top: 2px;
+}
+
+.menu-navegacao {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+}
+
+.menu-item {
+    background: transparent;
+    border: none;
+    color: var(--cor-texto-mutado);
+    padding: 10px 14px;
+    border-radius: 6px;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.menu-item:hover {
+    background: var(--bg-hover);
+    color: #fff;
+}
+
+.menu-item.ativo {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--cor-primaria);
+    font-weight: 600;
+    border-left: 3px solid var(--cor-primaria);
+}
+
+.caixa-saldo {
+    background: #0f1216;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid var(--borda);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.label-saldo {
+    font-size: 11px;
+    color: var(--cor-texto-mutado);
+}
+
+.valor-saldo {
+    font-size: 14px;
+    font-weight: 700;
+    color: #4ade80;
+}
+
+/* Painel Central */
+.painel-central {
+    flex: 1;
+    padding: 24px 30px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.barra-rodada {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-card);
+    padding: 18px 24px;
+    border-radius: 8px;
+    border: 1px solid var(--borda);
+}
+
+.subtitulo {
+    font-size: 12px;
+    color: var(--cor-texto-mutado);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.barra-rodada h2 {
+    font-size: 18px;
+    margin-top: 4px;
+}
+
+.btn-jogar {
+    background: var(--cor-primaria);
+    color: #000;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.btn-jogar:hover {
+    background: var(--cor-primaria-hover);
+    transform: translateY(-1px);
+}
+
+.cards-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.card {
+    background: var(--bg-card);
+    padding: 18px 20px;
+    border-radius: 8px;
+    border: 1px solid var(--borda);
+}
+
+.card h3 {
+    font-size: 14px;
+    color: var(--cor-texto-mutado);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.stats-numeros {
+    display: flex;
+    gap: 24px;
+}
+
+.stat-box {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-valor {
+    font-size: 24px;
+    font-weight: 800;
+}
+
+.stat-valor.win { color: #4ade80; }
+.stat-valor.draw { color: #facc15; }
+.stat-valor.loss { color: #f87171; }
+
+.stat-label {
+    font-size: 12px;
+    color: var(--cor-texto-mutado);
+}
+
+/* Tabela de Jogos */
+.tabela-jogos {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 13px;
+}
+
+.tabela-jogos th {
+    text-align: left;
+    padding: 10px 12px;
+    color: var(--cor-texto-mutado);
+    border-bottom: 1px solid var(--borda);
+    font-weight: 600;
+}
+
+.tabela-jogos td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tabela-jogos tr:hover {
+    background: var(--bg-hover);
+}
+
+.tabela-jogos tr.g4 td:first-child {
+    border-left: 3px solid #3b82f6;
+}

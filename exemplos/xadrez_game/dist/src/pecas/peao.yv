@@ -1,0 +1,70 @@
+# Regras de Movimentação do Peão no Xadrez (Pawn Rules)
+
+class Peao {
+    fn init(cor) {
+        this.cor = cor; # "brancas" ou "pretas"
+        this.tipo = "peao";
+        this.simbolo = cor == "brancas" ? "♙" : "♟";
+    }
+
+    # Calcula os movimentos válidos para um peão na posição (linha, coluna)
+    # matriz: grade 8x8 contendo objetos de peça ou null
+    fn obterMovimentosValidos(linha, coluna, matriz) {
+        let movimentos = [];
+
+        # Peões brancos sobem (linha diminui: -1)
+        # Peões pretos descem (linha aumenta: +1)
+        let direcao = this.cor == "brancas" ? -1 : 1;
+        let linhaInicial = this.cor == "brancas" ? 6 : 1;
+
+        # 1. Avanço de 1 casa para frente (deve estar livre)
+        let proxLinha = linha + direcao;
+        if (proxLinha >= 0 && proxLinha < 8) {
+            let casaFrente = matriz[proxLinha][coluna];
+            if (casaFrente == null || casaFrente == "") {
+                movimentos.push({
+                    "paraLinha": proxLinha,
+                    "paraColuna": coluna,
+                    "tipo": "normal"
+                });
+
+                # 2. Primeiro movimento: pode avançar 2 casas se ambas estiverem livres
+                if (linha == linhaInicial) {
+                    let linhaDupla = linha + (direcao * 2);
+                    let casaDupla = matriz[linhaDupla][coluna];
+                    if (casaDupla == null || casaDupla == "") {
+                        movimentos.push({
+                            "paraLinha": linhaDupla,
+                            "paraColuna": coluna,
+                            "tipo": "duplo"
+                        });
+                    }
+                }
+            }
+        }
+
+        # 3. Captura diagonal (esquerda e direita)
+        # Só pode mover se houver peça adversária
+        let colunasCaptura = [coluna - 1, coluna + 1];
+        let i = 0;
+        while (i < len(colunasCaptura)) {
+            let cCap = colunasCaptura[i];
+            if (cCap >= 0 && cCap < 8 && proxLinha >= 0 && proxLinha < 8) {
+                let pecaAlvo = matriz[proxLinha][cCap];
+                if (pecaAlvo != null && pecaAlvo != "") {
+                    # Se for uma peça adversária (cor diferente)
+                    if (pecaAlvo["cor"] != this.cor) {
+                        movimentos.push({
+                            "paraLinha": proxLinha,
+                            "paraColuna": cCap,
+                            "tipo": "captura"
+                        });
+                    }
+                }
+            }
+            i = i + 1;
+        }
+
+        return movimentos;
+    }
+}

@@ -1,0 +1,34 @@
+﻿# Matrizes nativas 2D na Stack VM de Bytecode
+let A = [
+    [1.0, 2.0],
+    [3.0, 4.0]
+]
+
+let B = [
+    [2.0, 0.0],
+    [1.0, 2.0]
+]
+
+print("Matriz A:")
+print(A)
+
+print("Determinante de A via VM:", A.det())
+print("Transposta de A via VM:")
+print(A.T)
+
+let C = A * B
+print("Multiplicacao A * B via VM:")
+print(C)
+
+let Inv = A.inv()
+print("Inversa de A via VM:")
+print(Inv)
+
+let I = A * Inv
+print("Identidade (A * A^(-1)) via VM:")
+print(I)
+
+# Listas na VM
+let lista = [10, 20, 30]
+print("Elemento 1 da lista:", lista[1])
+print("Tamanho da lista:", lista.length)

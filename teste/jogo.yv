@@ -1,0 +1,33 @@
+print("========================================");
+print("   JOGO DE ADIVINHACAO NATIVO EM YVIRA  ");
+print("========================================");
+
+let nomeJogador = input("Qual o seu nome? ");
+print("Ola,", nomeJogador, "! Seja muito bem-vindo ao mundo Yvira!");
+
+let segredo = random(1, 10);
+let tentativas = 0;
+let acertou = false;
+
+print("");
+print("Eu pensei em um numero entre 1 e 10. Tente adivinhar!");
+
+while (not acertou) {
+    let resposta = input("Digite seu palpite: ");
+    let palpite = toNumber(resposta);
+    tentativas += 1;
+
+    if (palpite == segredo) {
+        print("PARABENS", nomeJogador, "! Voce acertou em", tentativas, "tentativa(s)!");
+        acertou = true;
+    } else {
+        if (palpite < segredo) {
+            print("O numero secreto e MAIOR!");
+        } else {
+            print("O numero secreto e MENOR!");
+        }
+    }
+}
+
+print("");
+print("Obrigado por jogar!");

@@ -1,0 +1,164 @@
+import "http";
+import "cache";
+
+print("=================================================================");
+print("   BANCO YVIRA: PIX ENGINE DE ALTA PERFORMANCE COM CACHE NATIVO   ");
+print("=================================================================\n");
+
+# 1. Configuração do Banco de Dados SQLite em memória
+@db("sqlite://:memory:");
+
+# 2. Criação das tabelas bancárias
+@exec("CREATE TABLE contas (id INTEGER PRIMARY KEY, titular TEXT, saldo REAL);");
+@exec("CREATE TABLE transacoes_pix (id INTEGER PRIMARY KEY AUTOINCREMENT, de_id INTEGER, para_id INTEGER, valor REAL, ts REAL);");
+
+# 3. Inicialização das contas (Alice e Bob começam com saldo)
+@exec("INSERT INTO contas (id, titular, saldo) VALUES (?, ?, ?);", [1, "Alice Souza", 100000.0]);
+@exec("INSERT INTO contas (id, titular, saldo) VALUES (?, ?, ?);", [2, "Bob Silva", 100000.0]);
+
+# 4. AQUECIMENTO DO CACHE NATIVO EM MEMÓRIA (Write-Behind / In-Memory State)
+# O cache atômico armazena o saldo em nanossegundos na RAM
+let saldosIniciais = @query("SELECT id, saldo FROM contas;");
+foreach (c in saldosIniciais) {
+    cache.set("saldo:conta:" + c["id"], c["saldo"]);
+}
+
+# Fila em memória para registro de transações
+let filaTransacoes = [];
+let contadorPix = 0;
+
+# 5. Handler do Microserviço Bancário HTTP (Ultra rápido em cache)
+fn api_bancaria(req) {
+    if (req.method == "POST" && req.path == "/pix") {
+        let de = req.body["de"];
+        let para = req.body["para"];
+        let valor = req.body["valor"];
+
+        let keyDe = "saldo:conta:" + de;
+        let keyPara = "saldo:conta:" + para;
+
+        let saldoDe = cache.get(keyDe);
+        if (saldoDe < valor) {
+            return http.response(422, { "sucesso": false, "erro": "Saldo insuficiente em cache" });
+        }
+
+        # Atualizações atômicas em cache (Zero overhead de lock no SQLite)
+        cache.decr(keyDe, valor);
+        cache.incr(keyPara, valor);
+
+        contadorPix = contadorPix + 1;
+        let pixId = contadorPix;
+
+        # Registra na fila para auditoria / sincronização
+        filaTransacoes.push({
+            "id": pixId,
+            "de": de,
+            "para": para,
+            "valor": valor,
+            "ts": time()
+        });
+
+        return { "sucesso": true, "pix_id": pixId, "valor": valor };
+    }
+
+    if (req.method == "GET" && req.path == "/saldos") {
+        return [
+            { "id": 1, "titular": "Alice Souza", "saldo": cache.get("saldo:conta:1") },
+            { "id": 2, "titular": "Bob Silva", "saldo": cache.get("saldo:conta:2") }
+        ];
+    }
+
+    return http.response(404, { "erro": "Rota desconhecida" });
+}
+
+# 6. Sobe o servidor HTTP na porta 6061 em segundo plano
+let server = http.serve(6061, api_bancaria, { "background": true });
+
+let total_transacoes = 100;
+print(">>> Executando bateria de teste com " + total_transacoes + " transações PIX...");
+print(">>> Modo: Cache Nativo em Memória (Write-Behind com sincronização final)");
+
+let tempos = [];
+let tempo_inicio_geral = time();
+let soma_tempos = 0;
+let estouros_count = 0;
+
+let i = 1;
+while (i <= total_transacoes) {
+    let valor_pix = (random(500, 50000)) / 100.0;
+    let de_conta = 1;
+    let para_conta = 2;
+    if (i % 2 == 0) {
+        de_conta = 2;
+        para_conta = 1;
+    }
+
+    let payload = {
+        "de": de_conta,
+        "para": para_conta,
+        "valor": valor_pix
+    };
+
+    let t_start = time();
+    let res = http.post("http://localhost:6061/pix", payload);
+    let t_end = time();
+
+    let duracao_ms = t_end - t_start;
+    tempos.push(duracao_ms);
+    soma_tempos = soma_tempos + duracao_ms;
+
+    let media_atual = soma_tempos / i;
+    if (i > 5 && duracao_ms >= (media_atual * 5.0)) {
+        estouros_count = estouros_count + 1;
+        print("[ALERTA ESTOURO!] Transação #" + i + " demorou " + duracao_ms + "ms (Média: " + media_atual + "ms)");
+    }
+
+    i = i + 1;
+}
+
+let tempo_fim_geral = time();
+let tempo_total_execucao = tempo_fim_geral - tempo_inicio_geral;
+let media_final = soma_tempos / total_transacoes;
+
+# 7. SINCRONIZAÇÃO EM MASSA (FLUSH / COMMIT BATCH NO SQLITE)
+print("\n>>> SINCRONIZANDO EM LOTE (FLUSH) PARA O BANCO DE DADOS...");
+let t_flush_inicio = time();
+
+@transaction {
+    # 1. Atualiza saldos consolidados finais
+    @exec("UPDATE contas SET saldo = ? WHERE id = 1;", [cache.get("saldo:conta:1")]);
+    @exec("UPDATE contas SET saldo = ? WHERE id = 2;", [cache.get("saldo:conta:2")]);
+
+    # 2. Insere todo o histórico de transações em uma única transação atômica
+    foreach (tx in filaTransacoes) {
+        @exec("INSERT INTO transacoes_pix (de_id, para_id, valor, ts) VALUES (?, ?, ?, ?);", [tx["de"], tx["para"], tx["valor"], tx["ts"]]);
+    }
+}
+
+let t_flush_fim = time();
+let duracao_flush = t_flush_fim - t_flush_inicio;
+print(">>> [FLUSH CONCLUÍDO] " + len(filaTransacoes) + " registros gravados no SQLite em " + duracao_flush + " ms!");
+
+# 8. Auditoria de integridade banco vs cache
+let saldos_db = @query("SELECT id, titular, saldo FROM contas ORDER BY id ASC;");
+let total_pix_db = @query("SELECT COUNT(*) as total, SUM(valor) as volume FROM transacoes_pix;");
+
+print("\n=================================================================");
+print("                     RELATÓRIO DE PERFORMANCE                    ");
+print("=================================================================");
+print("  Total de transações executadas : " + total_transacoes);
+print("  Tempo médio por PIX HTTP (ms)  : " + media_final + " ms");
+print("  Estouros detectados (> 5x média): " + estouros_count);
+print("  Tempo total requisições HTTP   : " + tempo_total_execucao + " ms (" + (tempo_total_execucao / 1000.0) + " segundos)");
+print("  Taxa de throughput (TPS)       : " + (total_transacoes / (tempo_total_execucao / 1000.0)) + " transações/segundo");
+print("  Tempo do Batch Flush no SQLite : " + duracao_flush + " ms para " + len(filaTransacoes) + " registros");
+print("-----------------------------------------------------------------");
+print("Saldos Finais Auditados no SQLite após Flush:");
+foreach (conta in saldos_db) {
+    print("  Conta #" + conta["id"] + " (" + conta["titular"] + ") -> Saldo: R$ " + conta["saldo"]);
+}
+print("Auditoria de transações gravadas: " + total_pix_db[0]["total"] + " transações | Volume total: R$ " + total_pix_db[0]["volume"]);
+print("=================================================================\n");
+
+server.stop();
+print("Servidor bancário finalizado com sucesso.");

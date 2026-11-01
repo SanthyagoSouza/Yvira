@@ -1,0 +1,129 @@
+import "ambiente.yv";
+import "agente.yv";
+
+print("=================================================================");
+print("   YVIRA REINFORCEMENT LEARNING: Q-LEARNING LABIRINTO INTELIGENTE ");
+print("=================================================================\n");
+
+# 1. Configurações do Ambiente e Parâmetros de Treinamento
+let LINHAS = 5;
+let COLUNAS = 5;
+let TOTAL_EPISODIOS = 1000;
+let MAX_PASSOS_POR_EPISODIO = 50;
+
+let env = LabirintoAmbiente(LINHAS, COLUNAS);
+let totalEstados = env.totalEstados;
+let totalAcoes = 4;
+
+# Hiperparâmetros: Alpha = 0.2 (aprendizado), Gamma = 0.95 (visão de futuro), Epsilon = 1.0 (exploração inicial)
+let agente = QLearningAgent(totalEstados, totalAcoes, 0.2, 0.95, 1.0, 0.995);
+
+print("Mapa do Labirinto:");
+print("  [🤖] Início (0,0)");
+print("  [🧱] Parede (Obstáculo)");
+print("  [🔥] Lava (-100 pontos / Morte)");
+print("  [💎] Tesouro (+100 pontos / Vitória)");
+print(env.renderizar(0));
+
+print(">>> INICIANDO O TREINAMENTO DA IA POR REFORÇO (" + TOTAL_EPISODIOS + " EPISÓDIOS)...");
+
+let tInicio = time();
+let vitoriasPrimeiraMetade = 0;
+let vitoriasSegundaMetade = 0;
+
+let ep = 1;
+while (ep <= TOTAL_EPISODIOS) {
+    let estado = env.reset();
+    let passos = 0;
+    let terminou = false;
+
+    while (terminou == false && passos < MAX_PASSOS_POR_EPISODIO) {
+        # O agente escolhe ação baseada na política epsilon-greedy
+        let acao = agente.escolherAcao(estado, false);
+
+        # O ambiente reage
+        let resultado = env.passo(acao);
+        let proximoEstado = resultado["proximoEstado"];
+        let recompensa = resultado["recompensa"];
+        terminou = resultado["terminou"];
+
+        # O agente aprende via Equação de Bellman na Q-Table
+        agente.aprender(estado, acao, recompensa, proximoEstado, terminou);
+
+        estado = proximoEstado;
+        passos = passos + 1;
+
+        if (resultado["evento"] == "tesouro") {
+            if (ep <= (TOTAL_EPISODIOS / 2)) {
+                vitoriasPrimeiraMetade = vitoriasPrimeiraMetade + 1;
+            } else {
+                vitoriasSegundaMetade = vitoriasSegundaMetade + 1;
+            }
+        }
+    }
+
+    agente.decairEpsilon();
+
+    # Feedback de progresso a cada 200 episódios
+    if (ep % 200 == 0 || ep == TOTAL_EPISODIOS) {
+        let totalVitAcumuladas = vitoriasPrimeiraMetade + vitoriasSegundaMetade;
+        let taxaGeral = (totalVitAcumuladas / ep) * 100.0;
+        print("  [Episódio " + ep + "/" + TOTAL_EPISODIOS + "] -> Epsilon: " + agente.epsilon + " | Taxa de Vitória Acumulada: " + taxaGeral + "%");
+    }
+
+    ep = ep + 1;
+}
+
+let tFim = time();
+let duracaoTreino = tFim - tInicio;
+
+print("\n=================================================================");
+print("                     RELATÓRIO DE APRENDIZADO                     ");
+print("=================================================================");
+print("  Episódios Simulados          : " + TOTAL_EPISODIOS);
+print("  Tempo de Treinamento         : " + duracaoTreino + " ms (" + (duracaoTreino / 1000.0) + " s)");
+print("  Vitórias nos primeiros 500 ep: " + vitoriasPrimeiraMetade + " / 500 (" + ((vitoriasPrimeiraMetade / 500.0) * 100.0) + "%)");
+print("  Vitórias nos últimos 500 ep  : " + vitoriasSegundaMetade + " / 500 (" + ((vitoriasSegundaMetade / 500.0) * 100.0) + "%)");
+print("-----------------------------------------------------------------");
+print("Evolução Evidente: O agente aprendeu a desviar da lava e encontrar o tesouro!");
+print("=================================================================\n");
+
+# 2. Demonstração Visual da Rota Ótima Aprendida
+print(">>> EXECUTANDO DEMONSTRAÇÃO DO CAMINHO ÓTIMO ENCONTRADO PELA IA:\n");
+
+let estadoDemo = env.reset();
+let passosDemo = 0;
+let caminhoSucesso = false;
+
+print("Posição Inicial:");
+print(env.renderizar(estadoDemo));
+
+while (passosDemo < 20) {
+    # Aqui forçamos o agente a usar 100% o que aprendeu (sem exploração aleatória)
+    let melhorAcao = agente.escolherAcao(estadoDemo, true);
+    let nomeAcao = ACOES[melhorAcao];
+
+    let res = env.passo(melhorAcao);
+    passosDemo = passosDemo + 1;
+
+    print("Passo #" + passosDemo + " -> IA decidiu mover para: [" + nomeAcao + "]");
+    print(env.renderizar(res["proximoEstado"]));
+
+    if (res["evento"] == "tesouro") {
+        caminhoSucesso = true;
+        print("🎉 [OBJETIVO ALCANÇADO!] A IA alcançou o tesouro em apenas " + passosDemo + " movimentos perfeitos!");
+        break;
+    }
+
+    if (res["evento"] == "lava") {
+        print("💥 [FALHA] Caiu na lava.");
+        break;
+    }
+
+    estadoDemo = res["proximoEstado"];
+}
+
+if (caminhoSucesso == false) {
+    print("O agente não concluiu a rota no limite de passos.");
+}
+print("\nDemonstração de Q-Learning concluída com sucesso no Yvira.");

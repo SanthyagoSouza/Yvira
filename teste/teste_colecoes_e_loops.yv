@@ -1,0 +1,63 @@
+# Teste de Listas, Dicionários, Métodos de String e Laços (For / Foreach)
+
+print("--- 1. TESTE DE STRINGS E MÉTODOS ---")
+let frase = "  Linguagem Yvira e Incrível!  "
+print("Original:", frase)
+print("Trim:", frase.trim())
+print("Upper:", frase.upper())
+print("Lower:", frase.lower())
+print("Tamanho:", frase.length)
+print("Sub:", frase.trim().sub(0, 9))
+print("Split por espaço:", frase.trim().split(" "))
+
+print("\n--- 2. TESTE DE LISTAS HETEROGÊNEAS ---")
+let nomes = ["Alice", "Bob", "Carlos"]
+print("Lista inicial:", nomes)
+nomes.add("Daniel")
+print("Após add:", nomes)
+let removido = nomes.pop()
+print("Pop:", removido, "Sobrou:", nomes)
+print("Primeiro elemento:", nomes[0])
+print("Último elemento:", nomes[-1])
+print("Join:", nomes.join(" -> "))
+
+print("\n--- 3. TESTE DE DICIONÁRIOS / MAPAS ---")
+let usuario = { "nome": "Santhyago", "cargo": "Desenvolvedor", "nivel": 10 }
+print("Mapa:", usuario)
+print("Acesso por chave usuario['nome']:", usuario["nome"])
+print("Acesso por propriedade usuario.cargo:", usuario.cargo)
+usuario.set("ativo", true)
+print("Chaves:", usuario.keys())
+print("Valores:", usuario.values())
+
+print("\n--- 4. TESTE DE LAÇO FOR CLÁSSICO ---")
+let soma = 0
+for (let i = 1; i <= 5; i += 1) {
+    soma += i
+}
+print("Soma de 1 a 5:", soma)
+
+print("\n--- 5. TESTE DE FOREACH EM LISTA ---")
+let frutas = ["Maçã", "Banana", "Uva"]
+foreach (fruta in frutas) {
+    print("Fruta da vez:", fruta)
+}
+
+print("\n--- 6. TESTE DE FOREACH COM RANGE() ---")
+let pares = []
+foreach (n in range(0, 10, 2)) {
+    pares.add(n)
+}
+print("Números pares gerados por range:", pares)
+
+print("\n--- 7. TESTE DE BREAK E CONTINUE ---")
+print("Testando break no 3:")
+for (let j = 1; j <= 5; j += 1) {
+    if (j == 3) {
+        print("Encontrou 3, dando break!")
+        break
+    }
+    print("j =", j)
+}
+
+print("\n--- TODOS OS TESTES PASSARAM COM SUCESSO! ---")

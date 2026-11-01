@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="Yvira.Ast/Yvira.Ast.csproj" />
+  <Project Path="Yvira.Cli/Yvira.Cli.csproj" />
+  <Project Path="Yvira.Lexer/Yvira.Lexer.csproj" />
+  <Project Path="Yvira.Parser/Yvira.Parser.csproj" />
+  <Project Path="Yvira.Semantic/Yvira.Semantic.csproj" />
+  <Project Path="Yvira.Vm/Yvira.Vm.csproj" />
+</Solution>

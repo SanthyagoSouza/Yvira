@@ -1,0 +1,68 @@
+# ==============================================================================
+# Projeto: Backend Auth, Multi-Bancos e Bot de Monitoramento Temporal com @time
+# Autor  : Santhyago Souza Ponciano
+# ==============================================================================
+
+import "fs" as fs;
+
+print("=== [YVIRA BACKEND] Inicializando Microservico & Bot ===");
+
+# 1. Configurando Conexoes: Banco Principal de Usuarios + Banco de Sessao/Auditoria
+@db("sqlite://usuarios_auth.db");
+@db.analytics("sqlite://:memory:");
+
+# Criando estrutura de dados
+@exec("CREATE TABLE IF NOT EXISTS contas (id INTEGER PRIMARY KEY, usuario TEXT, token TEXT, ativo INTEGER);");
+@exec.analytics("CREATE TABLE IF NOT EXISTS logs_auditoria (id INTEGER PRIMARY KEY, evento TEXT, hora TEXT);");
+
+# 2. Servico de Autenticacao
+class ServicoAuth {
+    fn criar_conta(usuario, token) {
+        let id = @exec("INSERT INTO contas (usuario, token, ativo) VALUES (?, ?, ?);", [usuario, token, 1]);
+        @exec.analytics("INSERT INTO logs_auditoria (evento, hora) VALUES (?, ?);", ["Conta registrada: " + usuario, "2026-10-27"]);
+        return id;
+    }
+
+    fn autenticar(usuario, token) {
+        # Sanitizacao nativa com anti-SQL injection
+        let res = @query("SELECT id, usuario, ativo FROM contas WHERE usuario = ? AND token = ?;", [usuario, token]);
+        if (res.length() > 0) {
+            let u = res[0];
+            if (u["ativo"] == 1) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+let auth = ServicoAuth();
+auth.criar_conta("santhyago", "token_secreto_123");
+auth.criar_conta("servico_worker", "worker_key_999");
+
+print("[AUTH] Contas criadas no banco seguro.");
+print("[AUTH] Validando login santhyago: " + auth.autenticar("santhyago", "token_secreto_123"));
+print("[AUTH] Validando login invalido : " + auth.autenticar("hacker", "' OR '1'='1"));
+
+# 3. Bot Reativo de Monitoramento de Sessao (@time e @stop)
+let ciclos = 0;
+
+fn bot_monitor_sessao() {
+    ciclos = ciclos + 1;
+    let contas_ativas = @query("SELECT count(*) as total FROM contas WHERE ativo = 1;");
+    let total = contas_ativas[0]["total"];
+    
+    print("[BOT TICK #" + ciclos + "] Monitorando contas ativas: " + total);
+    @exec.analytics("INSERT INTO logs_auditoria (evento, hora) VALUES (?, ?);", ["Check de contas ativas: " + total, "Tick " + ciclos]);
+    
+    # Ao completar 3 verificacoes, encerra o bot
+    if (ciclos >= 3) {
+        print("[BOT] Ciclo de monitoramento finalizado! Encerrando com @stop...");
+        @stop.bot_monitor_sessao();
+    }
+}
+
+print("\nIniciando bot de monitoramento @time a cada 1 segundo...");
+@time.bot_monitor_sessao(1);
+
+print("Microservico ativo. Scheduler gerenciando o ciclo de vida do processo em background.");

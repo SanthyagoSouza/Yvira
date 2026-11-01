@@ -1,0 +1,44 @@
+========================================================================
+             CLICK BATTLE ARENA - INSTRUÇÕES DE EXECUÇÃO
+========================================================================
+
+Este jogo utiliza o novíssimo SUPERPODER AUTO-DISCOVERY nativo do Yvira!
+Você NÃO precisa digitar ou configurar IP: os computadores encontram o
+servidor automaticamente na rede local (Wi-Fi ou Cabo)!
+
+------------------------------------------------------------------------
+1. NO COMPUTADOR SERVIDOR (Onde o server.yv roda)
+------------------------------------------------------------------------
+Passo A) Abrir o terminal na pasta do jogo e iniciar o servidor:
+   cd exemplos\click_battle_game
+   yvira run server.yv
+
+   Você verá no terminal:
+   [Servidor Online]: Click Battle Arena ativo na porta 7070
+   [Beacon UDP]: Anunciando servidor na rede local automaticamente!
+   [Servidor Pronto]: Aguardando guerreiros de clique...
+
+Passo B) Para jogar neste computador servidor:
+   Basta dar 2 cliques em ClickBattleArena.exe da pasta dist!
+
+------------------------------------------------------------------------
+2. NO SEGUNDO COMPUTADOR (Pela Rede Local Wi-Fi ou Cabo)
+------------------------------------------------------------------------
+Passo A) Copie a pasta "dist" para o segundo computador.
+
+Passo B) Dê 2 cliques no executável:
+   ClickBattleArena.exe
+
+   O jogo encontra o servidor sozinho em menos de 2 segundos e conecta!
+   Sem digitar IP, sem portas, zero configurações!
+
+------------------------------------------------------------------------
+3. COMO JOGAR
+------------------------------------------------------------------------
+1. Digite seu apelido de guerreiro e clique em "ENTRAR NA ARENA".
+2. Ambos os jogadores se verão instantaneamente na lista do Lobby.
+3. Clique em "DESAFIAR".
+4. O oponente receberá a notificação em tempo real na tela.
+5. Ao clicar em "ACEITAR", o duelo de 10 segundos comeca!
+6. Clique freneticamente para puxar a barra de cabo de guerra e vencer!
+========================================================================

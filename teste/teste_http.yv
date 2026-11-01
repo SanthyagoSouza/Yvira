@@ -1,0 +1,18 @@
+﻿import "http" as http
+
+print("--- Teste do Modulo http ---")
+
+# Fazendo requisicao GET a uma API publica simples (JSONPlaceholder)
+try {
+    let res = http.get("https://jsonplaceholder.typicode.com/todos/1")
+    print("Status HTTP:", res.status)
+    print("Sucesso (ok)?:", res.ok)
+    
+    # Fazendo o parse do JSON retornado diretamente
+    let todo = res.json()
+    print("ID:", todo.id)
+    print("Titulo:", todo.title)
+    print("Concluido?:", todo.completed)
+} catch (erro) {
+    print("Falha na requisicao http:", erro)
+}

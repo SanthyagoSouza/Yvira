@@ -1,0 +1,26 @@
+﻿fn somar(a, b) {
+    return a + b
+}
+
+fn dobro(n) {
+    return n * 2
+}
+
+fn fatorial(n) {
+    if (n <= 1) {
+        return 1
+    }
+    return n * fatorial(n - 1)
+}
+
+let x = somar(15, 25)
+print("Resultado de somar(15, 25):", x)
+
+let y = dobro(x)
+print("Resultado de dobro(x):", y)
+
+let fat5 = fatorial(5)
+print("Fatorial de 5 (recursao na VM):", fat5)
+
+let fat7 = fatorial(7)
+print("Fatorial de 7 (recursao na VM):", fat7)

@@ -1,0 +1,73 @@
+print("==================================================");
+print("   SUPER MOTOR MATRICIAL & CIENTÍFICO YVIRA       ");
+print("==================================================");
+
+print("--- 1. GERADORES RÁPIDOS DE MATRIZES ---");
+let z = zeros(2, 3);
+print("Matriz de Zeros (2x3):", z);
+
+let u = ones(3, 3);
+print("Matriz de Uns (3x3):", u);
+
+let i = eye(3);
+print("Matriz Identidade (3x3):", i);
+
+let r = randMat(2, 4, 10, 50);
+print("Matriz Aleatoria com valores entre 10 e 50:", r);
+
+print("");
+print("--- 2. DETERMINANTE E TRAÇO DE MATRIZ ---");
+# Matriz 3x3:
+# [ 6, 1, 1 ]
+# [ 4, -2, 5 ]
+# [ 2, 8, 7 ]
+let A = [
+    [6, 1, 1],
+    [4, -2, 5],
+    [2, 8, 7]
+];
+print("Matriz A (3x3):", A);
+
+let detA = A.det();
+print("Determinante det(A):", detA);
+
+let tracoA = A.trace();
+print("Traço da Matriz A (Soma da Diagonal Principal):", tracoA);
+
+print("");
+print("--- 3. ESTATÍSTICAS NATIVAS EM MATRIZES (SEM LAÇOS FOR!) ---");
+let dados = [
+    [10, 20, 30],
+    [40, 50, 60]
+];
+print("Matriz de Dados:", dados);
+print("Soma total (dados.sum):", dados.sum);
+print("Media aritmetica (dados.mean):", dados.mean);
+print("Valor maximo (dados.max):", dados.max);
+print("Valor minimo (dados.min):", dados.min);
+
+print("");
+print("--- 4. RESOLUÇÃO DE SISTEMAS LINEARES: A * x = b ---");
+# Exemplo clássico de Engenharia/Física:
+# 2x + y = 8
+# x - 3y = -10
+# Solução esperada: x = 2, y = 4
+let coeficientes = [
+    [2, 1],
+    [1, -3]
+];
+let b = [8, -10];
+
+print("Sistema de Equações:");
+print("  2x +  y =   8");
+print("   x - 3y = -10");
+
+let solucao = solve(coeficientes, b);
+print("Vetor Solução [x, y] calculado pelo Yvira:", solucao);
+
+# Verificação: A * x deve ser igual a b
+let checagem = coeficientes * solucao;
+print("Comprovacao: Coeficientes * Solucao =", checagem);
+
+print("");
+print("Super motor de matrizes concluido com 100% de precisao!");

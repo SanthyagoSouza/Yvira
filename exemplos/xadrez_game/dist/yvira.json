@@ -1,0 +1,8 @@
+{
+  "name": "XadrezPortatil",
+  "version": "1.0.0",
+  "description": "Projeto desenvolvido na linguagem Yvira",
+  "entry": "main.yv",
+  "author": "Yvira Developer",
+  "dependencies": {}
+}

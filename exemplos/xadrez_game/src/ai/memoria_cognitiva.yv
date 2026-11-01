@@ -1,0 +1,100 @@
+# Módulo de Memória Cognitiva e Aprendizado Espelho da IA
+# Registra as táticas do jogador humano e permite que a IA replique seus truques contra ele
+
+class MemoriaCognitiva {
+    fn init() {
+        this.caminhoArquivo = "dados/aprendizado_humano.json";
+        this.historicoPartidaAtual = [];
+        this.memoria = null;
+        this.carregar();
+    }
+
+    fn carregar() {
+        try {
+            let conteudo = ler_arquivo(this.caminhoArquivo);
+            if (conteudo != null && conteudo != "") {
+                this.memoria = json_parse(conteudo);
+            }
+        } catch (e) {
+            this.memoria = {
+                "totalPartidas": 0,
+                "vitoriasHumano": 0,
+                "vitoriasIa": 0,
+                "jogadasFavoritasHumano": {},
+                "sequenciasHumano": []
+            };
+        }
+
+        if (this.memoria == null) {
+            this.memoria = {
+                "totalPartidas": 0,
+                "vitoriasHumano": 0,
+                "vitoriasIa": 0,
+                "jogadasFavoritasHumano": {},
+                "sequenciasHumano": []
+            };
+        }
+    }
+
+    fn salvar() {
+        try {
+            let jsonTexto = json_stringify(this.memoria);
+            escrever_arquivo(this.caminhoArquivo, jsonTexto);
+        } catch (e) {
+            print("[IA Cognitiva]: Erro ao salvar memoria: " + e);
+        }
+    }
+
+    # Registra cada jogada executada pelo humano durante a partida
+    fn registrarLanceHumano(origR, origC, destR, destC, tipoPeca) {
+        let chave = origR + "_" + origC + "->" + destR + "_" + destC;
+        this.historicoPartidaAtual.push({
+            "chave": chave,
+            "origR": origR,
+            "origC": origC,
+            "destR": destR,
+            "destC": destC,
+            "tipo": tipoPeca
+        });
+
+        let favs = this.memoria["jogadasFavoritasHumano"];
+        if (favs == null) {
+            favs = {};
+            this.memoria["jogadasFavoritasHumano"] = favs;
+        }
+
+        let pesoAtual = favs[chave] == null ? 0 : favs[chave];
+        favs[chave] = pesoAtual + 1;
+    }
+
+    # Verifica se a IA reconhece o movimento do humano para antecipar ou contra-atacar
+    fn consultarLanceEspelho(linhaEspelhoOrig, colEspelhoOrig, linhaEspelhoDest, colEspelhoDest) {
+        # Converte as coordenadas do humano para a perspectiva invertida da IA
+        let chaveInvertida = linhaEspelhoOrig + "_" + colEspelhoOrig + "->" + linhaEspelhoDest + "_" + colEspelhoDest;
+        let favs = this.memoria["jogadasFavoritasHumano"];
+        if (favs != null && favs[chaveInvertida] != null) {
+            return favs[chaveInvertida];
+        }
+        return 0;
+    }
+
+    # Finaliza a partida salvando as sequências aprendidas
+    fn registrarFimDePartida(vencedor) {
+        this.memoria["totalPartidas"] = this.memoria["totalPartidas"] + 1;
+        if (vencedor == "humano") {
+            this.memoria["vitoriasHumano"] = this.memoria["vitoriasHumano"] + 1;
+            # Se o humano venceu, a IA grava toda a sequência vencedora dele para replicar depois!
+            let seqs = this.memoria["sequenciasHumano"];
+            if (seqs == null) {
+                seqs = [];
+                this.memoria["sequenciasHumano"] = seqs;
+            }
+            seqs.push(this.historicoPartidaAtual);
+        } else if (vencedor == "ia") {
+            this.memoria["vitoriasIa"] = this.memoria["vitoriasIa"] + 1;
+        }
+
+        this.salvar();
+        this.historicoPartidaAtual = [];
+    }
+}

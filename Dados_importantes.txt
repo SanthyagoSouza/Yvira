@@ -1,0 +1,20 @@
+Sempre rodar isso aqui caso de problemas de variaveis de ambiente no computador
+
+$env:Path = "C:\Program Files\dotnet\;" + $env:Path
+
+
+Isso aqui e pra criar o projeto do zero
+dotnet new sln -n Beta
+dotnet new console -n Beta.Cli
+dotnet new classlib -n Beta.Lexer
+dotnet new classlib -n Beta.Parser
+dotnet new classlib -n Beta.Ast
+dotnet new classlib -n Beta.Semantic
+dotnet new classlib -n Beta.Vm
+dotnet sln add Beta.Cli/Beta.Cli.csproj
+dotnet sln add Beta.Lexer/Beta.Lexer.csproj
+dotnet sln add Beta.Parser/Beta.Parser.csproj
+dotnet sln add Beta.Ast/Beta.Ast.csproj
+dotnet sln add Beta.Semantic/Beta.Semantic.csproj
+dotnet sln add Beta.Vm/Beta.Vm.csproj
+dotnet add Beta.Cli/Beta.Cli.csproj reference Beta.Lexer/Beta.Lexer.csproj

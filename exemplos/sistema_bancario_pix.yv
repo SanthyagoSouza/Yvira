@@ -1,0 +1,125 @@
+import "http";
+
+print("=================================================================");
+print("     BANCO YVIRA: SISTEMA DE PROCESSAMENTO PIX EM TEMPO REAL     ");
+print("=================================================================\n");
+
+# 1. Configuração do Banco de Dados SQLite em memória para alta performance
+@db("sqlite://:memory:");
+
+# 2. Criação das tabelas bancárias
+@exec("CREATE TABLE contas (id INTEGER PRIMARY KEY, titular TEXT, saldo REAL);");
+@exec("CREATE TABLE transacoes_pix (id INTEGER PRIMARY KEY AUTOINCREMENT, de_id INTEGER, para_id INTEGER, valor REAL, ts REAL);");
+
+# 3. Inicialização das contas (Alice e Bob começam com saldo)
+@exec("INSERT INTO contas (id, titular, saldo) VALUES (?, ?, ?);", [1, "Alice Souza", 100000.0]);
+@exec("INSERT INTO contas (id, titular, saldo) VALUES (?, ?, ?);", [2, "Bob Silva", 100000.0]);
+
+# 4. Handler do Microserviço Bancário HTTP
+fn api_bancaria(req) {
+    if (req.method == "POST" && req.path == "/pix") {
+        let de = req.body["de"];
+        let para = req.body["para"];
+        let valor = req.body["valor"];
+
+        # Executa a transferência atômica com banco nativo
+        @exec("UPDATE contas SET saldo = saldo - ? WHERE id = ?;", [valor, de]);
+        @exec("UPDATE contas SET saldo = saldo + ? WHERE id = ?;", [valor, para]);
+        let pix_id = @exec("INSERT INTO transacoes_pix (de_id, para_id, valor, ts) VALUES (?, ?, ?, ?);", [de, para, valor, time()]);
+
+        return { "sucesso": true, "pix_id": pix_id, "valor": valor };
+    }
+
+    if (req.method == "GET" && req.path == "/saldos") {
+        let contas = @query("SELECT id, titular, saldo FROM contas ORDER BY id ASC;");
+        return contas;
+    }
+
+    return http.response(404, { "erro": "Rota desconhecida" });
+}
+
+# 5. Sobe o servidor HTTP na porta 6060 em segundo plano
+let server = http.serve(6060, api_bancaria, { "background": true });
+
+# 6. Pergunta ao usuário a quantidade de transações a testar
+print("Informe a quantidade de transações PIX a serem processadas no teste:");
+let input_qtd = input("Quantidade: ");
+let total_transacoes = to_number(input_qtd);
+
+if (total_transacoes <= 0) {
+    total_transacoes = 100;
+    print("Valor padrão adotado: 100 transações.");
+}
+
+print("\n>>> INICIANDO O DISPARO DE " + total_transacoes + " PIX VIA HTTP + BANCO DE DADOS NATIVO...");
+
+let tempos = [];
+let tempo_inicio_geral = time();
+let soma_tempos = 0;
+let estouros_count = 0;
+
+let i = 1;
+while (i <= total_transacoes) {
+    # Randomiza valores do PIX entre 5.0 e 500.0
+    let valor_centavos = random(500, 50000);
+    let valor_pix = valor_centavos / 100.0;
+
+    # Alterna de quem envia e quem recebe para movimentar as duas pontas
+    let de_conta = 1;
+    let para_conta = 2;
+    if (i % 2 == 0) {
+        de_conta = 2;
+        para_conta = 1;
+    }
+
+    let payload = {
+        "de": de_conta,
+        "para": para_conta,
+        "valor": valor_pix
+    };
+
+    let t_start = time();
+    let res = http.post("http://localhost:6060/pix", payload);
+    let t_end = time();
+
+    let duracao_ms = t_end - t_start;
+    tempos.push(duracao_ms);
+    soma_tempos = soma_tempos + duracao_ms;
+
+    # Média móvel atual até o momento
+    let media_atual = soma_tempos / i;
+
+    # Verifica se houve estouro de tempo 5x acima da média (a partir da 5ª requisição para calibração)
+    if (i > 5 && duracao_ms >= (media_atual * 5.0)) {
+        estouros_count = estouros_count + 1;
+        print("[ALERTA ESTOURO DE TEMPO!] Transação #" + i + " demorou " + duracao_ms + "ms (Média: " + media_atual + "ms | > 5x)");
+    }
+
+    i = i + 1;
+}
+
+let tempo_fim_geral = time();
+let tempo_total_execucao = tempo_fim_geral - tempo_inicio_geral;
+let media_final = soma_tempos / total_transacoes;
+
+# 7. Consulta final aos saldos consolidados
+let saldos_finais = http.get("http://localhost:6060/saldos").json();
+
+print("\n=================================================================");
+print("                     RELATÓRIO DE PERFORMANCE                    ");
+print("=================================================================");
+print("  Total de transações executadas : " + total_transacoes);
+print("  Tempo médio por PIX (ms)       : " + media_final + " ms");
+print("  Estouros detectados (> 5x média): " + estouros_count);
+print("  Tempo total do teste           : " + tempo_total_execucao + " ms (" + (tempo_total_execucao / 1000.0) + " segundos)");
+print("  Taxa de throughput (TPS)       : " + (total_transacoes / (tempo_total_execucao / 1000.0)) + " transações/segundo");
+print("-----------------------------------------------------------------");
+print("Saldos Finais Consolidados:");
+foreach (conta in saldos_finais) {
+    print("  Conta #" + conta["id"] + " (" + conta["titular"] + ") -> Saldo: R$ " + conta["saldo"]);
+}
+print("=================================================================\n");
+
+# Encerra o servidor de teste
+server.stop();
+print("Servidor bancário finalizado com sucesso.");

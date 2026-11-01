@@ -1,0 +1,85 @@
+# Motor de Indicadores Técnicos Quantitativos em Matrizes e Listas
+
+class IndicadoresOuro {
+    # 1. Média Móvel Simples (SMA)
+    fn sma(candles, periodo, indiceAtual) {
+        if (indiceAtual < (periodo - 1)) return null;
+
+        let soma = 0.0;
+        let k = 0;
+        while (k < periodo) {
+            let c = candles[indiceAtual - k];
+            soma = soma + c["close"];
+            k = k + 1;
+        }
+        return soma / periodo;
+    }
+
+    # 2. RSI - Relative Strength Index (Índice de Força Relativa)
+    fn rsi(candles, periodo, indiceAtual) {
+        if (indiceAtual < periodo) return 50.0;
+
+        let somaAltas = 0.0;
+        let somaBaixas = 0.0;
+
+        let k = 0;
+        while (k < periodo) {
+            let idx = indiceAtual - k;
+            let cAtual = candles[idx]["close"];
+            let cAnterior = candles[idx - 1]["close"];
+            let dif = cAtual - cAnterior;
+
+            if (dif > 0) {
+                somaAltas = somaAltas + dif;
+            } else {
+                somaBaixas = somaBaixas + (-dif);
+            }
+            k = k + 1;
+        }
+
+        if (somaBaixas == 0.0) return 100.0;
+        if (somaAltas == 0.0) return 0.0;
+
+        let mediaAlta = somaAltas / periodo;
+        let mediaBaixa = somaBaixas / periodo;
+        let rs = mediaAlta / mediaBaixa;
+        let rsiVal = 100.0 - (100.0 / (1.0 + rs));
+
+        return rsiVal;
+    }
+
+    # 3. Momentum / Taxa de Variação dos últimos N candles
+    fn momentum(candles, periodo, indiceAtual) {
+        if (indiceAtual < periodo) return 0.0;
+        let atual = candles[indiceAtual]["close"];
+        let base = candles[indiceAtual - periodo]["close"];
+        return ((atual - base) / base) * 100.0; # Variação percentual
+    }
+
+    # 4. Volatilidade ATR Simples (Average True Range em Dólares)
+    fn atr(candles, periodo, indiceAtual) {
+        if (indiceAtual < periodo) return 5.0; # $5 default para XAUUSD
+
+        let somaTR = 0.0;
+        let k = 0;
+        while (k < periodo) {
+            let idx = indiceAtual - k;
+            let cAtual = candles[idx];
+            let cAnterior = candles[idx - 1];
+
+            let tr1 = cAtual["high"] - cAtual["low"];
+            let tr2 = cAtual["high"] - cAnterior["close"];
+            if (tr2 < 0) tr2 = -tr2;
+            let tr3 = cAtual["low"] - cAnterior["close"];
+            if (tr3 < 0) tr3 = -tr3;
+
+            let tr = tr1;
+            if (tr2 > tr) tr = tr2;
+            if (tr3 > tr) tr = tr3;
+
+            somaTR = somaTR + tr;
+            k = k + 1;
+        }
+        return somaTR / periodo;
+    }
+}

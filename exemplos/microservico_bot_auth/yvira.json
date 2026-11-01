@@ -1,0 +1,7 @@
+{
+  "name": "microservico_bot_auth",
+  "version": "1.0.0",
+  "description": "Backend com Autenticacao, Multi-Bancos e Bot de Monitoramento Temporal @time",
+  "entry": "main.yv",
+  "author": "Santhyago Souza Ponciano"
+}

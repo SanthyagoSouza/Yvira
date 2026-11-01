@@ -1,0 +1,50 @@
+{
+  "name": "yvira-language",
+  "displayName": "Yvira Language Support",
+  "description": "Suporte à linguagem Yvira (.yv): destaque de sintaxe, reconhecimento de tipo, ícone e configurações.",
+  "version": "0.0.4",
+  "main": "./extension.js",
+  "activationEvents": [
+    "onLanguage:yvira"
+  ],
+  "publisher": "santhyago",
+  "engines": {
+    "vscode": "^1.70.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "yvira",
+        "aliases": [
+          "Yvira",
+          "yvira"
+        ],
+        "extensions": [
+          ".yv"
+        ],
+        "icon": {
+          "light": "./icons/yvira.svg",
+          "dark": "./icons/yvira.svg"
+        },
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "yvira",
+        "scopeName": "source.yv",
+        "path": "./syntaxes/yvira.tmLanguage.json"
+      }
+    ],
+    "iconThemes": [
+      {
+        "id": "yvira-icon-theme",
+        "label": "Yvira Icons",
+        "path": "./icon-theme.json"
+      }
+    ]
+  }
+}

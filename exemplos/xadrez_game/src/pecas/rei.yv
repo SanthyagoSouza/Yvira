@@ -1,0 +1,118 @@
+# Regras de Movimentação do Rei no Xadrez (King Rules)
+
+class Rei {
+    fn init(cor) {
+        this.cor = cor; # "brancas" ou "pretas"
+        this.tipo = "rei";
+        this.simbolo = cor == "brancas" ? "♔" : "♚";
+    }
+
+    # O Rei se move exatamente 1 casa em qualquer uma das 8 direções.
+    # Possui também as jogadas especiais de Roque Pequeno e Roque Grande.
+    fn obterMovimentosValidos(linha, coluna, matriz) {
+        let movimentos = [];
+
+        # 8 direções de 1 passo: [dLinha, dColuna]
+        let passos = [
+            [-1, 0],  # Cima
+            [1, 0],   # Baixo
+            [0, -1],  # Esquerda
+            [0, 1],   # Direita
+            [-1, -1], # Cima-Esquerda
+            [-1, 1],  # Cima-Direita
+            [1, -1],  # Baixo-Esquerda
+            [1, 1]    # Baixo-Direita
+        ];
+
+        let i = 0;
+        while (i < len(passos)) {
+            let passo = passos[i];
+            let r = linha + passo[0];
+            let c = coluna + passo[1];
+
+            # Verifica se a casa está dentro do tabuleiro 8x8
+            if (r >= 0 && r < 8 && c >= 0 && c < 8) {
+                let pecaDestino = matriz[r][c];
+
+                if (pecaDestino == null || pecaDestino == "") {
+                    # Casa vazia: movimento normal de 1 casa permitido
+                    movimentos.push({
+                        "paraLinha": r,
+                        "paraColuna": c,
+                        "tipo": "normal"
+                    });
+                } else {
+                    # Peça de cor diferente: captura permitida!
+                    if (pecaDestino["cor"] != this.cor) {
+                        movimentos.push({
+                            "paraLinha": r,
+                            "paraColuna": c,
+                            "tipo": "captura"
+                        });
+                    }
+                }
+            }
+
+            i = i + 1;
+        }
+
+        # ========================================================
+        # JOGADAS ESPECIAIS: ROQUE PEQUENO E ROQUE GRANDE
+        # ========================================================
+        let pecaRei = matriz[linha][coluna];
+        let jaMoveu = false;
+        if (pecaRei != null && pecaRei["jaMoveu"] != null) {
+            jaMoveu = pecaRei["jaMoveu"];
+        }
+
+        # O Rei só pode rocar se nunca tiver se movido antes
+        if (!jaMoveu) {
+            # 1. Roque Pequeno (Ala do Rei):
+            # Coluna 4 (Rei) -> Coluna 6 (g1/g8). Casas 5 e 6 devem estar vazias.
+            # Torre na Coluna 7 (h1/h8) não pode ter se movido.
+            let torrePequeno = matriz[linha][7];
+            if (torrePequeno != null && torrePequeno["tipo"] == "torre" && torrePequeno["cor"] == this.cor) {
+                let torrePequenoMoveu = torrePequeno["jaMoveu"] == null ? false : torrePequeno["jaMoveu"];
+                if (!torrePequenoMoveu) {
+                    let casa5 = matriz[linha][5];
+                    let casa6 = matriz[linha][6];
+                    if ((casa5 == null || casa5 == "") && (casa6 == null || casa6 == "")) {
+                        movimentos.push({
+                            "paraLinha": linha,
+                            "paraColuna": 6,
+                            "tipo": "roque_pequeno",
+                            "torreLinha": linha,
+                            "torreColunaOrig": 7,
+                            "torreColunaDest": 5
+                        });
+                    }
+                }
+            }
+
+            # 2. Roque Grande (Ala da Dama):
+            # Coluna 4 (Rei) -> Coluna 2 (c1/c8). Casas 1, 2 e 3 devem estar vazias.
+            # Torre na Coluna 0 (a1/a8) não pode ter se movido.
+            let torreGrande = matriz[linha][0];
+            if (torreGrande != null && torreGrande["tipo"] == "torre" && torreGrande["cor"] == this.cor) {
+                let torreGrandeMoveu = torreGrande["jaMoveu"] == null ? false : torreGrande["jaMoveu"];
+                if (!torreGrandeMoveu) {
+                    let casa1 = matriz[linha][1];
+                    let casa2 = matriz[linha][2];
+                    let casa3 = matriz[linha][3];
+                    if ((casa1 == null || casa1 == "") && (casa2 == null || casa2 == "") && (casa3 == null || casa3 == "")) {
+                        movimentos.push({
+                            "paraLinha": linha,
+                            "paraColuna": 2,
+                            "tipo": "roque_grande",
+                            "torreLinha": linha,
+                            "torreColunaOrig": 0,
+                            "torreColunaDest": 3
+                        });
+                    }
+                }
+            }
+        }
+
+        return movimentos;
+    }
+}

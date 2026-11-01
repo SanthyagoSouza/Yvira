@@ -1,0 +1,34 @@
+# Modelos de Domínio Orientados a Objetos (POO)
+
+class ContaBancaria {
+    fn init(id, titular, saldoCentavos) {
+        this.id = id;
+        this.titular = titular;
+        this.saldoCentavos = saldoCentavos;
+    }
+
+    fn formatarMoeda() {
+        let reais = this.saldoCentavos / 100.0;
+        return "R$ " + reais;
+    }
+}
+
+class PixTransacao {
+    fn init(id, deId, paraId, valorCentavos, ts) {
+        this.id = id;
+        this.deId = deId;
+        this.paraId = paraId;
+        this.valorCentavos = valorCentavos;
+        this.ts = ts;
+    }
+
+    fn toMap() {
+        return {
+            "id": this.id,
+            "de": this.deId,
+            "para": this.paraId,
+            "valor_centavos": this.valorCentavos,
+            "ts": this.ts
+        };
+    }
+}

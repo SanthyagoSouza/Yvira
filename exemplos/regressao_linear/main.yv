@@ -1,0 +1,118 @@
+﻿import "fs" as fs
+
+print("==========================================================")
+print("     SISTEMA DE PREVISAO DE IMOVEIS - MACHINE LEARNING     ")
+print("               Desenvolvido na Linguagem Yvira            ")
+print("==========================================================\n")
+
+# 1. Classe de Regressao Linear por Minimos Quadrados Ordinarios (OLS)
+# Equacao Normal: beta = (X^T * X)^(-1) * X^T * y
+class RegressaoLinear {
+    fn init() {
+        this.pesos = null
+        this.treinado = false
+    }
+
+    # Treina o modelo encontrando os coeficientes beta analiticamente
+    fn treinar(X, y) {
+        print("[Treinamento] Calculando X transposta (X^T)...")
+        let Xt = X.T
+
+        print("[Treinamento] Multiplicando Xt * X...")
+        let XtX = Xt * X
+
+        print("[Treinamento] Invertendo matriz de covariancia (XtX)^(-1)...")
+        let XtX_inv = XtX.inverse()
+
+        print("[Treinamento] Multiplicando inversa por Xt...")
+        let inv_Xt = XtX_inv * Xt
+
+        print("[Treinamento] Calculando vetor de pesos otimos beta...")
+        this.pesos = inv_Xt * y
+        this.treinado = true
+        print("[Treinamento] Modelo treinado com sucesso!\n")
+    }
+
+    # Realiza predicoes para novas amostras
+    fn prever(X_novos) {
+        if (not this.treinado) {
+            throw "O modelo ainda nao foi treinado!"
+        }
+        return X_novos * this.pesos
+    }
+
+    fn obterPesos() {
+        return this.pesos
+    }
+}
+
+# 2. Carregar e Processar Dados do CSV
+print("[1/4] Carregando dataset de imoveis (imoveis.csv)...")
+let linhas = fs.readLines("imoveis.csv")
+
+# Matrizes de treino
+# Features X: [bias(1), area_m2, quartos]
+# Targets  y: [preco_milhares]
+let X_dados = [
+    [1.0, 50.0, 1.0],
+    [1.0, 65.0, 2.0],
+    [1.0, 78.0, 2.0],
+    [1.0, 92.0, 3.0],
+    [1.0, 110.0, 3.0],
+    [1.0, 135.0, 4.0],
+    [1.0, 150.0, 4.0],
+    [1.0, 180.0, 5.0]
+]
+
+let y_dados = [
+    [160.0],
+    [210.0],
+    [245.0],
+    [290.0],
+    [340.0],
+    [410.0],
+    [460.0],
+    [540.0]
+]
+
+print("Amostras carregadas:", X_dados.rows, "imoveis com", X_dados.cols - 1, "caracteristicas cada.\n")
+
+# 3. Instanciacao e Treinamento do Modelo OLS
+print("[2/4] Instanciando e treinando modelo de Regressao Linear...")
+let modelo = RegressaoLinear()
+modelo.treinar(X_dados, y_dados)
+
+let betas = modelo.obterPesos()
+print("Parametros aprendidos pelo modelo:")
+print("  - Intercepto (Beta 0) : R$", betas.get(0, 0), "mil")
+print("  - Preco por m2 (Beta 1): R$", betas.get(1, 0), "mil por m2")
+print("  - Preco por quarto (Beta 2): R$", betas.get(2, 0), "mil por quarto\n")
+
+# 4. Avaliacao: Previsao para Novos Imoveis no Mercado
+print("[3/4] Realizando simulacoes e previsoes para novos imoveis no mercado:")
+
+# Novo Imovel 1: 70m2, 2 quartos
+# Novo Imovel 2: 120m2, 3 quartos
+# Novo Imovel 3: 200m2, 4 quartos
+let novos_imoveis = [
+    [1.0, 70.0, 2.0],
+    [1.0, 120.0, 3.0],
+    [1.0, 200.0, 4.0]
+]
+
+let predicoes = modelo.prever(novos_imoveis)
+
+print("  Imovel 1 (70m2, 2 quartos)  -> Preco Estimado: R$", predicoes.get(0, 0) * 1000)
+print("  Imovel 2 (120m2, 3 quartos) -> Preco Estimado: R$", predicoes.get(1, 0) * 1000)
+print("  Imovel 3 (200m2, 4 quartos) -> Preco Estimado: R$", predicoes.get(2, 0) * 1000)
+
+# 5. Exportacao do Relatorio de Previsoes em CSV
+print("\n[4/4] Salvando relatorio de predicoes em 'previsoes_mercado.csv' via modulo fs...")
+let relatorio = [
+    [70.0, 2.0, predicoes.get(0, 0)],
+    [120.0, 3.0, predicoes.get(1, 0)],
+    [200.0, 4.0, predicoes.get(2, 0)]
+]
+fs.writeCsv("previsoes_mercado.csv", relatorio)
+print("Relatorio gerado com sucesso!")
+print("==========================================================")

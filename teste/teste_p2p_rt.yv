@@ -1,0 +1,40 @@
+# Teste ponta a ponta de conexao e envio de mensagem
+let s = @realtime.servidor({
+    "porta": 7890,
+    "segredo": "TESTE123",
+    "rotacao": 30
+});
+
+fn onMsg(cliente, dados) {
+    print("[SERVIDOR RECEBEU]: " + dados.msg);
+    cliente.emitir("resposta", { "status": "OK" });
+}
+
+s.ao("ola", onMsg);
+s.iniciar();
+
+let c = @realtime.cliente({
+    "endereco": "ws://localhost:7890",
+    "segredo": "TESTE123",
+    "rotacao": 30
+});
+
+fn onResposta(dados) {
+    print("[CLIENTE RECEBEU RESPOSTA]: " + dados.status);
+}
+
+fn onConectar() {
+    print("[CLIENTE CONECTOU] Enviando mensagem 'ola'...");
+    c.emitir("ola", { "msg": "TESTE_DE_REDE" });
+}
+
+c.ao("conectar", onConectar);
+c.ao("resposta", onResposta);
+c.conectar();
+
+let t = 0;
+while (t < 15) {
+    dormir(100);
+    t = t + 1;
+}
+print("[TESTE CONCLUIDO]");

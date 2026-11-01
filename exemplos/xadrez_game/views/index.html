@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xadrez Master - Yvira Engine</title>
+    <link rel="stylesheet" href="assets/css/global.css">
+    <link rel="stylesheet" href="assets/css/yvira-shell.css">
+    <link rel="stylesheet" href="assets/css/menu.css">
+</head>
+<body>
+    <div class="janela-container">
+        <!-- Barra de Título Customizada Arrastável -->
+                <!-- BARRA NATIVA YVIRA COM ABAS E CONTROLES (Arrastavel) -->
+        <header class="yvira-titlebar" data-arrastavel="true">
+            <div class="yvira-app-icon">Y</div>
+            <!-- Trilho de Abas Dinamicas -->
+            <div class="yvira-tabs" id="yvira_tabs"></div>
+            <button class="yvira-new-tab" id="yvira_new_tab" title="Nova Aba">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+            <!-- Botoes de Janela Estilo Yvira -->
+            <div class="yvira-controls">
+                <button class="yvira-btn min" onclick="minimizarJanelaComAnimacao()" title="Minimizar">
+                    <svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg>
+                </button>
+                <button class="yvira-btn max" onclick="maximizarJanelaComAnimacao()" title="Maximizar">
+                    <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="3"/></svg>
+                </button>
+                <button class="yvira-btn close" onclick="fecharJanelaComAnimacao()" title="Fechar">
+                    <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Container de Telas (Menu Principal vs Tabuleiro) -->
+        <main class="corpo-aplicacao">
+            <!-- TELA 1: MENU PRINCIPAL -->
+            <section id="tela_menu" class="tela-ativa">
+                <div class="banner-central">
+                    <div class="logo-xadrez">
+                        <span class="peca-destaque">♞</span>
+                        <h1>XADREZ MASTER</h1>
+                        <p class="subtitulo">Motor Tático Desenvolvido em Yvira</p>
+                    </div>
+
+                    <!-- Botões de Ação do Menu -->
+                    <div class="menu-opcoes">
+                        <!-- Modo IA Adaptativa -->
+                        <button class="btn-menu principal" onclick="iniciarPartida('ia')">
+                            <span class="btn-icone">🤖</span> JOGAR CONTRA A MÁQUINA
+                        </button>
+                        <!-- Modo 2 Jogadores -->
+                        <button class="btn-menu secundario" onclick="iniciarPartida('pvp')">
+                            <span class="btn-icone">👥</span> JOGADOR VS JOGADOR
+                        </button>
+
+                        <!-- Seletor Interativo de Dificuldade -->
+                        <div class="bloco-dificuldade">
+                            <span class="label-dificuldade">DIFICULDADE DA IA:</span>
+                            <div class="botoes-dificuldade">
+                                <button class="btn-dif" id="dif_facil" onclick="alterarDificuldade('Fácil')">Fácil</button>
+                                <button class="btn-dif ativo" id="dif_medio" onclick="alterarDificuldade('Médio')">Médio</button>
+                                <button class="btn-dif" id="dif_dificil" onclick="alterarDificuldade('Difícil')">Difícil</button>
+                            </div>
+                        </div>
+
+                        <button class="btn-menu secundario" onclick="abrirConfiguracoes()">
+                            <span class="btn-icone">⚙</span> CONFIGURAÇÕES
+                        </button>
+
+                        <button class="btn-menu perigo" onclick="sairDoJogo()">
+                            <span class="btn-icone">✕</span> SAIR DO JOGO
+                        </button>
+                    </div>
+
+                    <div class="rodape-menu">
+                        <span>Yvira Gaming Framework • Renderização com Aceleração por Hardware</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TELA 2: TABULEIRO DE JOGO (Aparece ao clicar em Iniciar) -->
+            <section id="tela_jogo" class="tela-oculta">
+                <div class="jogo-layout">
+                    <!-- Topo do Jogo -->
+                    <div class="jogo-topbar">
+                        <button class="btn-voltar" onclick="voltarAoMenu()">← Voltar ao Menu</button>
+                        <div class="info-partida">
+                            <span>Dificuldade: <strong id="lbl_dificuldade_ativa">Médio</strong></span>
+                            <span>Turno: <strong id="lbl_turno" style="color: #60a5fa;">Brancas (Você)</strong></span>
+                        </div>
+                        <button class="btn-reiniciar" onclick="reiniciarPartida()">↻ Reiniciar</button>
+                    </div>
+
+                    <!-- Tabuleiro Central de 64 Casas -->
+                    <div class="area-tabuleiro">
+                        <div id="tabuleiro" class="tabuleiro-xadrez">
+                            <!-- Gerado dinamicamente ou renderizado -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- MODAL DE PROMOCAO -->
+            <div id="modal_promocao" class="modal-promocao tela-oculta">
+                <div class="modal-conteudo">
+                    <h3>ESCOLHA A PROMOCAO DO PEAO</h3>
+                    <p>O peao alcancou a ultima fileira! Escolha a nova peca:</p>
+                    <div class="opcoes-promocao">
+                        <button class="btn-promocao" onclick="escolherPromocao('rainha')">
+                            <span id="simb_rainha" class="simbolo-promocao">♕</span>
+                            <span class="nome-promocao">Rainha</span>
+                        </button>
+                        <button class="btn-promocao" onclick="escolherPromocao('torre')">
+                            <span id="simb_torre" class="simbolo-promocao">♖</span>
+                            <span class="nome-promocao">Torre</span>
+                        </button>
+                        <button class="btn-promocao" onclick="escolherPromocao('bispo')">
+                            <span id="simb_bispo" class="simbolo-promocao">♗</span>
+                            <span class="nome-promocao">Bispo</span>
+                        </button>
+                        <button class="btn-promocao" onclick="escolherPromocao('cavalo')">
+                            <span id="simb_cavalo" class="simbolo-promocao">♘</span>
+                            <span class="nome-promocao">Cavalo</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Script de Ligação com o Motor Yvira -->
+    <script>
+        let dificuldadeAtual = "Médio";
+
+        function alterarDificuldade(nivel) {
+            dificuldadeAtual = nivel;
+            document.querySelectorAll(".btn-dif").forEach(b => b.classList.remove("ativo"));
+
+            if (nivel === "Fácil") document.getElementById("dif_facil").classList.add("ativo");
+            else if (nivel === "Médio") document.getElementById("dif_medio").classList.add("ativo");
+            else if (nivel === "Difícil") document.getElementById("dif_dificil").classList.add("ativo");
+
+            // Envia evento para o Yvira registrar a dificuldade
+            window.yvira.emit("mudar_dificuldade", { nivel: nivel });
+        }
+
+        let modoJogoAtual = "ia";
+        function iniciarPartida(modo) {
+            if (modo) modoJogoAtual = modo;
+            document.getElementById("lbl_dificuldade_ativa").innerText = modoJogoAtual === "ia" ? ("IA: " + dificuldadeAtual) : "Humano vs Humano";
+            document.getElementById("tela_menu").className = "tela-oculta";
+            document.getElementById("tela_jogo").className = "tela-ativa";
+            window.yvira.emit("iniciar_partida", { dificuldade: dificuldadeAtual, modo: modoJogoAtual });
+        }
+
+        function voltarAoMenu() {
+            document.getElementById("tela_jogo").className = "tela-oculta";
+            document.getElementById("tela_menu").className = "tela-ativa";
+            window.yvira.emit("voltar_menu", {});
+        }
+
+        function sairDoJogo() {
+            window.yvira.emit("sair_jogo", {});
+        }
+
+        function renderizarTabuleiro(casas) {
+            let container = document.getElementById("tabuleiro");
+            container.innerHTML = "";
+
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    let casa = document.createElement("div");
+                    let isClara = (r + c) % 2 === 0;
+                    casa.className = "casa " + (isClara ? "casa-clara" : "casa-escura");
+                    casa.dataset.linha = r;
+                    casa.dataset.coluna = c;
+
+                    // Exibe a peça se houver
+                    if (casas && casas[r] && casas[r][c]) {
+                        casa.innerText = casas[r][c];
+                    }
+
+                    casa.onclick = function() {
+                        window.yvira.emit("clique_casa", { linha: r, coluna: c });
+                    };
+
+                    container.appendChild(casa);
+                }
+            }
+        }
+
+        // Chamado pelo Yvira quando a partida é iniciada
+        window.receberTabuleiroInicial = function(dados) {
+            renderizarTabuleiro(dados.matriz);
+            if (dados.turno) {
+                document.getElementById("lbl_turno").innerText = dados.turno === "brancas" ? "Brancas (Você)" : "Pretas (IA)";
+            }
+        };
+
+        // Chamado pelo Yvira para atualizar o tabuleiro após um movimento
+        window.atualizarTabuleiro = function(dados) {
+            renderizarTabuleiro(dados.matriz);
+            if (dados.turno) {
+                document.getElementById("lbl_turno").innerText = dados.turno === "brancas" ? "Brancas (Você)" : "Pretas (IA)";
+            }
+        };
+
+        // Destaque visual das casas válidas calculadas pelo Yvira
+        window.destacarCasasValidas = function(movimentos) {
+            document.querySelectorAll(".casa").forEach(c => {
+                c.classList.remove("casa-valida");
+                c.classList.remove("casa-captura");
+            });
+
+            if (!movimentos || !movimentos.length) return;
+
+            movimentos.forEach(m => {
+                let seletor = `.casa[data-linha='${m.paraLinha}'][data-coluna='${m.paraColuna}']`;
+                let el = document.querySelector(seletor);
+                if (el) {
+                    if (m.tipo === "captura") {
+                        el.classList.add("casa-captura");
+                    } else {
+                        el.classList.add("casa-valida");
+                    }
+                }
+            });
+        };
+
+        // Renderiza tabuleiro padrão de demonstração de imediato
+        const setupInicial = [
+            ["♜","♞","♝","♛","♚","♝","♞","♜"],
+            ["♟","♟","♟","♟","♟","♟","♟","♟"],
+            ["","","","","","","",""],
+            ["","","","","","","",""],
+            ["","","","","","","",""],
+            ["","","","","","","",""],
+            ["♙","♙","♙","♙","♙","♙","♙","♙"],
+            ["♖","♘","♗","♕","♔","♗","♘","♖"]
+        ];
+        renderizarTabuleiro(setupInicial);
+
+        // Inicializacao do Gerenciador de Abas Yvira Shell
+        const shell = new YviraShell({
+            onNewTab: (sh) => {
+                sh.adicionarAba("Partida " + (sh.tabs.length + 1), null, true);
+            }
+        });
+        // Primeira aba ativa
+        shell.adicionarAba("Xadrez Master", null, false);
+        let dadosPromocaoPendente = null;
+        window.solicitarPromocao = function(dados) {
+            dadosPromocaoPendente = dados;
+            let cor = dados.cor;
+            document.getElementById("simb_rainha").innerText = cor === "brancas" ? "♕" : "♛";
+            document.getElementById("simb_torre").innerText = cor === "brancas" ? "♖" : "♜";
+            document.getElementById("simb_bispo").innerText = cor === "brancas" ? "♗" : "♝";
+            document.getElementById("simb_cavalo").innerText = cor === "brancas" ? "♘" : "♞";
+            document.getElementById("modal_promocao").className = "modal-promocao tela-ativa";
+        };
+        function escolherPromocao(tipoEscolhido) {
+            document.getElementById("modal_promocao").className = "modal-promocao tela-oculta";
+            if (!dadosPromocaoPendente) return;
+            window.yvira.emit("confirmar_promocao", {
+                linha: dadosPromocaoPendente.linha,
+                coluna: dadosPromocaoPendente.coluna,
+                tipo: tipoEscolhido,
+                cor: dadosPromocaoPendente.cor
+            });
+            dadosPromocaoPendente = null;
+        }
+    </script>
+<script src="assets/js/yvira-shell.js"></script>
+</body>
+</html>

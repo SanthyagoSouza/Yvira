@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brasfoot Yvira 2026</title>
+    <link rel="stylesheet" href="assets/css/global.css">
+    <link rel="stylesheet" href="assets/css/jogo.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- 1. Barra de Título Customizada Arrastável -->
+        <header class="titlebar" data-arrastavel="true">
+            <div class="marca">
+                <span class="icone-bola">⚽</span>
+                <span class="titulo-jogo">BRASFOOT YVIRA <span class="badge">2026</span></span>
+            </div>
+            <div class="botoes-janela">
+                <button class="btn-janela" onclick="window.yvira.minimizar()" title="Minimizar">─</button>
+                <button class="btn-janela" onclick="window.yvira.maximizar()" title="Maximizar">□</button>
+                <button class="btn-janela btn-fechar" onclick="window.yvira.fechar()" title="Fechar">✕</button>
+            </div>
+        </header>
+
+        <!-- 2. Corpo do Jogo com Grid / Flexbox Moderno -->
+        <div class="conteudo-principal">
+            <!-- Sidebar com Menu do Clube -->
+            <aside class="sidebar">
+                <div class="perfil-clube">
+                    <div class="escudo">🇾</div>
+                    <div class="nome-clube" id="clube_nome">Yvira FC</div>
+                    <div class="divisao-clube">1ª Divisão Nacional</div>
+                </div>
+
+                <nav class="menu-navegacao">
+                    <button class="menu-item ativo" onclick="selecionarAba('elenco')">📋 Elenco e Tática</button>
+                    <button class="menu-item" onclick="selecionarAba('classificacao')">🏆 Classificação</button>
+                    <button class="menu-item" onclick="selecionarAba('mercado')">💰 Mercado de Passes</button>
+                    <button class="menu-item" onclick="selecionarAba('financas')">🏦 Finanças do Clube</button>
+                </nav>
+
+                <div class="caixa-saldo">
+                    <span class="label-saldo">Caixa do Clube</span>
+                    <span class="valor-saldo" id="clube_caixa">R$ 15.420.000</span>
+                </div>
+            </aside>
+
+            <!-- Área Central de Conteúdo Dinâmico -->
+            <main class="painel-central">
+                <!-- Topbar do Painel com Rodada e Próximo Jogo -->
+                <div class="barra-rodada">
+                    <div>
+                        <span class="subtitulo">Campeonato Nacional • Rodada 14 de 38</span>
+                        <h2>Próximo Confronto: Yvira FC vs Real Paulista</h2>
+                    </div>
+                    <button class="btn-jogar" id="btn_jogar_rodada" onclick="jogarPartida()">▶ Jogar Rodada</button>
+                </div>
+
+                <!-- Cards com Estatísticas e Tabela -->
+                <div class="cards-grid">
+                    <div class="card">
+                        <h3>Desempenho da Temporada</h3>
+                        <div class="stats-numeros">
+                            <div class="stat-box">
+                                <span class="stat-valor win">9</span>
+                                <span class="stat-label">Vitórias</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-valor draw">3</span>
+                                <span class="stat-label">Empates</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-valor loss">1</span>
+                                <span class="stat-label">Derrotas</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Líder da Artilharia</h3>
+                        <p><strong>Gabriel Silva</strong> • 11 gols em 13 partidas</p>
+                        <p style="color: #4ade80;">Moral: Alta (98%) • Salário: R$ 85.000/mês</p>
+                    </div>
+                </div>
+
+                <!-- Tabela de Classificação do Campeonato -->
+                <div class="card secao-tabela">
+                    <h3>Classificação Geral da Série A</h3>
+                    <table class="tabela-jogos">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Clube</th>
+                                <th>P</th>
+                                <th>J</th>
+                                <th>V</th>
+                                <th>E</th>
+                                <th>D</th>
+                                <th>SG</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpo_classificacao">
+                            <tr class="g4"><td>1</td><td><strong>Yvira FC</strong></td><td>30</td><td>13</td><td>9</td><td>3</td><td>1</td><td>+18</td></tr>
+                            <tr class="g4"><td>2</td><td>Real Paulista</td><td>28</td><td>13</td><td>8</td><td>4</td><td>1</td><td>+12</td></tr>
+                            <tr class="g4"><td>3</td><td>Atlético Serrano</td><td>25</td><td>13</td><td>7</td><td>4</td><td>2</td><td>+9</td></tr>
+                            <tr class="g4"><td>4</td><td>Porto Alegre United</td><td>24</td><td>13</td><td>7</td><td>3</td><td>3</td><td>+7</td></tr>
+                            <tr><td>5</td><td>Rio Branco</td><td>21</td><td>13</td><td>6</td><td>3</td><td>4</td><td>+4</td></tr>
+                            <tr><td>6</td><td>Cruzeiro do Norte</td><td>18</td><td>13</td><td>5</td><td>3</td><td>5</td><td>0</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Script de comunicação com o Yvira -->
+    <script>
+        function selecionarAba(nome) {
+            window.yvira.emit("trocar_aba", { aba: nome });
+        }
+
+        function jogarPartida() {
+            let btn = document.getElementById("btn_jogar_rodada");
+            btn.innerText = "⏳ Simulando...";
+            btn.disabled = true;
+
+            // Dispara evento para o motor em Yvira
+            window.yvira.emit("simular_partida", { rodada: 14 });
+        }
+
+        // Função invocada pelo Yvira quando a partida termina
+        window.resultadoPartida = function(resultado) {
+            let btn = document.getElementById("btn_jogar_rodada");
+            btn.innerText = "▶ Próxima Rodada";
+            btn.disabled = false;
+            alert("Fim de Jogo!\n" + resultado.placar + "\n\n" + resultado.mensagem);
+        };
+    </script>
+</body>
+</html>

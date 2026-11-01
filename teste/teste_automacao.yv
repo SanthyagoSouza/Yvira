@@ -1,0 +1,20 @@
+# Teste de Automacao Temporal com @time e @stop
+let contador = 0;
+
+fn tick() {
+    contador = contador + 1;
+    print("[CRON TICK " + contador + "] Executado automaticamente!");
+    
+    if (contador >= 3) {
+        print("Limite de 3 ticks atingido! Parando a automacao com @stop...");
+        @stop.tick();
+    }
+}
+
+print("Iniciando aplicacao Yvira...");
+print("Registrando @time.tick(1) para rodar a cada 1 segundo...");
+
+# Dispara o agendamento de tick a cada 1 segundo
+@time.tick(1);
+
+print("Fluxo principal finalizado. Aguardando execucoes agendadas em background...");

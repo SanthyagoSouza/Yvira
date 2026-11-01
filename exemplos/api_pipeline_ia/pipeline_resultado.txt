@@ -1,0 +1,1 @@
+Treinamento do Perceptron concluido com sucesso no Yvira Backend Pipeline.

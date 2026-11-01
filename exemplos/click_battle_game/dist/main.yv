@@ -1,0 +1,157 @@
+# Client App do Jogador - Click Battle Arena
+print("=========================================================");
+print("       CLICK BATTLE ARENA - CLIENTE DESKTOP              ");
+print("=========================================================\n");
+
+let app = criar_janela({
+    "titulo": "Click Battle Arena - Yvira Realtime",
+    "view": "views/index.html",
+    "largura": 950,
+    "altura": 680,
+    "min_largura": 800,
+    "min_altura": 600,
+    "modo_tela": "semi-full",
+    "barra_customizada": true,
+    "redimensionavel": true,
+    "cor_fundo": "#0b0e14"
+});
+
+# AUTO-DISCOVERY NATIVO YVIRA: Localiza o servidor na rede local sem precisar digitar IP!
+let enderecoServidor = "ws://192.168.0.35:7070";
+if (args != null && len(args) > 0 && args[0] != "") {
+    enderecoServidor = args[0];
+} else {
+    print("[Rede]: Procurando servidor Click Battle na rede local (Auto-Discovery)...");
+    let achou = @realtime.descobrir(2); # Espera até 2s pelo beacon
+    if (achou.encontrado) {
+        enderecoServidor = achou.url;
+        print($"[Rede]: Servidor localizado automaticamente em {achou.url}!");
+    } else {
+        print($"[Rede]: Servidor padrao utilizado: {enderecoServidor}");
+    }
+}
+
+print($"[Config]: Conectando ao Servidor em: {enderecoServidor}");
+
+let rede = @realtime.cliente({
+    "endereco": enderecoServidor,
+    "segredo": "CLICK_BATTLE_SECRET_2026",
+    "rotacao": 30
+});
+
+let meuId = "";
+let meuNome = "";
+let salaAtiva = "";
+let tempoDuelo = 10;
+let dueloAtivo = false;
+
+fn aoConectar() {
+    print("[Rede]: Conectado ao servidor oficial Click Battle!");
+}
+
+rede.ao("conectar", aoConectar);
+
+fn aoReceberConvite(convite) {
+    print("[Convite Recebido]: " + convite.desafianteNome + " te desafiou!");
+    app.emitir("mostrar_convite", convite);
+}
+
+fn aoReceberRecusa(recusa) {
+    print("[Desafio]: " + recusa.rivalNome + " recusou o seu desafio.");
+    app.emitir("aviso_recusa", recusa);
+}
+
+fn aoIniciarDuelo(arena) {
+    salaAtiva = arena.salaId;
+    dueloAtivo = true;
+    tempoDuelo = 10;
+    print("[DUELO INICIADO]: Enfrentando " + arena.rivalNome + " por 10 segundos!");
+    app.emitir("abrir_arena", arena);
+}
+
+fn aoAtualizarPlacar(placar) {
+    app.emitir("atualizar_placar", placar);
+}
+
+fn aoFimPartida(resultado) {
+    dueloAtivo = false;
+    let ganhou = (resultado.vencedorId == meuId);
+    let empatou = (resultado.vencedorId == "empate");
+    app.emitir("resultado_final", {
+        "ganhou": ganhou,
+        "empatou": empatou,
+        "meusCliques": resultado.meusCliques,
+        "rivalCliques": resultado.rivalCliques
+    });
+}
+
+fn aoConfirmarLobby(dados) {
+    meuId = dados.meuId;
+    meuNome = dados.meuNome;
+    print("[Lobby Conectado]: Meu ID e " + meuId);
+    app.emitir("login_sucesso", { "id": meuId, "nome": meuNome });
+
+    # Registra listeners dinamicos para este jogador
+    rede.ao("convite_recebido_alvo_" + meuId, aoReceberConvite);
+    rede.ao("desafio_recusado_" + meuId, aoReceberRecusa);
+    rede.ao("iniciar_duelo_" + meuId, aoIniciarDuelo);
+    rede.ao("placar_" + meuId, aoAtualizarPlacar);
+    rede.ao("fim_partida_" + meuId, aoFimPartida);
+}
+
+rede.ao("lobby_confirmado", aoConfirmarLobby);
+
+fn aoAtualizarJogadores(lista) {
+    app.emitir("renderizar_rivais", lista);
+}
+
+rede.ao("atualizar_jogadores", aoAtualizarJogadores);
+
+# 100% YVIRA: Eventos capturados da janela
+fn onEntrarComNome(dados) {
+    print("[Login]: Entrando como " + dados.nome);
+    rede.emitir("entrar_lobby", { "nome": dados.nome });
+}
+
+fn onDesafiarRival(dados) {
+    print("[Desafio Enviado]: Desafiando ID " + dados.alvoId);
+    rede.emitir("desafiar_jogador", { "alvoId": dados.alvoId });
+}
+
+fn onRespostaConvite(dados) {
+    rede.emitir("responder_desafio", {
+        "desafianteId": dados.desafianteId,
+        "aceitou": dados.aceitou
+    });
+}
+
+fn onCliqueCombate(dados) {
+    if (dueloAtivo) {
+        rede.emitir("clique_batalha", { "salaId": salaAtiva });
+    }
+}
+
+app.ao_evento("entrar_com_nome", onEntrarComNome);
+app.ao_evento("desafiar_rival", onDesafiarRival);
+app.ao_evento("resposta_convite", onRespostaConvite);
+app.ao_evento("clique_combate", onCliqueCombate);
+
+# Inicia conexao de rede e exibe janela
+rede.conectar();
+app.exibir();
+
+# Cronometro 100% YVIRA nativo com agendamento @time
+fn atualizarCronometro() {
+    if (dueloAtivo) {
+        tempoDuelo = tempoDuelo - 1;
+        app.emitir("atualizar_timer", { "tempo": tempoDuelo });
+        if (tempoDuelo <= 0) {
+            dueloAtivo = false;
+            rede.emitir("finalizar_duelo", { "salaId": salaAtiva });
+        }
+    }
+}
+
+@time.atualizarCronometro(1);
+
+app.esperar();

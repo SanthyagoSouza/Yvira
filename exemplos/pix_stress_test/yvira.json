@@ -1,0 +1,7 @@
+{
+  "name": "pix_stress_test",
+  "version": "2.0.0",
+  "description": "Sistema Bancário PIX Transacional de Alta Concorrência em Yvira com POO, Centavos Inteiros e Multithreading",
+  "entry": "main.yv",
+  "author": "Santhyago Souza Ponciano"
+}

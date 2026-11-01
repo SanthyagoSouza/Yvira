@@ -1,0 +1,67 @@
+# Regras de Movimentação do Bispo no Xadrez (Bishop Rules)
+
+class Bispo {
+    fn init(cor) {
+        this.cor = cor; # "brancas" ou "pretas"
+        this.tipo = "bispo";
+        this.simbolo = cor == "brancas" ? "♗" : "♝";
+    }
+
+    # O Bispo se move nas diagonais:
+    # 4 direções diagonais contínuas até a borda ou colisão com peça.
+    # Diagonais:
+    # Cima-Esquerda (-1, -1), Cima-Direita (-1, +1), Baixo-Esquerda (+1, -1), Baixo-Direita (+1, +1)
+    fn obterMovimentosValidos(linha, coluna, matriz) {
+        let movimentos = [];
+
+        let direcoes = [
+            [-1, -1], # Cima-Esquerda
+            [-1, 1],  # Cima-Direita
+            [1, -1],  # Baixo-Esquerda
+            [1, 1]    # Baixo-Direita
+        ];
+
+        let d = 0;
+        while (d < len(direcoes)) {
+            let dir = direcoes[d];
+            let dLinha = dir[0];
+            let dColuna = dir[1];
+
+            let r = linha + dLinha;
+            let c = coluna + dColuna;
+
+            # Avança na diagonal enquanto estiver dentro dos limites do tabuleiro 8x8
+            while (r >= 0 && r < 8 && c >= 0 && c < 8) {
+                let pecaDestino = matriz[r][c];
+
+                if (pecaDestino == null || pecaDestino == "") {
+                    # Casa vazia: movimento diagonal normal permitido
+                    movimentos.push({
+                        "paraLinha": r,
+                        "paraColuna": c,
+                        "tipo": "normal"
+                    });
+                } else {
+                    # Colidiu com uma peça
+                    if (pecaDestino["cor"] != this.cor) {
+                        # Peça adversária: captura permitida!
+                        movimentos.push({
+                            "paraLinha": r,
+                            "paraColuna": c,
+                            "tipo": "captura"
+                        });
+                    }
+                    # O raio de visão diagonal é bloqueado pela peça
+                    break;
+                }
+
+                r = r + dLinha;
+                c = c + dColuna;
+            }
+
+            d = d + 1;
+        }
+
+        return movimentos;
+    }
+}

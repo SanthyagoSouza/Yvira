@@ -1,0 +1,147 @@
+# Modelos de Domínio do Ambiente e Agente de Reinforcement Learning
+
+# Ações possíveis:
+# 0: Cima, 1: Baixo, 2: Esquerda, 3: Direita
+let ACOES = ["CIMA", "BAIXO", "ESQUERDA", "DIREITA"];
+
+class LabirintoAmbiente {
+    fn init(linhas, colunas) {
+        this.linhas = linhas;
+        this.colunas = colunas;
+        this.totalEstados = linhas * colunas;
+
+        # 0: Livre (.), 1: Parede (#), 2: Lava (Fogo), 3: Tesouro (Goal)
+        # Grade 5x5:
+        # [S]  .   .   .   .
+        #  .   #   .   🔥  .
+        #  .   #   .   #   .
+        #  .   🔥  .   #   .
+        #  .   .   .   .  [💎]
+        this.grid = zeros(linhas, colunas);
+
+        # Paredes / Obstáculos
+        this.grid[1, 1] = 1;
+        this.grid[2, 1] = 1;
+        this.grid[2, 3] = 1;
+        this.grid[3, 3] = 1;
+
+        # Armadilhas de Lava (🔥)
+        this.grid[1, 3] = 2;
+        this.grid[3, 1] = 2;
+
+        # Objetivo / Tesouro (💎) no canto inferior direito
+        this.grid[linhas - 1, colunas - 1] = 3;
+
+        this.estadoInicial = 0; # (0, 0)
+        this.estadoAtual = 0;
+    }
+
+    fn reset() {
+        this.estadoAtual = this.estadoInicial;
+        return this.estadoAtual;
+    }
+
+    fn estadoParaCoordenadas(estado) {
+        let r = 0;
+        let c = estado;
+        while (c >= this.colunas) {
+            r = r + 1;
+            c = c - this.colunas;
+        }
+        return { "r": r, "c": c };
+    }
+
+    fn coordenadasParaEstado(r, c) {
+        return (r * this.colunas) + c;
+    }
+
+    fn passo(acao) {
+        let pos = this.estadoParaCoordenadas(this.estadoAtual);
+        let nr = pos["r"];
+        let nc = pos["c"];
+
+        # 0: Cima, 1: Baixo, 2: Esquerda, 3: Direita
+        if (acao == 0) nr = nr - 1;
+        if (acao == 1) nr = nr + 1;
+        if (acao == 2) nc = nc - 1;
+        if (acao == 3) nc = nc + 1;
+
+        # Bateu na borda do mapa: fica no mesmo lugar com pequena penalidade
+        if (nr < 0 || nr >= this.linhas || nc < 0 || nc >= this.colunas) {
+            return {
+                "proximoEstado": this.estadoAtual,
+                "recompensa": -2.0,
+                "terminou": false,
+                "evento": "borda"
+            };
+        }
+
+        let tipoBloco = this.grid[nr, nc];
+
+        # Bateu em parede (#)
+        if (tipoBloco == 1) {
+            return {
+                "proximoEstado": this.estadoAtual,
+                "recompensa": -2.0,
+                "terminou": false,
+                "evento": "parede"
+            };
+        }
+
+        let novoEstado = this.coordenadasParaEstado(nr, nc);
+        this.estadoAtual = novoEstado;
+
+        # Caiu na Lava (🔥)
+        if (tipoBloco == 2) {
+            return {
+                "proximoEstado": novoEstado,
+                "recompensa": -100.0,
+                "terminou": true,
+                "evento": "lava"
+            };
+        }
+
+        # Conquistou o Tesouro (💎)
+        if (tipoBloco == 3) {
+            return {
+                "proximoEstado": novoEstado,
+                "recompensa": 100.0,
+                "terminou": true,
+                "evento": "tesouro"
+            };
+        }
+
+        # Movimento livre normal (penalidade leve de tempo para forçar menor caminho)
+        return {
+            "proximoEstado": novoEstado,
+            "recompensa": -1.0,
+            "terminou": false,
+            "evento": "passo"
+        };
+    }
+
+    fn renderizar(posicaoAgente) {
+        let posAg = this.estadoParaCoordenadas(posicaoAgente);
+        let r = 0;
+        let output = "";
+        while (r < this.linhas) {
+            let linhaStr = "   ";
+            let c = 0;
+            while (c < this.colunas) {
+                if (r == posAg["r"] && c == posAg["c"]) {
+                    linhaStr = linhaStr + "[🤖] ";
+                } else {
+                    let tipo = this.grid[r, c];
+                    if (tipo == 0) linhaStr = linhaStr + "[ .] ";
+                    if (tipo == 1) linhaStr = linhaStr + "[🧱] ";
+                    if (tipo == 2) linhaStr = linhaStr + "[🔥] ";
+                    if (tipo == 3) linhaStr = linhaStr + "[💎] ";
+                }
+                c = c + 1;
+            }
+            output = output + linhaStr + "\n";
+            r = r + 1;
+        }
+        return output;
+    }
+}

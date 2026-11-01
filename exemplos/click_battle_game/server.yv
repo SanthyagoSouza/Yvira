@@ -1,0 +1,218 @@
+# Servidor Oficial do Click Battle Arena - Yvira Realtime
+print("=========================================================");
+print("       CLICK BATTLE ARENA - SERVIDOR MULTIPLAYER         ");
+print("=========================================================\n");
+
+let servidor = @realtime.servidor({
+    "porta": 7070,
+    "segredo": "CLICK_BATTLE_SECRET_2026",
+    "rotacao": 30,
+    "limitePacotes": 150
+});
+
+let jogadores = {};
+let salasDuelo = {};
+let idsConectados = [];
+
+fn aoIniciar(info) {
+    print("[Servidor Online]: Click Battle Arena ativo na porta " + info.porta);
+    print("  -> Motor WebSocket: 0.0.0.0 (Sem necessidade de admin)");
+    print("  -> Criptografia E2E: " + info.criptografia);
+    print("  -> Limite Anti-Flood: " + info.antiFloodLimite + " pacotes/segundo");
+}
+
+servidor.ao("iniciado", aoIniciar);
+
+fn atualizarListaLobby() {
+    let lista = [];
+    for (id in idsConectados) {
+        let j = jogadores[id];
+        if (j != null) {
+            lista.push({
+                "id": id,
+                "nome": j.nome,
+                "status": j.status
+            });
+        }
+    }
+    servidor.para("lobby").emitir("atualizar_jogadores", lista);
+}
+
+fn aoConectar(cliente) {
+    print("[Novo Jogador Conectado]: " + cliente.id);
+}
+
+servidor.ao("conectar", aoConectar);
+
+fn aoEntrarLobby(cliente, dados) {
+    let nome = "Gamer_" + cliente.id;
+    if (dados != null && dados.nome != null && dados.nome != "") {
+        nome = dados.nome;
+    }
+
+    jogadores[cliente.id] = {
+        "nome": nome,
+        "status": "livre",
+        "salaAtual": "lobby",
+        "cliques": 0
+    };
+
+    idsConectados.push(cliente.id);
+    cliente.entrar("lobby");
+    print("[Lobby]: " + nome + " (" + cliente.id + ") entrou no lobby.");
+
+    cliente.emitir("lobby_confirmado", {
+        "meuId": cliente.id,
+        "meuNome": nome
+    });
+
+    atualizarListaLobby();
+}
+
+servidor.ao("entrar_lobby", aoEntrarLobby);
+
+fn aoDesafiar(cliente, dados) {
+    let alvoId = dados.alvoId;
+    let desafiante = jogadores[cliente.id];
+    let alvo = jogadores[alvoId];
+
+    if (desafiante != null && alvo != null && alvo.status == "livre") {
+        print("[Desafio]: " + desafiante.nome + " desafiou " + alvo.nome);
+        servidor.para("lobby").emitir("convite_recebido_alvo_" + alvoId, {
+            "desafianteId": cliente.id,
+            "desafianteNome": desafiante.nome
+        });
+    }
+}
+
+servidor.ao("desafiar_jogador", aoDesafiar);
+
+fn aoResponderDesafio(cliente, dados) {
+    let desafianteId = dados.desafianteId;
+    let aceitou = dados.aceitou;
+    let desafiante = jogadores[desafianteId];
+    let alvo = jogadores[cliente.id];
+
+    if (desafiante == null || alvo == null) { return null; }
+
+    if (!aceitou) {
+        print("[Desafio Recusado]: " + alvo.nome + " recusou o duelo com " + desafiante.nome);
+        servidor.para("lobby").emitir("desafio_recusado_" + desafianteId, {
+            "rivalNome": alvo.nome
+        });
+        return null;
+    }
+
+    let salaId = "sala_" + desafianteId + "_" + cliente.id;
+    desafiante.status = "duelo";
+    desafiante.salaAtual = salaId;
+    desafiante.cliques = 0;
+
+    alvo.status = "duelo";
+    alvo.salaAtual = salaId;
+    alvo.cliques = 0;
+
+    salasDuelo[salaId] = {
+        "idA": desafianteId,
+        "idB": cliente.id,
+        "cliquesA": 0,
+        "cliquesB": 0,
+        "tempo": 10
+    };
+
+    atualizarListaLobby();
+
+    servidor.para("lobby").emitir("iniciar_duelo_" + desafianteId, {
+        "salaId": salaId,
+        "meuNome": desafiante.nome,
+        "rivalNome": alvo.nome,
+        "tempo": 10
+    });
+
+    servidor.para("lobby").emitir("iniciar_duelo_" + cliente.id, {
+        "salaId": salaId,
+        "meuNome": alvo.nome,
+        "rivalNome": desafiante.nome,
+        "tempo": 10
+    });
+}
+
+servidor.ao("responder_desafio", aoResponderDesafio);
+
+fn aoCliqueBatalha(cliente, dados) {
+    let salaId = dados.salaId;
+    let duelo = salasDuelo[salaId];
+    if (duelo == null) { return null; }
+
+    if (cliente.id == duelo.idA) {
+        duelo.cliquesA = duelo.cliquesA + 1;
+    } else {
+        duelo.cliquesB = duelo.cliquesB + 1;
+    }
+
+    servidor.para("lobby").emitir("placar_" + duelo.idA, {
+        "meusCliques": duelo.cliquesA,
+        "cliquesRival": duelo.cliquesB
+    });
+
+    servidor.para("lobby").emitir("placar_" + duelo.idB, {
+        "meusCliques": duelo.cliquesB,
+        "cliquesRival": duelo.cliquesA
+    });
+}
+
+servidor.ao("clique_batalha", aoCliqueBatalha);
+
+fn aoFinalizarDuelo(cliente, dados) {
+    let salaId = dados.salaId;
+    let duelo = salasDuelo[salaId];
+    if (duelo != null) {
+        let vencedorId = "empate";
+        if (duelo.cliquesA > duelo.cliquesB) {
+            vencedorId = duelo.idA;
+        } else if (duelo.cliquesB > duelo.cliquesA) {
+            vencedorId = duelo.idB;
+        }
+
+        let a = jogadores[duelo.idA];
+        let b = jogadores[duelo.idB];
+
+        servidor.para("lobby").emitir("fim_partida_" + duelo.idA, {
+            "vencedorId": vencedorId,
+            "meusCliques": duelo.cliquesA,
+            "rivalCliques": duelo.cliquesB
+        });
+
+        servidor.para("lobby").emitir("fim_partida_" + duelo.idB, {
+            "vencedorId": vencedorId,
+            "meusCliques": duelo.cliquesB,
+            "rivalCliques": duelo.cliquesA
+        });
+
+        if (a != null) { a.status = "livre"; }
+        if (b != null) { b.status = "livre"; }
+        salasDuelo[salaId] = null;
+        atualizarListaLobby();
+    }
+}
+
+servidor.ao("finalizar_duelo", aoFinalizarDuelo);
+
+fn aoDesconectar(cliente) {
+    let j = jogadores[cliente.id];
+    if (j != null) {
+        print("[Jogador Desconectado]: " + j.nome + " (" + cliente.id + ")");
+        jogadores[cliente.id] = null;
+        atualizarListaLobby();
+    }
+}
+
+servidor.ao("desconectar", aoDesconectar);
+
+servidor.iniciar();
+print("[Servidor Pronto]: Aguardando guerreiros de clique...\n");
+
+let rodando = true;
+while (rodando) {
+    dormir(100);
+}

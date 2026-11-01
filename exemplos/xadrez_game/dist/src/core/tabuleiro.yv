@@ -1,0 +1,93 @@
+# Motor de Tabuleiro de Xadrez com Peças Reais e Objetos
+import "../pecas/peao.yv";
+
+class TabuleiroXadrez {
+    fn criarSetupInicial() {
+        let matriz = [];
+        let r = 0;
+        while (r < 8) {
+            let linha = [];
+            let c = 0;
+            while (c < 8) {
+                linha.push(null);
+                c = c + 1;
+            }
+            matriz.push(linha);
+            r = r + 1;
+        }
+
+        # 1. Posiciona os 8 Peões Pretos na linha 1
+        let col = 0;
+        while (col < 8) {
+            matriz[1][col] = {
+                "tipo": "peao",
+                "cor": "pretas",
+                "simbolo": "♟"
+            };
+            col = col + 1;
+        }
+
+        # 2. Posiciona os 8 Peões Brancos na linha 6
+        col = 0;
+        while (col < 8) {
+            matriz[6][col] = {
+                "tipo": "peao",
+                "cor": "brancas",
+                "simbolo": "♙"
+            };
+            col = col + 1;
+        }
+
+        # 3. Peças Maiores Pretas (Linha 0)
+        let maioresPretas = ["♜","♞","♝","♛","♚","♝","♞","♜"];
+        let nomesPretas = ["torre","cavalo","bispo","rainha","rei","bispo","cavalo","torre"];
+        col = 0;
+        while (col < 8) {
+            matriz[0][col] = {
+                "tipo": nomesPretas[col],
+                "cor": "pretas",
+                "simbolo": maioresPretas[col],
+                "jaMoveu": false
+            };
+            col = col + 1;
+        }
+
+        # 4. Peças Maiores Brancas (Linha 7)
+        let maioresBrancas = ["♖","♘","♗","♕","♔","♗","♘","♖"];
+        let nomesBrancas = ["torre","cavalo","bispo","rainha","rei","bispo","cavalo","torre"];
+        col = 0;
+        while (col < 8) {
+            matriz[7][col] = {
+                "tipo": nomesBrancas[col],
+                "cor": "brancas",
+                "simbolo": maioresBrancas[col],
+                "jaMoveu": false
+            };
+            col = col + 1;
+        }
+
+        return matriz;
+    }
+
+    # Converte matriz de objetos para grade de símbolos para o HTML
+    fn extrairSimbolos(matriz) {
+        let grid = [];
+        let r = 0;
+        while (r < 8) {
+            let l = [];
+            let c = 0;
+            while (c < 8) {
+                let peca = matriz[r][c];
+                if (peca != null) {
+                    l.push(peca["simbolo"]);
+                } else {
+                    l.push("");
+                }
+                c = c + 1;
+            }
+            grid.push(l);
+            r = r + 1;
+        }
+        return grid;
+    }
+}

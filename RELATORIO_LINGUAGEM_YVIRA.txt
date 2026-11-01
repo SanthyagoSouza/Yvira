@@ -1,0 +1,167 @@
+================================================================================
+          RELATÓRIO GERAL DE MATURIDADE E ARQUITETURA DA LINGUAGEM YVIRA
+================================================================================
+Versão Atual da Linguagem : 2.1.0
+Ambiente de Execução      : Runtime .NET 10 (C#) Nativo Win-x64 Standalone
+Extensão de Código-Fonte  : .yv
+Distribuição Principal    : dist/bin/yvira.exe (registrado no PATH do sistema)
+Autor & Idealizador       : Santhyago Souza Ponciano 🇧🇷
+Data de Consolidação      : 31 de Outubro de 2026
+Estado Geral do Sistema   : PRODUÇÃO / ESTÁVEL / MULTIPLAYER REALTIME ATIVO
+
+================================================================================
+1. IDENTIDADE E PROPÓSITO DO YVIRA
+================================================================================
+O Yvira é uma linguagem científica e de desenvolvimento de sistemas modernos
+desenhada para eliminar a "fadiga de pacotes" e a dependência de ecossistemas
+externos pesados (Node.js/Python). Ela combina simplicidade sintática com
+primitivas de alto poder embutidas diretamente na gramática do compilador:
+
+  • ÁLGEBRA LINEAR E IA NATIVAS: Matrizes, vetores e operadores (@, inv, det,
+    solve, SVD) nativos na gramática sem precisar de pacotes adicionais.
+  • AGENDAMENTOS TEMPORAIS SEM CRON (@time / @stop): O próprio runtime possui
+    um scheduler concorrente de alto desempenho sem daemons do SO.
+  • BANCO DE DADOS NATIVO (@db, @query, @exec, @transaction): SQL parametrizado,
+    segurança anti-injection e controle transacional no núcleo da linguagem.
+  • INTERFACES GRÁFICAS & DESKTOP (criar_janela / WebView2): Criação de apps e
+    jogos com UI moderna desacoplada via IPC bidirecional nativo.
+  • REALTIME MULTIPLAYER MILITAR (@realtime): Servidor e cliente WebSocket nativos
+    em sockets TCP puros (0.0.0.0), com salas, chaves rotativas HMAC-SHA256 e
+    criptografia de pacotes ponta a ponta (AES-256-CBC).
+  • EMPACOTAMENTO STANDALONE (yvira build): Compilação direta de qualquer script
+    para executável Windows independente (.exe) com assets protegidos.
+
+================================================================================
+2. O QUE O YVIRA POSSUI (RECURSOS ATIVOS E VALIDADOS)
+================================================================================
+
+[✓] NÚCLEO SINTÁTICO E GRAMÁTICA:
+    - Declaração de variáveis via 'let' com inferência de tipos.
+    - Tipos primitivos: int, float/double, string, boolean (true/false) e null.
+    - Operações aritméticas completas com precedência correta (+, -, *, /, %, **).
+    - Operadores de comparação: ==, !=, <, <=, >, >=.
+    - Operadores lógicos de símbolo e texto: && (and), || (or), ! (not).
+    - Controle de fluxo: if, else if, else, while, for (tradicional) e for/in.
+    - Funções nomeadas de primeira classe com closures e recursão ilimitada (fn nome(args)).
+
+[✓] SUPER MOTOR MATRICIAL E ÁLGEBRA LINEAR:
+    - Literais de matrizes 1D e 2D com sintaxe nativa: [[1, 2], [3, 4]].
+    - Operador nativo de multiplicação matricial '@' e sobrecarga de operadores (+, -, *).
+    - Geradores numéricos: eye(n), zeros(l, c), ones(l, c), rand_mat(l, c).
+    - Operações algébricas: transposta (.T), determinante (.det()), inversa (.inv()),
+      traço (.trace()), decomposição LU, SVD, QR e resolução de sistemas (solve(A, b)).
+    - Módulo de Machine Learning nativo com Q-Learning (@ai.qlearning).
+
+[✓] COLEÇÕES DINÂMICAS:
+    - Listas dinâmicas indexadas (list): push, pop, insert, remove, len, fatiamento.
+    - Mapas/Dicionários (map): {"chave": valor}, acesso por ponto (.prop) ou colchetes.
+
+[✓] TRATAMENTO ROBUSTO DE EXCEÇÕES:
+    - Blocos try, catch(erro) e finally.
+    - Lançamento sob demanda de exceções com throw.
+
+[✓] ORIENTAÇÃO A OBJETOS FORMAL:
+    - Declaração formal de classes com class Nome { ... }.
+    - Construtores com constructor(...) e instanciação com new Nome(...).
+    - Contexto de instância interno com this.
+
+[✓] ENTRADA, SAÍDA E CONFIGURAÇÃO:
+    - Leitura direta de variáveis de ambiente: import ".env" as env.
+    - Leitura e mapeamento de arquivos JSON estruturados: import "config.json" as cfg.
+    - Sistema de arquivos nativo (fs): read, write, append, exists, remove, readCsv, writeCsv.
+    - Cliente HTTP moderno (http): http.get(url) e http.post(url, payload) com res.json().
+
+[✓] AUTOMAÇÃO TEMPORAL REATIVA (@time e @stop):
+    - Agendamento não bloqueante de funções com @time.minha_funcao(intervalo, ...args).
+    - Interrupção sob demanda com @stop.minha_funcao().
+
+[✓] BANCO DE DADOS NATIVO E TRANSAÇÕES:
+    - Conexões multi-bancos com @db("sqlite://loja.db").
+    - Execução parametrizada segura anti-SQL Injection com @exec e consultas com @query.
+    - Controle transacional automático com rollback sob falha: @transaction { ... }.
+
+[✓] INTERFACES DE USUÁRIO (TUI & GUI DESKTOP):
+    - Console rico (TUI): menu, confirmar, caixa, tabela, barra_progresso, limpar_tela.
+    - Desktop GUI: criar_janela(...) integrado a WebView2 acelerado por GPU.
+    - Bridge IPC bidirecional: window.yvira.emit(...) no front e app.ao_evento(...) no backend.
+
+[✓] COMUNICAÇÃO REALTIME MULTIPLAYER (@realtime):
+    - Servidor nativo (@realtime.servidor) rodando em 0.0.0.0 via sockets TCP puros Fleck.
+    - Cliente nativo (@realtime.cliente) com conexão instantânea em LAN ou WAN.
+    - Rooms/Salas de duelo, eventos customizados e broadcast isolado.
+    - Chaves de autenticação rotativas (Rolling Keys) com HMAC-SHA256 a cada N segundos.
+    - Criptografia ponta a ponta AES-256-CBC nos payloads.
+    - Rate limiter integrado contra flood e ataques de negação de serviço.
+
+[✓] EMPACOTADOR DE BINÁRIOS STANDALONE (yvira build):
+    - yvira build -o MeuApp: gera pasta dist/ com MeuApp.exe e assets ocultos.
+    - yvira build --single-file -o MeuApp: gera 1 único arquivo executável (.exe)
+      com payload ZIP embutido e descompressão em cache isolado.
+
+[✓] FERRAMENTAS DO DESENVOLVEDOR (CLI & DX):
+    - yvira run <arquivo.yv>: execução direta via AST ou VM.
+    - yvira repl: console interativo com coloração de sintaxe ao vivo e histórico.
+    - yvira init <nome>: cria scaffold de projeto com yvira.json, .env e main.yv.
+    - yvira info: exibe dados de versão, .NET runtime e projeto ativo.
+    - yvira upgrade: mecanismo de atualização automática global.
+    - Extensão para Visual Studio Code com gramática TextMate e ícone próprio.
+
+================================================================================
+3. O QUE O YVIRA NÃO POSSUI (LIMITAÇÕES SINTÁTICAS E O QUE EVITAR)
+================================================================================
+
+[!] SEM FUNÇÕES ANÔNIMAS INLINE:
+    O Yvira exige que funções tenham nome (fn nome() { ... }).
+    Sintaxes como 'fn() { ... }' ou arrow functions '() => { ... }' não existem.
+    Sempre declare a função e passe seu identificador.
+
+[!] SEM ANOTAÇÃO DE TIPO EXPLÍCITA NA DECLARAÇÃO:
+    Sintaxes como 'let x: int = 10' ou 'x : String' não são suportadas.
+    O compilador infere o tipo automaticamente através de 'let x = 10;'.
+
+[!] DECORATORS LIMITADOS AOS NATIVOS DO SISTEMA:
+    Não é permitida a criação de decorators arbitrários. Apenas os decorators
+    nativos do compilador são válidos:
+    @time, @stop, @db, @exec, @query, @transaction, @realtime, @ai, @cache.
+    (Ex: não existe '@thread.executar'; utiliza-se o '@time').
+
+[!] SEM MODIFICADORES DE VISIBILIDADE EM CLASSES:
+    Não há palavras-chave 'public', 'private' ou 'protected'. Os membros e métodos
+    de uma instância são públicos por padrão.
+
+[!] SEM GERENCIAMENTO MANUAL DE MEMÓRIA:
+    Não há operadores de ponteiro ('*', '&'), 'malloc' ou 'free'. A memória é
+    gerenciada com segurança automática via Garbage Collector do runtime.
+
+================================================================================
+4. PROJETOS OFICIAIS DE REFERÊNCIA NO REPOSITÓRIO
+================================================================================
+1. Click Battle Arena Multiplayer:
+   - Caminho: exemplos/click_battle_game/
+   - Descrição: Jogo multiplayer competitivo em rede local (LAN) com WebSockets
+     TCP em 0.0.0.0:7070, cronômetro nativo @time, pontuação sincronizada e
+     executável portátil compilado em dist/ClickBattleArena.exe. 100% Yvira.
+
+2. Pipeline de IA & Machine Learning:
+   - Caminho: exemplos/api_pipeline_ia/
+   - Descrição: Processamento de tensores, regressão e treinamento Q-Learning.
+
+3. Microsserviço de Autenticação e Monitoramento:
+   - Caminho: exemplos/microservico_bot_auth/
+   - Descrição: API de banco SQLite com transações seguras e bot em background.
+
+4. Monitor de Cotação Cripto REST:
+   - Caminho: exemplos/monitor_cripto/
+   - Descrição: Consumo de APIs públicas via http.get com parsing de JSON e logs.
+
+================================================================================
+5. HISTÓRICO DE VERSÕES E MARCOS
+================================================================================
+• v0.1 Alpha : Parser Pratt, analisador léxico, árvore sintática e execução básica.
+• v0.5       : Funções de primeira classe, closures e chamadas recursivas.
+• v1.0       : Álgebra Linear completa (SIMD, LU, SVD, QR) e coleções dinâmicas.
+• v1.5       : Automação @time/@stop, banco de dados @db e tratamento try/catch.
+• v2.0       : Stack VM em Bytecode, REPL colorido, LSP e compilação standalone.
+• v2.1 (Atual): Superpoder @realtime com Fleck em 0.0.0.0, salas multiplayer,
+               chaves rotativas HMAC-SHA256, criptografia AES-256 e motor GUI WebView2.
+================================================================================

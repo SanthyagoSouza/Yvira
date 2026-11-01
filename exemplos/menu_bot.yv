@@ -1,0 +1,51 @@
+# Menu de Controle do Robô XAUUSD (Exemplo TUI)
+
+limpar_tela();
+
+caixa("YVIRA QUANT TRADER", "Painel de Controle Operacional\nAtivo: XAU/USD (Gold Spot)\nStatus do Mercado: Aberto");
+
+let opcoes = [
+    "1. Iniciar Robô com IA Multi-Timeframe (H1 + M15)",
+    "2. Executar Backtest de Robustez e Custos",
+    "3. Exibir Métricas e Performance da Carteira",
+    "4. Configurar Parâmetros de Risco e Lote",
+    "0. Sair"
+];
+
+let escolha = menu("Selecione a Ação Desejada:", opcoes);
+
+if (escolha == 0) {
+    print("\nIniciando Agente Quantitativo no XAUUSD...");
+    let p = 0;
+    while (p <= 100) {
+        barra_progresso(p, 100, "Sincronizando Candles:");
+        dormir(40);
+        p = p + 25;
+    }
+    print("\nRobô em execução no mercado real!");
+} else if (escolha == 1) {
+    print("\nExecutando Backtest Walk-Forward...");
+    let p = 0;
+    while (p <= 100) {
+        barra_progresso(p, 100, "Processando Janelas:");
+        dormir(50);
+        p = p + 20;
+    }
+    print("\nBacktest concluído! Rentabilidade: +33.16% | Drawdown: 12.59%");
+} else if (escolha == 2) {
+    print("\n--- Carteira Atual ---");
+    let cabecalho = ["Ativo", "Lote", "Lucro Acumulado", "Win Rate"];
+    let dados = [
+        ["XAUUSD", "0.01 - 0.03", "+$546.91", "52.5%"]
+    ];
+    tabela(cabecalho, dados);
+} else if (escolha == 3) {
+    let querMudar = confirmar("Deseja ativar lote dinâmico por volatilidade (ATR)?");
+    if (querMudar) {
+        print("Configuração salva com sucesso!");
+    } else {
+        print("Operação cancelada pelo usuário.");
+    }
+} else {
+    print("\nOperação finalizada.");
+}

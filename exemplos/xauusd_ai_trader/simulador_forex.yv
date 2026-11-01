@@ -1,0 +1,167 @@
+# Simulador de Corretora Forex (Exchange Simulator)
+# Gerencia Saldo, Margem, Execução de Ordens, Spread e PnL (Lucro/Prejuízo)
+
+class ForexSimulator {
+    fn init(saldoInicial, alavancagem, spreadDolares) {
+        this.saldoInicial = saldoInicial;
+        this.saldo = saldoInicial;
+        this.alavancagem = alavancagem;
+        this.spread = spreadDolares; # 31 pontos = $0.31 por onça
+
+        # Posição aberta:
+        # tipo: 0 (Nenhuma), 1 (COMPRA), 2 (VENDA)
+        this.posicaoAberta = 0;
+        this.precoEntrada = 0.0;
+        this.volumeLotes = 0.01; # Lote padrão inicial
+
+        this.totalTrades = 0;
+        this.tradesVencedores = 0;
+        this.tradesPerdedores = 0;
+        this.lucroTotal = 0.0;
+        this.historicoTrades = [];
+    }
+
+    fn reset() {
+        this.saldo = this.saldoInicial;
+        this.posicaoAberta = 0;
+        this.precoEntrada = 0.0;
+        this.volumeLotes = 0.01;
+        this.totalTrades = 0;
+        this.tradesVencedores = 0;
+        this.tradesPerdedores = 0;
+        this.lucroTotal = 0.0;
+        this.historicoTrades = [];
+    }
+
+    # Executa a tomada de decisão da IA
+    # acao: 0 = Neutro
+    #       1 = Comprar 0.01
+    #       2 = Comprar 0.02
+    #       3 = Comprar 0.03
+    #       4 = Vender 0.01
+    #       5 = Vender 0.02
+    #       6 = Vender 0.03
+    #       7 = Fechar com Lucro Estagnado
+    #       8 = Fechar no Zero a Zero (Breakeven)
+    fn executarAcao(acao, precoAtual, atrVolatilidade) {
+        let pnlOperacao = 0.0;
+        let houveFechamento = false;
+        let motivoFechamento = "";
+
+        # Determina a direção e volume desejados caso seja abertura
+        let direcaoAcao = 0; # 0 = Neutro, 1 = Compra, 2 = Venda
+        let volumeAcao = 0.01;
+
+        if (acao == 1) { direcaoAcao = 1; volumeAcao = 0.01; }
+        if (acao == 2) { direcaoAcao = 1; volumeAcao = 0.02; }
+        if (acao == 3) { direcaoAcao = 1; volumeAcao = 0.03; }
+        if (acao == 4) { direcaoAcao = 2; volumeAcao = 0.01; }
+        if (acao == 5) { direcaoAcao = 2; volumeAcao = 0.02; }
+        if (acao == 6) { direcaoAcao = 2; volumeAcao = 0.03; }
+
+        # 1. Se já está posicionado, verifica condições de saída ou gerenciamento
+        if (this.posicaoAberta != 0) {
+            let diffAtual = 0.0;
+            if (this.posicaoAberta == 1) diffAtual = precoAtual - this.precoEntrada;
+            if (this.posicaoAberta == 2) diffAtual = this.precoEntrada - precoAtual;
+
+            let stopLossAtr = -1.0 * atrVolatilidade;
+            let takeProfitAtr = 2.5 * atrVolatilidade;
+
+            let deveFechar = false;
+
+            # A. Stop-Loss rígido por volatilidade
+            if (diffAtual <= stopLossAtr) {
+                deveFechar = true;
+                motivoFechamento = "STOP_LOSS";
+            }
+            # B. Take-Profit alvo cheio
+            else if (diffAtual >= takeProfitAtr) {
+                deveFechar = true;
+                motivoFechamento = "TAKE_PROFIT";
+            }
+            # C. Ação 7: Fechar com Lucro Estagnado (só sai se já tiver pelo menos 1.2x ATR de lucro e o mercado travar)
+            else if (acao == 7 && diffAtual >= (1.2 * atrVolatilidade)) {
+                deveFechar = true;
+                motivoFechamento = "LUCRO_ESTAGNADO";
+            }
+            # D. Ação 8: Fechar no Zero a Zero (Breakeven - protege quando deu pelo menos 0.8x ATR e recuou para o preço de entrada)
+            else if (acao == 8 && diffAtual >= this.spread && diffAtual < (0.6 * atrVolatilidade)) {
+                deveFechar = true;
+                motivoFechamento = "ZERO_A_ZERO";
+            }
+
+            if (deveFechar) {
+                let oncas = this.volumeLotes * 100.0;
+                pnlOperacao = (diffAtual - this.spread) * oncas;
+
+                # No Breakeven / Zero a Zero, se fechou ligeiramente no spread, normaliza para preservar banca
+                if (motivoFechamento == "ZERO_A_ZERO" && pnlOperacao < 0.0 && pnlOperacao > -2.0) {
+                    pnlOperacao = 0.0;
+                }
+
+                this.saldo = this.saldo + pnlOperacao;
+                this.lucroTotal = this.lucroTotal + pnlOperacao;
+                this.totalTrades = this.totalTrades + 1;
+                houveFechamento = true;
+
+                if (pnlOperacao > 0) {
+                    this.tradesVencedores = this.tradesVencedores + 1;
+                } else if (pnlOperacao < 0) {
+                    this.tradesPerdedores = this.tradesPerdedores + 1;
+                }
+
+                let nomeTipo = "COMPRA";
+                if (this.posicaoAberta == 2) nomeTipo = "VENDA";
+
+                # Risco estimado da operação em dólares (baseado no SL de 1x ATR):
+                let riscoDolares = (1.0 * atrVolatilidade + this.spread) * oncas;
+
+                this.historicoTrades.push({
+                    "tradeId": this.totalTrades,
+                    "tipo": nomeTipo,
+                    "volume": this.volumeLotes,
+                    "precoEntrada": this.precoEntrada,
+                    "precoSaida": precoAtual,
+                    "pnl": pnlOperacao,
+                    "risco": riscoDolares,
+                    "motivo": motivoFechamento,
+                    "saldoApos": this.saldo
+                });
+
+                this.posicaoAberta = 0;
+                this.precoEntrada = 0.0;
+            }
+        }
+
+        # 2. Se a posição está livre e a ação manda comprar ou vender
+        if (this.posicaoAberta == 0 && direcaoAcao != 0) {
+            this.posicaoAberta = direcaoAcao;
+            this.volumeLotes = volumeAcao;
+            this.precoEntrada = precoAtual;
+        }
+
+        # 3. Retorna a Recompensa (Reward) para a Equação de Bellman
+        let recompensa = 0.0;
+        if (houveFechamento) {
+            if (motivoFechamento == "LUCRO_ESTAGNADO" && pnlOperacao > 0) {
+                # Bonifica positivamente por garantir o lucro e evitar que vire stop
+                recompensa = pnlOperacao * 1.5;
+            } else if (motivoFechamento == "ZERO_A_ZERO") {
+                # Bonificação por proteger a banca e sair no empate
+                recompensa = 5.0;
+            } else {
+                recompensa = pnlOperacao;
+            }
+        }
+
+        return {
+            "pnl": pnlOperacao,
+            "recompensa": recompensa,
+            "saldoAtual": this.saldo,
+            "posicao": this.posicaoAberta,
+            "volume": this.volumeLotes,
+            "motivo": motivoFechamento
+        };
+    }
+}

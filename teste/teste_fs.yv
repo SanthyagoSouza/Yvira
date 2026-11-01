@@ -1,0 +1,28 @@
+﻿import "fs" as fs
+
+print("--- Teste do Modulo fs (File System) ---")
+
+# 1. Escrever e ler arquivo de texto
+fs.write("teste_saida.txt", "Ola mundo do sistema Yvira!\nLinha 2 de teste.")
+print("Arquivo existe?:", fs.exists("teste_saida.txt"))
+
+let conteudo = fs.read("teste_saida.txt")
+print("Conteudo lido:\n" + conteudo)
+
+# 2. Append no arquivo
+fs.append("teste_saida.txt", "\nLinha 3 adicionada via append.")
+let linhas = fs.readLines("teste_saida.txt")
+print("Total de linhas lidas:", linhas.length)
+foreach (linha in linhas) {
+    print(">", linha)
+}
+
+# 3. Criar matriz, salvar em CSV e recarregar
+let M = [[1.5, 2.5, 3.5], [4.0, 5.0, 6.0], [7.2, 8.1, 9.9]]
+fs.writeCsv("matriz_teste.csv", M)
+print("\nMatriz salva com sucesso em CSV.")
+
+let M_lida = fs.readCsv("matriz_teste.csv")
+print("Matriz recarregada do CSV:")
+print(M_lida)
+print("Determinante da matriz lida:", M_lida.det())

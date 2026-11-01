@@ -1,0 +1,74 @@
+import "http";
+import "cache";
+
+print("=================================================================");
+print("   ESTRESSE CONCORRENTE: CACHE NATIVO VS SQLITE CONCORRENTE      ");
+print("=================================================================\n");
+
+@db("sqlite://:memory:");
+@exec("CREATE TABLE contas (id INTEGER PRIMARY KEY, titular TEXT, saldo REAL);");
+@exec("CREATE TABLE transacoes_pix (id INTEGER PRIMARY KEY AUTOINCREMENT, de_id INTEGER, para_id INTEGER, valor REAL, ts REAL);");
+
+@exec("INSERT INTO contas (id, titular, saldo) VALUES (?, ?, ?);", [1, "Alice Souza", 1000000.0]);
+@exec("INSERT INTO contas (id, titular, saldo) VALUES (?, ?, ?);", [2, "Bob Silva", 1000000.0]);
+
+cache.set("saldo:1", 1000000.0);
+cache.set("saldo:2", 1000000.0);
+
+fn api_pix_cache(req) {
+    if (req.method == "POST" && req.path == "/pix") {
+        let de = req.body["de"];
+        let para = req.body["para"];
+        let valor = req.body["valor"];
+
+        cache.decr("saldo:" + de, valor);
+        cache.incr("saldo:" + para, valor);
+
+        return { "sucesso": true, "valor": valor };
+    }
+    return http.response(404, { "erro": "Rota desconhecida" });
+}
+
+let server = http.serve(7080, api_pix_cache, { "background": true });
+
+fn gerar_payload(index) {
+    let de = 1;
+    let para = 2;
+    if (index % 2 == 0) {
+        de = 2;
+        para = 1;
+    }
+    return {
+        "de": de,
+        "para": para,
+        "valor": 10.0
+    };
+}
+
+let TOTAL_REQS = 1000;
+print("Disparando " + TOTAL_REQS + " requisições HTTP simultâneas com concorrência 32...");
+
+let res = http.batchPost("http://localhost:7080/pix", gerar_payload, TOTAL_REQS, 32);
+
+print("\n--- RESULTADO DE ALTO VOLUME (CACHE NATIVO) ---");
+print("Total de Requisições: " + res["total"]);
+print("Sucessos            : " + res["successes"]);
+print("Falhas              : " + res["failures"]);
+print("Tempo Total         : " + res["elapsed_ms"] + " ms");
+print("Latência Média      : " + res["avg_ms"] + " ms");
+print("Throughput (TPS)    : " + res["tps"] + " requisições/segundo");
+
+print("\nSaldos finais em cache:");
+print("  Alice: R$ " + cache.get("saldo:1"));
+print("  Bob  : R$ " + cache.get("saldo:2"));
+
+# Agora faz a persistência em lote no SQLite
+let t0 = time();
+@transaction {
+    @exec("UPDATE contas SET saldo = ? WHERE id = 1;", [cache.get("saldo:1")]);
+    @exec("UPDATE contas SET saldo = ? WHERE id = 2;", [cache.get("saldo:2")]);
+}
+let t1 = time();
+print("Flush final para o SQLite concluído em: " + (t1 - t0) + " ms!");
+
+server.stop();

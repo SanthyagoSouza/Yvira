@@ -1,0 +1,141 @@
+# ==============================================================================
+# Projeto: Pipeline de Backend, Ingestao de API, Banco de Dados e IA (Perceptron)
+# Autor  : Santhyago Souza Ponciano
+# ==============================================================================
+
+# 1. Carregando configuracoes de ambiente (.env nativo)
+import ".env" as config;
+import "fs" as fs;
+print("=== Iniciando Backend Pipeline IA Yvira ===");
+print("Banco de Dados: " + config.DB_PATH);
+print("Modelo de IA  : " + config.MODELO_NOME);
+
+# 2. Configurando Banco de Dados Nativo com @db
+@db("sqlite://" + config.DB_PATH);
+@db.analytics("sqlite://:memory:");
+
+# Criacao de tabelas seguras com @exec
+@exec("CREATE TABLE IF NOT EXISTS transacoes (id INTEGER PRIMARY KEY, valor REAL, score_risco REAL, flag_fraude INTEGER);");
+@exec.analytics("CREATE TABLE IF NOT EXISTS auditoria (id INTEGER PRIMARY KEY, msg TEXT, data TEXT);");
+
+# 3. Ingestao e Simulacao de Dados
+print("\n[1/4] Populando banco de dados com transacoes...");
+fn registrar_transacao(valor, score_risco, flag_fraude) {
+    @exec("INSERT INTO transacoes (valor, score_risco, flag_fraude) VALUES (?, ?, ?);", [valor, score_risco, flag_fraude]);
+    @exec.analytics("INSERT INTO auditoria (msg, data) VALUES (?, ?);", ["Transacao inserida: R$ " + valor, "2026-10-27"]);
+}
+
+# Dados de treino: [Valor Normalizado (0-1), Score Risco (0-1)] -> Fraude (1 ou 0)
+registrar_transacao(0.15, 0.20, 0);
+registrar_transacao(0.20, 0.10, 0);
+registrar_transacao(0.30, 0.25, 0);
+registrar_transacao(0.85, 0.90, 1);
+registrar_transacao(0.95, 0.80, 1);
+registrar_transacao(0.70, 0.85, 1);
+
+# 4. Consulta com @query e Montagem das Matrizes de IA
+print("[2/4] Carregando dados do banco para tensores matriciais...");
+let dados = @query("SELECT valor, score_risco, flag_fraude FROM transacoes;");
+print("Registros recuperados do banco: " + dados.length());
+
+# Matrizes de caracteristicas X (6 x 2) e rotulos Y (6 x 1)
+let X = [
+    [0.15, 0.20],
+    [0.20, 0.10],
+    [0.30, 0.25],
+    [0.85, 0.90],
+    [0.95, 0.80],
+    [0.70, 0.85]
+];
+
+let Y = [
+    [0],
+    [0],
+    [0],
+    [1],
+    [1],
+    [1]
+];
+
+print("Dimensoes da Matriz X: " + X.linhas + "x" + X.colunas);
+print("Dimensoes do Vetor Y : " + Y.linhas + "x" + Y.colunas);
+
+# 5. Classe do Modelo de Inteligencia Artificial (Neuronio / Classificador Linear)
+class ClassificadorFraude {
+    fn init() {
+        # Inicializa pesos (2 x 1) e bias
+        this.w1 = 0.5;
+        this.w2 = 0.5;
+        this.bias = -0.5;
+        this.lr = 0.1;
+    }
+
+    fn prever(valor, score) {
+        # Funcao de ativacao degrau: y = w1*x1 + w2*x2 + b
+        let ativacao = (this.w1 * valor) + (this.w2 * score) + this.bias;
+        if (ativacao >= 0.0) {
+            return 1;
+        }
+        return 0;
+    }
+
+    fn treinar(X_mat, Y_mat, epocas) {
+        print("\n[3/4] Treinando modelo de Machine Learning por " + epocas + " epocas...");
+        
+        for (let e = 1; e <= epocas; e = e + 1) {
+            let erros_epoca = 0;
+            
+            for (let i = 0; i < X_mat.linhas; i = i + 1) {
+                let x1 = X_mat.get(i, 0);
+                let x2 = X_mat.get(i, 1);
+                let y_real = Y_mat.get(i, 0);
+                
+                let predicao = this.prever(x1, x2);
+                let erro = y_real - predicao;
+                
+                if (erro != 0) {
+                    erros_epoca = erros_epoca + 1;
+                    # Atualizacao de pesos do Perceptron
+                    this.w1 = this.w1 + (this.lr * erro * x1);
+                    this.w2 = this.w2 + (this.lr * erro * x2);
+                    this.bias = this.bias + (this.lr * erro);
+                }
+            }
+            
+            if (erros_epoca == 0) {
+                print("Convergencia alcancada na epoca " + e + "! Erro = 0.");
+                break;
+            }
+        }
+        print("Treinamento finalizado. Pesos aprendidos: w1=" + this.w1 + ", w2=" + this.w2 + ", bias=" + this.bias);
+    }
+}
+
+let modelo = ClassificadorFraude();
+modelo.treinar(X, Y, 25);
+
+# 6. Testando Previsoes com Novos Dados de Entrada
+print("\n[4/4] Executando inferencia em novas transacoes:");
+
+fn testar_transacao(descricao, valor, score) {
+    let resultado = modelo.prever(valor, score);
+    let rotulo = "LEGITIMA";
+    if (resultado == 1) {
+        rotulo = "FRAUDE DETECTADA!";
+    }
+    print("  -> Transacao '" + descricao + "' [Valor=" + valor + ", Score=" + score + "]: " + rotulo);
+}
+
+testar_transacao("Compra Cafe", 0.05, 0.10);
+testar_transacao("Transferencia Suspeita Exterior", 0.92, 0.88);
+testar_transacao("Supermercado", 0.25, 0.15);
+testar_transacao("Saque Alto Fora de Hora", 0.80, 0.75);
+
+# Registrando relatorio de execucao com o modulo fs
+let log_saida = "Treinamento do Perceptron concluido com sucesso no Yvira Backend Pipeline.";
+fs.write("pipeline_resultado.txt", log_saida);
+print("\nRelatorio salvo em 'pipeline_resultado.txt' via fs.");
+
+let total_auditoria = @query.analytics("SELECT count(*) as total FROM auditoria;");
+print("Total de eventos registrados no banco de auditoria: " + total_auditoria[0]["total"]);
+print("\n=== Backend Pipeline Finalizado com Sucesso! ===");

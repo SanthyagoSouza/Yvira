@@ -1,0 +1,103 @@
+# Coletor e Gerador de Dados Históricos do XAUUSD (Gold / US Dollar)
+import "http";
+
+class XauusdDataLoader {
+    fn carregarTimeframe(timeframeStr, rangeDias) {
+        let candles = [];
+
+        try {
+            print("Baixando cotações reais do Ouro (XAUUSD) no timeframe " + timeframeStr + "...");
+            let url = "https://query1.finance.yahoo.com/v8/finance/chart/GC=F?interval=" + timeframeStr + "&range=" + rangeDias + "d";
+            let resp = http.get(url);
+
+            if (resp.status == 200) {
+                let json = resp.json();
+                let resultado = json["chart"]["result"][0];
+                let timestamps = resultado["timestamp"];
+                let quotes = resultado["indicators"]["quote"][0];
+                let opens = quotes["open"];
+                let highs = quotes["high"];
+                let lows = quotes["low"];
+                let closes = quotes["close"];
+                let volumes = quotes["volume"];
+
+                let i = 0;
+                let total = len(timestamps);
+                while (i < total) {
+                    let o = opens[i];
+                    let h = highs[i];
+                    let l = lows[i];
+                    let c = closes[i];
+                    let v = volumes[i];
+                    let t = timestamps[i];
+
+                    if (o != null && h != null && l != null && c != null) {
+                        let vol = 1000;
+                        if (v != null) vol = v;
+                        candles.push({
+                            "timestamp": t,
+                            "open": o,
+                            "high": h,
+                            "low": l,
+                            "close": c,
+                            "volume": vol
+                        });
+                    }
+                    i = i + 1;
+                }
+
+                if (len(candles) > 30) {
+                    print("Sucesso! " + len(candles) + " candles reais de " + timeframeStr + " do Ouro baixados.");
+                    return candles;
+                }
+            }
+        } catch (e) {
+            print("[Aviso]: Não foi possível baixar timeframe " + timeframeStr + " (" + e + ").");
+        }
+
+        return this.gerarSerieRealistaOuro(300, 2735.50);
+    }
+
+    fn carregarDadosReaisOuFallback(rangeDias) {
+        return this.carregarTimeframe("1h", rangeDias);
+    }
+
+    fn gerarSerieRealistaOuro(quantidade, precoInicial) {
+        let serie = [];
+        let p = precoInicial;
+        let t = time() - (quantidade * 3600 * 1000);
+
+        let i = 0;
+        while (i < quantidade) {
+            # Volatilidade do ouro: oscilações de $1 a $15 por hora
+            let variacaoCentavos = random(-1200, 1250); # -12.00 a +12.50
+            let variacao = variacaoCentavos / 100.0;
+            let o = p;
+            let c = o + variacao;
+            let spreadMax = (random(50, 400)) / 100.0;
+            let spreadMin = (random(50, 400)) / 100.0;
+            let maiorPreco = o;
+            if (c > maiorPreco) maiorPreco = c;
+            let menorPreco = o;
+            if (c < menorPreco) menorPreco = c;
+            let h = maiorPreco + spreadMax;
+            let l = menorPreco - spreadMin;
+            let vol = random(1000, 50000);
+
+            serie.push({
+                "timestamp": t,
+                "open": o,
+                "high": h,
+                "low": l,
+                "close": c,
+                "volume": vol
+            });
+
+            p = c;
+            t = t + (3600 * 1000);
+            i = i + 1;
+        }
+
+        return serie;
+    }
+}

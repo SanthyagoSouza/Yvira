@@ -1,0 +1,9 @@
+﻿let total = 0
+let i = 0
+
+while (i < 1000000) {
+    total += i * 2
+    i += 1
+}
+
+print("Total:", total)

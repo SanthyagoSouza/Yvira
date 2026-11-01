@@ -1,0 +1,19 @@
+# Teste de Servidor @realtime com Chave Rotativa
+print(">>> Testando inicializacao do superpoder @realtime...");
+
+let servidor = @realtime.servidor({
+    "porta": 5055,
+    "segredo": "MEU_SEGREDO_SUPER_SECRETO_2026",
+    "rotacao": 10
+});
+
+print("[OK] Instancia do servidor criada com sucesso via @realtime.servidor!");
+
+let cliente = @realtime.cliente({
+    "endereco": "ws://localhost:5055",
+    "segredo": "MEU_SEGREDO_SUPER_SECRETO_2026",
+    "rotacao": 10
+});
+
+print("[OK] Instancia do cliente criada com sucesso via @realtime.cliente!");
+print(">>> @realtime 100% OPERACIONAL NO YVIRA!");

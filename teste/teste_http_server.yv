@@ -1,0 +1,35 @@
+import "http";
+
+print("Iniciando teste do servidor HTTP nativo...");
+
+fn manipular_requisicao(req) {
+    if (req.method == "GET" && req.path == "/status") {
+        return { "servico": "Yvira API", "online": true, "linguagem": "Yvira" };
+    }
+
+    if (req.method == "POST" && req.path == "/echo") {
+        return { "recebido": req.body, "autor": "Santhyago" };
+    }
+
+    return http.response(404, { "erro": "Rota nao encontrada" });
+}
+
+# Inicia o servidor HTTP em background na porta 5055
+let server = http.serve(5055, manipular_requisicao, { "background": true });
+
+print("Servidor iniciado em background!");
+
+# Testa fazer uma requisição GET para ele mesmo
+let respGet = http.get("http://localhost:5055/status");
+print("GET /status Código: " + respGet.status);
+print("GET /status Body: " + respGet.body);
+
+# Testa fazer uma requisição POST com JSON para ele mesmo
+let dadosEnvio = { "mensagem": "Testando servidor HTTP nativo do Yvira!" };
+let respPost = http.post("http://localhost:5055/echo", dadosEnvio);
+print("POST /echo Código: " + respPost.status);
+print("POST /echo Body: " + respPost.body);
+
+# Encerra o servidor
+server.stop();
+print("Servidor encerrado com sucesso! Teste finalizado.");

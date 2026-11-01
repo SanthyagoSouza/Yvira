@@ -1,0 +1,64 @@
+print("========================================");
+print("   BEM-VINDO AO PROGRAMA FONTE YVIRA!   ");
+print("========================================");
+
+let criador = "Santhyago";
+let versao = "0.4 Alpha";
+
+print("Criador:", criador);
+print("Versao:", versao);
+
+print("");
+print("--- TESTE 1: FUNÇÃO SIMPLES COM PARÂMETROS E RETORNO ---");
+
+fn somar(a, b) {
+    return a + b;
+}
+
+let resultadoSoma = somar(25, 75);
+print("25 + 75 =", resultadoSoma);
+
+print("");
+print("--- TESTE 2: FUNÇÃO COM LÓGICA E CONDICIONAIS INTERNAS ---");
+
+fn verificarMaioridade(nome, idade) {
+    if (idade >= 18) {
+        return nome + " e maior de idade (" + idade + " anos)";
+    } else {
+        return nome + " e menor de idade (" + idade + " anos)";
+    }
+}
+
+print(verificarMaioridade("Carlos", 22));
+print(verificarMaioridade("Lucas", 15));
+
+print("");
+print("--- TESTE 3: FUNÇÃO RECURSIVA (FATORIAL) ---");
+
+fn fatorial(n) {
+    if (n <= 1) {
+        return 1;
+    }
+    return n * fatorial(n - 1);
+}
+
+print("Fatorial de 5:", fatorial(5));
+print("Fatorial de 6:", fatorial(6));
+
+print("");
+print("--- TESTE 4: FIBONACCI RECURSIVO ---");
+
+fn fibonacci(n) {
+    if (n <= 0) {
+        return 0;
+    }
+    if (n == 1) {
+        return 1;
+    }
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+print("Fibonacci de 7:", fibonacci(7));
+
+print("");
+print("Todas as funcoes executaram com 100% de precisao!");

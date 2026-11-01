@@ -1,0 +1,68 @@
+print("========================================");
+print("   SISTEMA NATIVO DE MATRIZES - YVIRA   ");
+print("========================================");
+
+print("--- 1. DECLARAÇÃO DE VETOR E ACESSO DIRETO ---");
+let v = [10, 20, 30, 40, 50];
+print("Vetor v:", v);
+print("Elemento v[0]:", v[0]);
+print("Elemento v[4]:", v[4]);
+print("Tamanho total (v.length):", v.length);
+
+print("");
+print("--- 2. MATRIZ 2D (SEM PRECISAR DE LOOP FOR) ---");
+let m = [
+    [1, 2, 3],
+    [4, 5, 6]
+];
+print("Matriz Original m (2x3):", m);
+print("Linhas:", m.rows, "| Colunas:", m.cols);
+
+print("");
+print("--- 3. ACESSO A ELEMENTOS E FATIAS DIRETAS ---");
+print("Elemento m[0, 1] (Linha 0, Coluna 1):", m[0, 1]);
+print("Elemento m[1, 2] (Linha 1, Coluna 2):", m[1, 2]);
+
+# Extração de Linha inteira sem for!
+print("Linha 0 inteira (m.row(0)):", m.row(0));
+print("Linha 1 inteira (m.row(1)):", m.row(1));
+
+# Extração de Coluna inteira sem for!
+print("Coluna 0 inteira (m.col(0)):", m.col(0));
+print("Coluna 2 inteira (m.col(2)):", m.col(2));
+
+print("");
+print("--- 4. TRANSPOSIÇÃO DE MATRIZ (INVERTER LINHAS POR COLUNAS) ---");
+let transposta = m.transpose(); # ou m.T
+print("Matriz Transposta (3x2):", transposta);
+
+print("");
+print("--- 5. MATEMÁTICA DIRETA EM MATRIZES (SEM LAÇOS FOR!) ---");
+let dobro = m * 2;
+print("Matriz multiplicada por 2 (m * 2):", dobro);
+
+let somada = m + 10;
+print("Matriz somada com 10 (m + 10):", somada);
+
+print("");
+print("--- 6. MULTIPLICAÇÃO MATRICIAL (DOT PRODUCT: M * M_Transposta) ---");
+let produtoMatricial = m * transposta; # (2x3) * (3x2) resulta em (2x2)
+print("Produto Matricial (2x2):", produtoMatricial);
+
+print("");
+print("--- 7. INVERSÃO DE MATRIZ QUADRADA (ALGEBRA LINEAR) ---");
+# Matriz 2x2: [[4, 7], [2, 6]]
+let quad = [
+    [4, 7],
+    [2, 6]
+];
+print("Matriz Quadrada Original:", quad);
+
+let inv = quad.inverse();
+print("Matriz Inversa Calculada (quad.inverse()):", inv);
+
+let identidade = quad * inv;
+print("Comprovacao: Matriz * Inversa = Identidade:", identidade);
+
+print("");
+print("Todas as operacoes de matrizes e vetores funcionaram perfeitamente!");

@@ -1,0 +1,10 @@
+﻿# Módulo de utilidades matemáticas
+fn somar(a, b) {
+    return a + b
+}
+
+fn multiplicar(a, b) {
+    return a * b
+}
+
+let versao = "1.0.0"

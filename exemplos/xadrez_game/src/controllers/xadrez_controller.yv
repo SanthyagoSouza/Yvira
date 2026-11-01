@@ -1,0 +1,312 @@
+fn on_confirmar_promocao(dados) {
+    let r = dados["linha"];
+    let c = dados["coluna"];
+    let novoTipo = dados["tipo"];
+    let cor = dados["cor"];
+
+    print("[Yvira Xadrez]: Peao promovido a " + novoTipo + " (" + cor + ")!");
+
+    let simb = "♕";
+    if (novoTipo == "rainha") { simb = cor == "brancas" ? "♕" : "♛"; }
+    if (novoTipo == "torre")  { simb = cor == "brancas" ? "♖" : "♜"; }
+    if (novoTipo == "bispo")  { simb = cor == "brancas" ? "♗" : "♝"; }
+    if (novoTipo == "cavalo") { simb = cor == "brancas" ? "♘" : "♞"; }
+
+    matrizEstado[r][c] = {
+        "tipo": novoTipo,
+        "cor": cor,
+        "simbolo": simb,
+        "jaMoveu": true
+    };
+
+    # Alterna o turno agora que a promocao concluiu
+    if (turnoAtual == "brancas") {
+        turnoAtual = "pretas";
+    } else {
+        turnoAtual = "brancas";
+    }
+
+    let simbolos = motorTabuleiro.extrairSimbolos(matrizEstado);
+    appGlobal.enviar_dados("atualizarTabuleiro", {
+        "matriz": simbolos,
+        "turno": turnoAtual
+    });
+}
+# Controlador do Xadrez (Ponte Yvira ⇄ Interface)
+import "../core/tabuleiro.yv";
+import "../pecas/peao.yv";
+import "../pecas/torre.yv";
+import "../pecas/cavalo.yv";
+import "../pecas/bispo.yv";
+import "../pecas/rainha.yv";
+import "../pecas/rei.yv";
+import "../ai/memoria_cognitiva.yv";
+import "../ai/motor_ia.yv";
+
+let motorTabuleiro = TabuleiroXadrez();
+let peaoRegrasBrancas = Peao("brancas");
+let peaoRegrasPretas = Peao("pretas");
+let torreRegrasBrancas = Torre("brancas");
+let torreRegrasPretas = Torre("pretas");
+let cavaloRegrasBrancas = Cavalo("brancas");
+let cavaloRegrasPretas = Cavalo("pretas");
+let bispoRegrasBrancas = Bispo("brancas");
+let bispoRegrasPretas = Bispo("pretas");
+let rainhaRegrasBrancas = Rainha("brancas");
+let rainhaRegrasPretas = Rainha("pretas");
+let reiRegrasBrancas = Rei("brancas");
+let reiRegrasPretas = Rei("pretas");
+
+let appGlobal = null;
+let matrizEstado = null;
+let pecaSelecionada = null; # { "linha": r, "coluna": c }
+let turnoAtual = "brancas";
+let modoJogo = "ia";
+let memoriaIa = MemoriaCognitiva();
+let motorIa = MotorIa(memoriaIa);
+
+# Função auxiliar para obter a lista de movimentos válidos de qualquer peça suportada
+fn obterMovimentosDePeca(peca, r, c, matriz) {
+    if (peca == null) return [];
+
+    let tipo = peca["tipo"];
+    let cor = peca["cor"];
+
+    if (tipo == "peao") {
+        let regras = cor == "brancas" ? peaoRegrasBrancas : peaoRegrasPretas;
+        return regras.obterMovimentosValidos(r, c, matriz);
+    }
+
+    if (tipo == "torre") {
+        let regrasTorre = cor == "brancas" ? torreRegrasBrancas : torreRegrasPretas;
+        return regrasTorre.obterMovimentosValidos(r, c, matriz);
+    }
+
+    if (tipo == "cavalo") {
+        let regrasCavalo = cor == "brancas" ? cavaloRegrasBrancas : cavaloRegrasPretas;
+        return regrasCavalo.obterMovimentosValidos(r, c, matriz);
+    }
+
+    if (tipo == "bispo") {
+        let regrasBispo = cor == "brancas" ? bispoRegrasBrancas : bispoRegrasPretas;
+        return regrasBispo.obterMovimentosValidos(r, c, matriz);
+    }
+
+    if (tipo == "rainha") {
+        let regrasRainha = cor == "brancas" ? rainhaRegrasBrancas : rainhaRegrasPretas;
+        return regrasRainha.obterMovimentosValidos(r, c, matriz);
+    }
+
+    if (tipo == "rei") {
+        let regrasRei = cor == "brancas" ? reiRegrasBrancas : reiRegrasPretas;
+        return regrasRei.obterMovimentosValidos(r, c, matriz);
+    }
+
+    return [];
+}
+
+fn on_mudar_dificuldade(dados) {
+    print("\n[Yvira Xadrez]: Dificuldade alterada: " + dados);
+}
+
+fn executarJogadaIa() {
+    print("\n[IA Cognitiva]: Analisando tabuleiro e lembrando taticas do humano...");
+    let melhorMov = motorIa.calcularMelhorMovimento(matrizEstado, obterMovimentosDePeca);
+    if (melhorMov == null) {
+        print("[IA Cognitiva]: Sem movimentos possiveis!");
+        return null;
+    }
+    let deR = melhorMov["deLinha"];
+    let deC = melhorMov["deColuna"];
+    let paraR = melhorMov["paraLinha"];
+    let paraC = melhorMov["paraColuna"];
+    let pecaIa = matrizEstado[deR][deC];
+    print("[IA Cognitiva]: Executando lance de contra-ataque!");
+    pecaIa["jaMoveu"] = true;
+    let tipoM = melhorMov["tipo"];
+    if (tipoM == "roque_pequeno" || tipoM == "roque_grande") {
+        let tLinha = melhorMov["torreLinha"];
+        let tColOrig = melhorMov["torreColunaOrig"];
+        let tColDest = melhorMov["torreColunaDest"];
+        let pecaTorre = matrizEstado[tLinha][tColOrig];
+        if (pecaTorre != null) {
+            pecaTorre["jaMoveu"] = true;
+            matrizEstado[tLinha][tColDest] = pecaTorre;
+            matrizEstado[tLinha][tColOrig] = null;
+        }
+    }
+    if (pecaIa["tipo"] == "peao" && paraR == 7) {
+        pecaIa = { "tipo": "rainha", "cor": "pretas", "simbolo": "♛", "jaMoveu": true };
+    }
+    matrizEstado[paraR][paraC] = pecaIa;
+    matrizEstado[deR][deC] = null;
+    turnoAtual = "brancas";
+    let simbolos = motorTabuleiro.extrairSimbolos(matrizEstado);
+    appGlobal.enviar_dados("atualizarTabuleiro", {
+        "matriz": simbolos,
+        "turno": turnoAtual,
+        "movimento": { "deLinha": deR, "deColuna": deC, "paraLinha": paraR, "paraColuna": paraC }
+    });
+}
+
+fn on_iniciar_partida(dados) {
+    print("\n[Yvira Xadrez]: Inicializando novo jogo...");
+    matrizEstado = motorTabuleiro.criarSetupInicial();
+    turnoAtual = "brancas";
+    pecaSelecionada = null;
+    if (dados != null && dados["modo"] != null) { modoJogo = dados["modo"]; }
+
+    let simbolos = motorTabuleiro.extrairSimbolos(matrizEstado);
+
+    let payload = {
+        "matriz": simbolos,
+        "turno": turnoAtual
+    };
+
+    appGlobal.enviar_dados("receberTabuleiroInicial", payload);
+}
+
+fn on_clique_casa(dados) {
+    let r = dados["linha"];
+    let c = dados["coluna"];
+
+    print("\n[Yvira Xadrez]: Clique registrado em [" + r + ", " + c + "]");
+
+    if (matrizEstado == null) return null;
+
+    let pecaClicada = matrizEstado[r][c];
+
+    # Se já tínhamos uma peça selecionada e o jogador clicou no destino válido
+    if (pecaSelecionada != null) {
+        let origR = pecaSelecionada["linha"];
+        let origC = pecaSelecionada["coluna"];
+        let pecaOrig = matrizEstado[origR][origC];
+
+        # Se clicou na mesma peça, desmarca
+        if (origR == r && origC == c) {
+            pecaSelecionada = null;
+            appGlobal.enviar_dados("destacarCasasValidas", []);
+            return null;
+        }
+
+        # Checa movimentos válidos para a peça selecionada (Peão, Torre, etc)
+        if (pecaOrig != null) {
+            let movimentosValidos = obterMovimentosDePeca(pecaOrig, origR, origC, matrizEstado);
+
+            # Verifica se a casa clicada está na lista de movimentos permitidos
+            let ehValido = false;
+            let movEscolhido = null;
+            let i = 0;
+            while (i < len(movimentosValidos)) {
+                let m = movimentosValidos[i];
+                if (m["paraLinha"] == r && m["paraColuna"] == c) {
+                    ehValido = true;
+                    movEscolhido = m;
+                }
+                i = i + 1;
+            }
+
+            if (ehValido) {
+                print("[Yvira Xadrez]: Movimento de " + pecaOrig["tipo"] + " executado com sucesso!");
+                pecaOrig["jaMoveu"] = true;
+                if (pecaOrig["cor"] == "brancas") {
+                    memoriaIa.registrarLanceHumano(origR, origC, r, c, pecaOrig["tipo"]);
+                }
+
+                # Trata jogada especial de Roque
+                let tipoMov = movEscolhido["tipo"];
+                if (tipoMov == "roque_pequeno" || tipoMov == "roque_grande") {
+                    let tLinha = movEscolhido["torreLinha"];
+                    let tColOrig = movEscolhido["torreColunaOrig"];
+                    let tColDest = movEscolhido["torreColunaDest"];
+                    let pecaTorre = matrizEstado[tLinha][tColOrig];
+                    if (pecaTorre != null) {
+                        pecaTorre["jaMoveu"] = true;
+                        matrizEstado[tLinha][tColDest] = pecaTorre;
+                        matrizEstado[tLinha][tColOrig] = null;
+                    }
+                    print("[Yvira Xadrez]: Roque executado!");
+                }
+
+                # Move a peça na matriz
+                matrizEstado[r][c] = pecaOrig;
+                matrizEstado[origR][origC] = null;
+                pecaSelecionada = null;
+
+                # Checa se houve promocao de peao (peao branco na linha 0 ou preto na linha 7)
+                if (pecaOrig["tipo"] == "peao" && (r == 0 || r == 7)) {
+                    print("[Yvira Xadrez]: Peao alcancou a ultima linha! Solicitando promocao...");
+                    let simbolos = motorTabuleiro.extrairSimbolos(matrizEstado);
+                    appGlobal.enviar_dados("atualizarTabuleiro", {
+                        "matriz": simbolos,
+                        "turno": turnoAtual
+                    });
+                    appGlobal.enviar_dados("solicitarPromocao", {
+                        "linha": r,
+                        "coluna": c,
+                        "cor": pecaOrig["cor"]
+                    });
+                    return null;
+                }
+
+                # Alterna turno
+                if (turnoAtual == "brancas") {
+                    turnoAtual = "pretas";
+                } else {
+                    turnoAtual = "brancas";
+                }
+
+                let simbolos = motorTabuleiro.extrairSimbolos(matrizEstado);
+                appGlobal.enviar_dados("atualizarTabuleiro", {
+                    "matriz": simbolos,
+                    "turno": turnoAtual,
+                    "movimento": { "deLinha": origR, "deColuna": origC, "paraLinha": r, "paraColuna": c }
+                });
+
+                # Se estiver jogando contra a maquina e for a vez das Pretas (IA)
+                if (modoJogo == "ia" && turnoAtual == "pretas") {
+                    executarJogadaIa();
+                }
+
+                return null;
+            }
+        }
+    }
+
+    # Se não tínhamos peça selecionada, tenta selecionar uma peça do turno atual
+    if (pecaClicada != null && pecaClicada["cor"] == turnoAtual) {
+        pecaSelecionada = { "linha": r, "coluna": c };
+        print("[Yvira Xadrez]: Peça selecionada: " + pecaClicada["tipo"] + " (" + pecaClicada["cor"] + ")");
+
+        let movs = obterMovimentosDePeca(pecaClicada, r, c, matrizEstado);
+        print("[Yvira Xadrez]: " + len(movs) + " movimentos válidos calculados para " + pecaClicada["tipo"] + ".");
+
+        # Envia as casas para destaque visual no tabuleiro
+        appGlobal.enviar_dados("destacarCasasValidas", movs);
+    } else {
+        pecaSelecionada = null;
+        appGlobal.enviar_dados("destacarCasasValidas", []);
+    }
+}
+
+fn on_voltar_menu(dados) {
+    print("[Yvira Xadrez]: Retornando ao menu principal...");
+}
+
+fn on_sair_jogo(dados) {
+    print("[Yvira Xadrez]: Saindo do jogo...");
+    appGlobal.fechar();
+}
+
+class XadrezController {
+    fn iniciar(app) {
+        appGlobal = app;
+
+        app.ao_evento("mudar_dificuldade", "on_mudar_dificuldade");
+        app.ao_evento("iniciar_partida", "on_iniciar_partida");
+        app.ao_evento("voltar_menu", "on_voltar_menu");
+        app.ao_evento("clique_casa", "on_clique_casa");
+        app.ao_evento("sair_jogo", "on_sair_jogo");
+        app.ao_evento("confirmar_promocao", "on_confirmar_promocao");
+    }
+}

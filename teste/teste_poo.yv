@@ -1,0 +1,48 @@
+﻿class Pessoa {
+    fn init(nome, idade) {
+        this.nome = nome
+        this.idade = idade
+    }
+
+    fn apresentar() {
+        print("Ola! Meu nome e " + this.nome + " e tenho " + this.idade + " anos.")
+    }
+
+    fn fazerAniversario() {
+        this.idade += 1
+        print("Parabens! Agora " + this.nome + " tem " + this.idade + " anos.")
+    }
+}
+
+let p1 = Pessoa("Carlos", 25)
+p1.apresentar()
+p1.fazerAniversario()
+p1.nome = "Carlos Eduardo"
+print("Nome atualizado:", p1.nome)
+
+class ContaBancaria {
+    fn init(titular, saldoInicial) {
+        this.titular = titular
+        this.saldo = saldoInicial
+    }
+
+    fn depositar(valor) {
+        this.saldo += valor
+        print("Deposito de", valor, "realizado. Novo saldo:", this.saldo)
+    }
+
+    fn sacar(valor) {
+        if (valor > this.saldo) {
+            print("Saldo insuficiente para saque de", valor)
+        } else {
+            this.saldo -= valor
+            print("Saque de", valor, "realizado com sucesso. Saldo restante:", this.saldo)
+        }
+    }
+}
+
+let conta = ContaBancaria("Carlos", 500)
+conta.depositar(250)
+conta.sacar(100)
+conta.sacar(1000)
+print("Representacao do objeto conta:", conta)

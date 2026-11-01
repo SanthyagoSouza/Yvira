@@ -1,0 +1,268 @@
+import "http";
+import "cache";
+import "modelos.yv";
+
+print("=================================================================");
+print("   BANCO YVIRA: SISTEMA PIX CORE (IN-MEMORY CACHE + WRITE-BEHIND)");
+print("=================================================================\n");
+
+# 1. Configuração do Banco de Dados SQLite em memória
+@db("sqlite://:memory:");
+
+@exec("CREATE TABLE contas (id INTEGER PRIMARY KEY, titular TEXT, saldo_centavos INTEGER NOT NULL CHECK (saldo_centavos >= 0));");
+@exec("CREATE TABLE transacoes_pix (id INTEGER PRIMARY KEY, de_id INTEGER, para_id INTEGER, valor_centavos INTEGER, ts REAL);");
+
+# 2. Inicialização de um Pool Realista de 50 Contas Bancárias
+let TOTAL_CONTAS = 50;
+let SALDO_INICIAL_POR_CONTA = 1000000; # R$ 10.000,00 por conta (1.000.000 centavos)
+
+print("Criando base com " + TOTAL_CONTAS + " contas bancárias...");
+let cIdx = 1;
+while (cIdx <= TOTAL_CONTAS) {
+    let titular = "Cliente #" + cIdx;
+    @exec("INSERT INTO contas (id, titular, saldo_centavos) VALUES (?, ?, ?);", [cIdx, titular, SALDO_INICIAL_POR_CONTA]);
+    cIdx = cIdx + 1;
+}
+
+# 3. AQUECIMENTO DO CACHE NATIVO EM MEMÓRIA
+print("Aquecendo Cache Nativo com saldos iniciais em RAM...");
+let storeSaldos = cache.store("saldos_contas");
+let storePixLedger = cache.store("pix_ledger");
+
+let contasIniciais = @query("SELECT id, titular, saldo_centavos FROM contas;");
+foreach (c in contasIniciais) {
+    storeSaldos.set("" + c["id"], c["saldo_centavos"]);
+}
+
+# 4. Camada de Serviço do PIX (Alta Performance com Cache Atômico)
+let contadorPixGlobal = 0;
+let listaHistoricoPix = [];
+
+class PixService {
+    fn processarTransferencia(deId, paraId, valorCentavos) {
+        if (valorCentavos <= 0) {
+            return { "sucesso": false, "status": 400, "erro": "Valor deve ser maior que zero (em centavos)." };
+        }
+        if (deId == paraId) {
+            return { "sucesso": false, "status": 400, "erro": "Conta de origem e destino devem ser distintas." };
+        }
+
+        let chaveDe = "" + deId;
+        let chavePara = "" + paraId;
+
+        let saldoOrigem = storeSaldos.get(chaveDe);
+        if (saldoOrigem == null) {
+            return { "sucesso": false, "status": 404, "erro": "Conta de origem inexistente." };
+        }
+
+        if (saldoOrigem < valorCentavos) {
+            return { "sucesso": false, "status": 422, "erro": "Saldo insuficiente em cache." };
+        }
+
+        # Operações de Débito e Crédito Atômicas em Memória (Sem Lock SQL)
+        storeSaldos.decr(chaveDe, valorCentavos);
+        storeSaldos.incr(chavePara, valorCentavos);
+
+        # Contador atômico no cache store para thread safety total
+        let pixId = storePixLedger.incr("sequence", 1.0);
+        let agora = time();
+
+        # Registra objeto POO de auditoria
+        let txObj = PixTransacao(pixId, deId, paraId, valorCentavos, agora);
+        storePixLedger.set("tx:" + pixId, txObj.toMap());
+
+        return {
+            "sucesso": true,
+            "status": 200,
+            "dados": { "pix_id": pixId, "de": deId, "para": paraId, "valor_centavos": valorCentavos }
+        };
+    }
+
+    fn listarSaldosTop(limite) {
+        let resultado = [];
+        let id = 1;
+        while (id <= limite && id <= TOTAL_CONTAS) {
+            let s = storeSaldos.get("" + id);
+            let obj = ContaBancaria(id, "Cliente #" + id, s);
+            resultado.push({
+                "id": obj.id,
+                "titular": obj.titular,
+                "saldo_centavos": obj.saldoCentavos,
+                "formatado": obj.formatarMoeda()
+            });
+            id = id + 1;
+        }
+        return resultado;
+    }
+}
+
+let pixService = PixService();
+
+# 5. Handler HTTP do Microserviço
+fn api_bancaria(req) {
+    if (req.method == "POST" && req.path == "/pix") {
+        let de = req.body["de"];
+        let para = req.body["para"];
+        let valorCentavos = req.body["valor_centavos"];
+
+        let res = pixService.processarTransferencia(de, para, valorCentavos);
+        if (res["sucesso"] == true) {
+            return http.response(200, res["dados"]);
+        } else {
+            return http.response(res["status"], { "erro": res["erro"] });
+        }
+    }
+
+    if (req.method == "GET" && req.path == "/saldos") {
+        return http.response(200, pixService.listarSaldosTop(10));
+    }
+
+    return http.response(404, { "erro": "Rota desconhecida" });
+}
+
+# 6. Sobe o servidor HTTP multithread na porta 7070 em background
+let server = http.serve(7070, api_bancaria, { "background": true });
+
+# 7. Configuração da Carga do Teste de Estresse
+# Se passado via argumento de linha de comando: yvira run main.yv 5000 [32]
+# Ou se informado interativamente no terminal
+let totalTransacoes = 2000;
+let concorrencia = 32;
+
+# 1. Verifica se foi passado via argumento CLI: yvira run main.yv <qtd> [concorrencia]
+try {
+    if (len(args) > 0 && args[0] != "") {
+        let qtdArg = to_number(args[0]);
+        if (qtdArg > 0) {
+            totalTransacoes = qtdArg;
+        }
+    }
+    if (len(args) > 1 && args[1] != "") {
+        let concArg = to_number(args[1]);
+        if (concArg > 0) {
+            concorrencia = concArg;
+        }
+    }
+} catch (e) { }
+
+# 2. Se não passou argumentos na linha de comando, pergunta de forma interativa
+if (len(args) == 0) {
+    try {
+        print("\nInforme a quantidade de transferências PIX [padrão " + totalTransacoes + "]:");
+        let inputQtd = input("Quantidade: ");
+        if (inputQtd != "") {
+            let conv = to_number(inputQtd);
+            if (conv > 0) totalTransacoes = conv;
+        }
+
+        print("Informe a concorrência [padrão " + concorrencia + "]:");
+        let inputConc = input("Concorrência: ");
+        if (inputConc != "") {
+            let cConv = to_number(inputConc);
+            if (cConv > 0) concorrencia = cConv;
+        }
+    } catch (e) { }
+}
+
+print("\n>>> DISPARANDO " + totalTransacoes + " PIX CONCORRENTES (CONCORRÊNCIA " + concorrencia + ") VIA HTTP...");
+
+# Saldos Iniciais para Auditoria
+let saldosIniciais = @query("SELECT SUM(saldo_centavos) as total FROM contas;");
+let totalCentavosInicial = saldosIniciais[0]["total"];
+
+# Gerador dinâmico de payload entre as 50 contas
+fn gerar_payload_pix(index) {
+    let valorPixCentavos = random(100, 1000); # R$ 1,00 a R$ 10,00
+    let deConta = random(1, TOTAL_CONTAS);
+    let paraConta = random(1, TOTAL_CONTAS);
+    if (deConta == paraConta) {
+        paraConta = (deConta % TOTAL_CONTAS) + 1;
+    }
+    return {
+        "de": deConta,
+        "para": paraConta,
+        "valor_centavos": valorPixCentavos
+    };
+}
+
+# Callback de progresso
+fn reportar_progresso(concluidos, total) {
+    let pct = (concluidos / total) * 100.0;
+    print("  [Progresso]: " + concluidos + " / " + total + " (" + pct + "%) concluídos...");
+}
+
+# 8. Disparo Concorrente de Alto Volume
+let resultadoBatch = http.batchPost("http://localhost:7070/pix", gerar_payload_pix, totalTransacoes, concorrencia, reportar_progresso);
+
+# 9. FLUSH ASSÍNCRONO / BATCH WRITE-BACK PARA O SQLITE
+let totalPixGerados = storePixLedger.get("sequence");
+if (totalPixGerados == null) totalPixGerados = 0;
+
+print("\n>>> REALIZANDO PERSISTÊNCIA EM MASSA (FLUSH WRITE-BACK) NO SQLITE...");
+print(">>> Total de transações registradas no Ledger em Cache: " + totalPixGerados);
+let tFlushStart = time();
+
+@transaction {
+    # 1. Consolida os saldos finais das 50 contas
+    let idC = 1;
+    while (idC <= TOTAL_CONTAS) {
+        let saldoFinalCache = storeSaldos.get("" + idC);
+        @exec("UPDATE contas SET saldo_centavos = ? WHERE id = ?;", [saldoFinalCache, idC]);
+        idC = idC + 1;
+    }
+
+    # 2. Persiste as transações em lote no SQLite
+    let txId = 1;
+    while (txId <= totalPixGerados) {
+        let tx = storePixLedger.get("tx:" + txId);
+        if (tx != null) {
+            @exec("INSERT INTO transacoes_pix (id, de_id, para_id, valor_centavos, ts) VALUES (?, ?, ?, ?, ?);", [tx["id"], tx["de"], tx["para"], tx["valor_centavos"], tx["ts"]]);
+        }
+        txId = txId + 1;
+    }
+}
+
+let tFlushEnd = time();
+let duracaoFlushMs = tFlushEnd - tFlushStart;
+print(">>> [FLUSH CONCLUÍDO]: " + totalPixGerados + " transações e " + TOTAL_CONTAS + " saldos gravados no SQLite em " + duracaoFlushMs + " ms!");
+
+# 10. Auditoria e Relatório Final
+let somaFinalDb = @query("SELECT SUM(saldo_centavos) as total FROM contas;");
+let totalCentavosFinal = somaFinalDb[0]["total"];
+let amostraContas = pixService.listarSaldosTop(10);
+let totalTransacoesDb = @query("SELECT COUNT(*) as qtd, SUM(valor_centavos) as total_volume FROM transacoes_pix;");
+
+let tempoTotalSeg = resultadoBatch["elapsed_ms"] / 1000.0;
+
+print("\n=================================================================");
+print("              RELATÓRIO DE DESEMPENHO E AUDITORIA                ");
+print("=================================================================");
+print("  Total de Requisições HTTP      : " + resultadoBatch["total"]);
+print("  Requisições com Sucesso (200)  : " + resultadoBatch["successes"]);
+print("  Requisições com Falha          : " + resultadoBatch["failures"]);
+print("  Tempo Total de Execução        : " + resultadoBatch["elapsed_ms"] + " ms (" + tempoTotalSeg + " s)");
+print("  Latência Média por PIX         : " + resultadoBatch["avg_ms"] + " ms");
+print("  Throughput Alcançado (TPS)     : " + resultadoBatch["tps"] + " transações/s");
+print("  Tempo de Flush no SQLite       : " + duracaoFlushMs + " ms");
+print("-----------------------------------------------------------------");
+print("Amostra das 10 Primeiras Contas:");
+foreach (c in amostraContas) {
+    print("  Conta #" + c["id"] + " (" + c["titular"] + ") -> " + c["formatado"] + " (" + c["saldo_centavos"] + " centavos)");
+}
+print("-----------------------------------------------------------------");
+print("Verificação da Invariante Contábil no SQLite:");
+print("  Soma Inicial do Sistema        : R$ " + (totalCentavosInicial / 100.0) + " (" + totalCentavosInicial + " centavos)");
+print("  Soma Final do Sistema          : R$ " + (totalCentavosFinal / 100.0) + " (" + totalCentavosFinal + " centavos)");
+
+if (totalCentavosInicial == totalCentavosFinal) {
+    print("  [AUDITORIA APROVADA] Nenhum centavo foi criado ou perdido! 100% íntegro.");
+} else {
+    print("  [AUDITORIA REPROVADA] Houve desvio contábil de: " + (totalCentavosFinal - totalCentavosInicial) + " centavos!");
+}
+print("  Transações gravadas no SQLite  : " + totalTransacoesDb[0]["qtd"] + " transações");
+print("  Volume movimentado auditado    : R$ " + (totalTransacoesDb[0]["total_volume"] / 100.0));
+print("=================================================================\n");
+
+# Encerra o servidor HTTP
+server.stop();
+print("Servidor PIX finalizado com sucesso.");

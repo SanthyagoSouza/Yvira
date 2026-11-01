@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Click Battle Arena - Yvira</title>
+  <link rel="stylesheet" href="assets/css/global.css">
+  <link rel="stylesheet" href="assets/css/yvira-shell.css">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <div class="janela-container">
+    <!-- Barra Nativa Padrão Yvira Arrastável -->
+    <header class="yvira-titlebar" data-arrastavel="true">
+      <div class="yvira-app-icon">⚡</div>
+      <div style="font-weight: 700; font-size: 13px; color: #00f2fe; letter-spacing: 1px;">CLICK BATTLE ARENA</div>
+      <div style="flex: 1;"></div>
+      <div class="yvira-controls">
+        <button class="yvira-btn min" onclick="window.yvira.minimizar()" title="Minimizar">
+          <svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg>
+        </button>
+        <button class="yvira-btn max" onclick="window.yvira.maximizar()" title="Maximizar">
+          <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="3"/></svg>
+        </button>
+        <button class="yvira-btn close" onclick="window.yvira.fechar()" title="Fechar">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="arena-container">
+      <!-- TELA 1: LOGIN -->
+      <section id="tela-login" class="screen-view active">
+        <div class="login-card">
+          <div class="neon-icon">⚔️</div>
+          <h1>CLICK BATTLE ARENA</h1>
+          <p class="subtitle">Multiplayer Realtime Nativo Yvira</p>
+          
+          <div class="input-group">
+            <label for="input-nickname">SEU APELIDO DE GUERRA:</label>
+            <input type="text" id="input-nickname" placeholder="Ex: CyberStriker" maxlength="15" autofocus onkeydown="if(event.key==='Enter') entrarNoJogo()">
+          </div>
+
+          <button id="btn-entrar" class="btn-primary" onclick="entrarNoJogo()">
+            ENTRAR NA ARENA
+          </button>
+        </div>
+      </section>
+
+      <!-- TELA 2: LOBBY -->
+      <section id="tela-lobby" class="screen-view">
+        <div class="lobby-header">
+          <div class="user-profile">
+            <span class="avatar-badge">👤</span>
+            <div>
+              <h3 id="label-meu-nome">Conectando...</h3>
+              <span class="status-online">● Online no Servidor</span>
+            </div>
+          </div>
+          <div class="lobby-counter">
+            <span id="label-total-jogadores">0</span> RIVAIS ONLINE
+          </div>
+        </div>
+
+        <div class="rivais-panel">
+          <h2>RIVAIS DISPONÍVEIS PARA DESAFIO</h2>
+          <div id="lista-rivais" class="rivais-grid">
+            <div class="empty-state">Procurando guerreiros no lobby...</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TELA 3: ARENA DE COMBATE -->
+      <section id="tela-arena" class="screen-view">
+        <div class="battle-hud">
+          <div class="player-box player-me">
+            <span class="p-name" id="hud-meu-nome">VOCÊ</span>
+            <span class="p-score" id="hud-meus-cliques">0</span>
+          </div>
+
+          <div class="timer-box">
+            <span class="timer-title">TEMPO RESTANTE</span>
+            <span class="timer-digits" id="hud-timer">10s</span>
+          </div>
+
+          <div class="player-box player-rival">
+            <span class="p-name" id="hud-rival-nome">RIVAL</span>
+            <span class="p-score" id="hud-rival-cliques">0</span>
+          </div>
+        </div>
+
+        <div class="tug-bar-container">
+          <div id="tug-bar-fill" class="tug-bar-fill" style="width: 50%;"></div>
+        </div>
+
+        <div class="click-target-zone">
+          <button id="btn-click-target" class="target-button" onmousedown="window.yvira.emit('clique_combate', {})">
+            <div class="target-inner">
+              <span class="target-icon">💥</span>
+              <span class="target-text">CLIQUE!</span>
+            </div>
+          </button>
+        </div>
+      </section>
+
+      <!-- MODAL CONVITE -->
+      <div id="modal-convite" class="modal-overlay">
+        <div class="modal-card">
+          <span class="modal-alert-icon">⚡</span>
+          <h2>VOCÊ FOI DESAFIADO!</h2>
+          <p id="modal-convite-texto">Um guerreiro quer disputar cliques!</p>
+          <div class="modal-actions">
+            <button class="btn-aceitar" onclick="responderConvite(true)">ACEITAR</button>
+            <button class="btn-recusar" onclick="responderConvite(false)">RECUSAR</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL RESULTADO -->
+      <div id="modal-resultado" class="modal-overlay">
+        <div class="modal-card">
+          <span id="modal-result-icon" class="modal-alert-icon">🏆</span>
+          <h2 id="modal-result-title">VITÓRIA!</h2>
+          <div class="result-details">
+            <div class="res-box">
+              <span>Seus Cliques</span>
+              <strong id="res-meus-cliques">0</strong>
+            </div>
+            <div class="res-box">
+              <span>Rival</span>
+              <strong id="res-rival-cliques">0</strong>
+            </div>
+          </div>
+          <button class="btn-primary" onclick="voltarAoLobby()">VOLTAR AO LOBBY</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Bridge 100% Declarativa: Apenas repassa cliques para window.yvira.emit e recebe callbacks do Yvira -->
+  <script>
+    let desafianteIdPendente = '';
+    let meuIdGlobal = '';
+
+    function trocarTela(id) {
+      document.querySelectorAll('.screen-view').forEach(s => s.classList.remove('active'));
+      const el = document.getElementById(id);
+      if (el) el.classList.add('active');
+    }
+
+    function entrarNoJogo() {
+      const input = document.getElementById('input-nickname');
+      const nome = input.value.trim() || 'Gamer';
+      window.yvira.emit('entrar_com_nome', { nome: nome });
+    }
+
+    function desafiarRival(alvoId) {
+      window.yvira.emit('desafiar_rival', { alvoId: alvoId });
+    }
+
+    function responderConvite(aceitou) {
+      document.getElementById('modal-convite').classList.remove('active');
+      window.yvira.emit('resposta_convite', {
+        desafianteId: desafianteIdPendente,
+        aceitou: aceitou
+      });
+    }
+
+    function voltarAoLobby() {
+      document.getElementById('modal-resultado').classList.remove('active');
+      trocarTela('tela-lobby');
+    }
+
+    // Callbacks acionados pelo motor Yvira
+    window.login_sucesso = function(dados) {
+      meuIdGlobal = dados.id;
+      document.getElementById('label-meu-nome').innerText = dados.nome;
+      trocarTela('tela-lobby');
+    };
+
+    window.renderizar_rivais = function(lista) {
+      const grid = document.getElementById('lista-rivais');
+      const rivais = (lista || []).filter(j => j && j.id !== meuIdGlobal);
+      document.getElementById('label-total-jogadores').innerText = rivais.length;
+
+      if (rivais.length === 0) {
+        grid.innerHTML = '<div class="empty-state">Nenhum rival online no momento. Abra outra janela para jogar contra você mesmo!</div>';
+        return;
+      }
+
+      grid.innerHTML = rivais.map(r => `
+        <div class="rival-card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong>${r.nome}</strong>
+            <span style="font-size:11px; color:#00ff88;">${r.status}</span>
+          </div>
+          <button class="btn-desafiar" onclick="desafiarRival('${r.id}')" ${r.status !== 'livre' ? 'disabled' : ''}>
+            ${r.status === 'livre' ? '⚡ DESAFIAR' : 'EM DUELO'}
+          </button>
+        </div>
+      `).join('');
+    };
+
+    window.mostrar_convite = function(dados) {
+      desafianteIdPendente = dados.desafianteId;
+      document.getElementById('modal-convite-texto').innerText = `O guerreiro "${dados.desafianteNome}" te desafiou para um duelo de 10 segundos!`;
+      document.getElementById('modal-convite').classList.add('active');
+    };
+
+    window.aviso_recusa = function(dados) {
+      alert(`O jogador ${dados.rivalNome} recusou o duelo.`);
+    };
+
+    window.abrir_arena = function(dados) {
+      document.getElementById('modal-convite').classList.remove('active');
+      document.getElementById('hud-meu-nome').innerText = dados.meuNome;
+      document.getElementById('hud-rival-nome').innerText = dados.rivalNome;
+      document.getElementById('hud-meus-cliques').innerText = '0';
+      document.getElementById('hud-rival-cliques').innerText = '0';
+      document.getElementById('tug-bar-fill').style.width = '50%';
+      document.getElementById('hud-timer').innerText = (dados.tempo || 10) + 's';
+      trocarTela('tela-arena');
+    };
+
+    window.atualizar_placar = function(dados) {
+      document.getElementById('hud-meus-cliques').innerText = dados.meusCliques;
+      document.getElementById('hud-rival-cliques').innerText = dados.cliquesRival;
+      const total = dados.meusCliques + dados.cliquesRival;
+      let pct = 50;
+      if (total > 0) {
+        pct = (dados.meusCliques / total) * 100;
+      }
+      document.getElementById('tug-bar-fill').style.width = pct + '%';
+    };
+
+    window.atualizar_timer = function(dados) {
+      document.getElementById('hud-timer').innerText = dados.tempo + 's';
+    };
+
+    window.resultado_final = function(dados) {
+      const modal = document.getElementById('modal-resultado');
+      const icon = document.getElementById('modal-result-icon');
+      const title = document.getElementById('modal-result-title');
+
+      if (dados.empatou) {
+        icon.innerText = '🤝';
+        title.innerText = 'EMPATE HISTÓRICO!';
+      } else if (dados.ganhou) {
+        icon.innerText = '🏆';
+        title.innerText = 'VITÓRIA ESMAGADORA!';
+      } else {
+        icon.innerText = '💀';
+        title.innerText = 'DERROTA!';
+      }
+
+      document.getElementById('res-meus-cliques').innerText = dados.meusCliques;
+      document.getElementById('res-rival-cliques').innerText = dados.rivalCliques;
+      modal.classList.add('active');
+    };
+  </script>
+</body>
+</html>

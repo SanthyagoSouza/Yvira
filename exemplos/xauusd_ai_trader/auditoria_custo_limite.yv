@@ -1,0 +1,105 @@
+# Identificação do Ponto de Ruptura (Breakeven Cost)
+# A partir de qual spread/custo a expectativa matemática vira negativa?
+
+import "dados_xauusd.yv";
+import "indicadores.yv";
+import "agente_trader.yv";
+import "simulador_forex.yv";
+
+let loader = XauusdDataLoader();
+let cH1 = loader.carregarTimeframe("1h", 60);
+let cM15 = loader.carregarTimeframe("15m", 60);
+
+let totalH1 = len(cH1);
+let totalM15 = len(cM15);
+let indic = IndicadoresOuro();
+
+let splitIdx = to_int(totalM15 * 0.75);
+let splitH1 = to_int(totalH1 * 0.75);
+
+seed(101);
+let agente = TraderAgent(0.2, 0.95, 1.0, 0.98);
+let simTreino = ForexSimulator(1000.0, 100, 0.31);
+
+let ep = 1;
+while (ep <= 40) {
+    simTreino.reset();
+    let m = 15;
+    let hCursor = 0;
+    while (m < splitIdx) {
+        let p = cM15[m]["close"];
+        let tsMClose = cM15[m]["timestamp"] + 900;
+        while (hCursor + 1 < splitH1 && (cH1[hCursor + 1]["timestamp"] + 3600) <= tsMClose) {
+            hCursor = hCursor + 1;
+        }
+        let fH1 = indic.sma(cH1, 5, hCursor);
+        let sH1 = indic.sma(cH1, 15, hCursor);
+        let rH1 = indic.rsi(cH1, 14, hCursor);
+        let momM15 = indic.momentum(cM15, 5, m);
+        let fM15 = indic.sma(cM15, 5, m);
+        let sM15 = indic.sma(cM15, 15, m);
+        let atrVal = indic.atr(cM15, 14, m);
+
+        let est = agente.codificarEstadoMultiTimeframe(fH1, sH1, rH1, momM15, fM15, sM15);
+        let ac = agente.escolherAcao(est, false);
+        let res = simTreino.executarAcao(ac, p, atrVal);
+
+        let mP = m + 1;
+        let term = (mP >= splitIdx);
+        let pEst = est;
+        if (term == false) {
+            let tsMPClose = cM15[mP]["timestamp"] + 900;
+            let hPCursor = hCursor;
+            while (hPCursor + 1 < splitH1 && (cH1[hPCursor + 1]["timestamp"] + 3600) <= tsMPClose) {
+                hPCursor = hPCursor + 1;
+            }
+            let pfH1 = indic.sma(cH1, 5, hPCursor);
+            let psH1 = indic.sma(cH1, 15, hPCursor);
+            let prH1 = indic.rsi(cH1, 14, hPCursor);
+            let pmM15 = indic.momentum(cM15, 5, mP);
+            let pfM15 = indic.sma(cM15, 5, mP);
+            let psM15 = indic.sma(cM15, 15, mP);
+            pEst = agente.codificarEstadoMultiTimeframe(pfH1, psH1, prH1, pmM15, pfM15, psM15);
+        }
+        agente.aprender(est, ac, res["recompensa"], pEst, term);
+        m = m + 1;
+    }
+    agente.decairEpsilon();
+    ep = ep + 1;
+}
+
+let custosTeste = [0.80, 0.90, 1.00, 1.15, 1.30];
+let k = 0;
+while (k < len(custosTeste)) {
+    let custo = custosTeste[k];
+    let sim = ForexSimulator(1000.0, 100, custo);
+    let mTeste = splitIdx;
+    let hCursorT = splitH1;
+    while (hCursorT > 0 && (cH1[hCursorT]["timestamp"] + 3600) > (cM15[mTeste]["timestamp"] + 900)) {
+        hCursorT = hCursorT - 1;
+    }
+    while (mTeste < totalM15) {
+        let p = cM15[mTeste]["close"];
+        let tsMClose = cM15[mTeste]["timestamp"] + 900;
+        while (hCursorT + 1 < totalH1 && (cH1[hCursorT + 1]["timestamp"] + 3600) <= tsMClose) {
+            hCursorT = hCursorT + 1;
+        }
+        let fH1 = indic.sma(cH1, 5, hCursorT);
+        let sH1 = indic.sma(cH1, 15, hCursorT);
+        let rH1 = indic.rsi(cH1, 14, hCursorT);
+        let momM15 = indic.momentum(cM15, 5, mTeste);
+        let fM15 = indic.sma(cM15, 5, mTeste);
+        let sM15 = indic.sma(cM15, 15, mTeste);
+        let atrVal = indic.atr(cM15, 14, mTeste);
+
+        let est = agente.codificarEstadoMultiTimeframe(fH1, sH1, rH1, momM15, fM15, sM15);
+        let ac = agente.escolherAcao(est, true);
+        sim.executarAcao(ac, p, atrVal);
+        mTeste = mTeste + 1;
+    }
+    if (sim.posicaoAberta != 0) sim.executarAcao(0, cM15[totalM15 - 1]["close"], 5.0);
+
+    let lq = sim.saldo - 1000.0;
+    print("Custo $" + custo + " -> PnL: $" + round(lq, 2) + " | Exp: $" + round(lq / to_number(sim.totalTrades), 2));
+    k = k + 1;
+}

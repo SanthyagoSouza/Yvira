@@ -1,0 +1,32 @@
+# Ponto de Entrada do Jogo de Xadrez - Yvira Game Engine
+import "src/controllers/xadrez_controller.yv";
+
+print("=================================================");
+print("       INICIALIZANDO YVIRA CHESS MASTER          ");
+print("=================================================\n");
+
+# 1. Configura a Janela Elegante
+let app = criar_janela({
+    "titulo": "Xadrez Master - Yvira Engine",
+    "view": "views/index.html",
+    "largura": 1000,
+    "altura": 720,
+    "min_largura": 800,
+    "min_altura": 600,
+    "modo_tela": "semi-full", # Opcoes: semi-full, normal, fullscreen
+    "barra_customizada": true,
+    "redimensionavel": true,
+    "cor_fundo": "#0d1117"
+});
+
+# 2. Conecta o Controlador
+let controller = XadrezController();
+controller.iniciar(app);
+
+print("[Janela]: Exibindo Menu Principal do Jogo...");
+
+# 3. Exibe a janela e aguarda
+app.exibir();
+app.esperar();
+
+print("\n[Jogo]: Sessao de Xadrez finalizada.");

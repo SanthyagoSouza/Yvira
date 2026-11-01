@@ -1,0 +1,91 @@
+# Cérebro de Aprendizado por Reforço (Q-Learning Agent)
+# Baseado na Equação de Bellman para atualização da Matriz Q(s, a)
+
+class QLearningAgent {
+    fn init(totalEstados, totalAcoes, alpha, gamma, epsilon, epsilonDecay) {
+        this.totalEstados = totalEstados;
+        this.totalAcoes = totalAcoes;
+
+        # Taxa de Aprendizado (Learning Rate)
+        this.alpha = alpha; # ex: 0.1
+
+        # Fator de Desconto (Discount Factor)
+        this.gamma = gamma; # ex: 0.95
+
+        # Taxa de Exploração (Epsilon-greedy)
+        this.epsilon = epsilon; # ex: 1.0 (100% exploração no início)
+        this.epsilonDecay = epsilonDecay; # ex: 0.995 (decai a cada episódio)
+        this.epsilonMin = 0.05;
+
+        # Q-Table nativa representada como YviraMatrix (totalEstados x totalAcoes)
+        this.qTable = zeros(totalEstados, totalAcoes);
+    }
+
+    # Escolhe ação usando política Epsilon-Greedy (Explorar vs Explorar Conhecimento)
+    fn escolherAcao(estado, forcarMelhorAcao) {
+        let sorteio = random(0, 1000) / 1000.0;
+
+        # Exploração aleatória
+        if (forcarMelhorAcao != true && sorteio < this.epsilon) {
+            return random(0, this.totalAcoes - 1);
+        }
+
+        # Explotação: escolhe a ação com maior valor Q no estado atual
+        return this.obterMelhorAcao(estado);
+    }
+
+    fn obterMelhorAcao(estado) {
+        let melhorAcao = 0;
+        let maiorQ = this.qTable[estado, 0];
+
+        let a = 1;
+        while (a < this.totalAcoes) {
+            let qVal = this.qTable[estado, a];
+            if (qVal > maiorQ) {
+                maiorQ = qVal;
+                melhorAcao = a;
+            }
+            a = a + 1;
+        }
+
+        return melhorAcao;
+    }
+
+    fn maxQ(estado) {
+        let maiorQ = this.qTable[estado, 0];
+        let a = 1;
+        while (a < this.totalAcoes) {
+            let qVal = this.qTable[estado, a];
+            if (qVal > maiorQ) {
+                maiorQ = qVal;
+            }
+            a = a + 1;
+        }
+        return maiorQ;
+    }
+
+    # Atualização da Equação de Bellman:
+    # Q(s, a) = Q(s, a) + alpha * [recompensa + gamma * max(Q(s', a')) - Q(s, a)]
+    fn aprender(estado, acao, recompensa, proximoEstado, terminou) {
+        let qAtual = this.qTable[estado, acao];
+        let alvo = recompensa;
+
+        if (terminou == false) {
+            let melhorProximoQ = this.maxQ(proximoEstado);
+            alvo = recompensa + (this.gamma * melhorProximoQ);
+        }
+
+        let delta = alvo - qAtual;
+        let novoQ = qAtual + (this.alpha * delta);
+
+        # Atualiza a Q-Table diretamente na Matriz
+        this.qTable[estado, acao] = novoQ;
+    }
+
+    # Reduz o epsilon gradualmente para o agente explorar menos e agir com inteligência
+    fn decairEpsilon() {
+        if (this.epsilon > this.epsilonMin) {
+            this.epsilon = this.epsilon * this.epsilonDecay;
+        }
+    }
+}
