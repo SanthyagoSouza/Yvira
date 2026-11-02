@@ -992,75 +992,135 @@ window.receber_dados_etl = <span class="kw">function</span>(pacote) {
       <!-- 14. TUI TERMINAL -->
       <section class="doc-section" id="tui-terminal">
         <h2>14. Menus Interativos no Terminal (TUI)</h2>
-        <p>Quer criar uma ferramenta sem janela, mas bonita no próprio terminal? O Yvira tem comandos embutidos de console:</p>
+        
+        <div class="why-box">
+          <strong>🤔 Por que o Yvira tem componentes TUI nativos?</strong><br>
+          Muitos programas de administração de redes, scripts DevOps ou servidores não precisam de janelas pesadas, mas telas pretas cheias de texto corrido são difíceis de usar e causam erros de digitação. O Yvira transforma o terminal comum do Windows em uma <strong>interface rica e interativa</strong> com suporte a setas do teclado, caixas desenhadas em Unicode e barras de progresso animadas sem nenhuma dependência externa!
+        </div>
+
+        <p>Veja o que cada ferramenta visual faz:</p>
+        <ul style="color: var(--text-dim); line-height: 1.8; margin-bottom: 20px;">
+          <li><code>menu(titulo, opcoes)</code>: Exibe uma lista na qual o usuário navega usando as setas <code>↑</code> e <code>↓</code> e pressiona <code>Enter</code> para selecionar. Retorna o índice numérico (0, 1, 2...).</li>
+          <li><code>box(titulo, conteudo)</code>: Desenha uma caixa elegante com moldura dupla Unicode ao redor de avisos importantes.</li>
+          <li><code>progress_bar(atual, total, rotulo)</code>: Mostra uma barra animada que preenche conforme sua tarefa avança.</li>
+          <li><code>confirm(pergunta)</code>: Faz uma pergunta interativa de confirmação (S/N) e devolve <code>true</code> ou <code>false</code>.</li>
+        </ul>
 
         <div class="code-block">
           <div class="code-header"><span>menu_terminal.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
-          <pre><code><span class="comment"># 1. Cria um menu navegável pelas setinhas do teclado ↑ / ↓</span>
-<span class="kw">let</span> escolhas = [<span class="str">"Iniciar Servidor"</span>, <span class="str">"Ver Relatório"</span>, <span class="str">"Sair"</span>];
-<span class="kw">let</span> opcao = <span class="fn">menu</span>(<span class="str">"O que você deseja fazer?"</span>, escolhas);
-<span class="fn">print</span>(<span class="str">"Você escolheu: "</span> + escolhas[opcao]);
+          <pre><code><span class="comment"># 1. Cria um menu interativo com setas ↑ / ↓ e Enter</span>
+<span class="kw">let</span> escolhas = [<span class="str">"Iniciar Servidor"</span>, <span class="str">"Backup do Banco de Dados"</span>, <span class="str">"Sair"</span>];
+<span class="kw">let</span> opcao = <span class="fn">menu</span>(<span class="str">"PAINEL DE CONTROLE YVIRA"</span>, escolhas);
 
-<span class="comment"># 2. Desenha caixas bonitas com bordas duplas</span>
-<span class="fn">box</span>(<span class="str">"AVISO DO SISTEMA"</span>, <span class="str">"Servidor iniciado com sucesso na porta 8080!"</span>);
+<span class="fn">print</span>(<span class="str">"Opção selecionada: "</span> + escolhas[opcao]);
 
-<span class="comment"># 3. Barra de progresso animada [████░░]</span>
-<span class="kw">let</span> i = <span class="num">0</span>;
-<span class="kw">while</span> (i <= <span class="num">100</span>) {
-    <span class="fn">progress_bar</span>(i, <span class="num">100</span>, <span class="str">"Baixando dados:"</span>);
-    <span class="fn">sleep</span>(<span class="num">30</span>); <span class="comment"># Dorme 30 milissegundos</span>
-    i = i + <span class="num">10</span>;
+<span class="comment"># 2. Pergunta de confirmação Sim ou Não</span>
+<span class="kw">if</span> (<span class="fn">confirm</span>(<span class="str">"Deseja realmente continuar?"</span>)) {
+    <span class="comment"># 3. Desenha uma caixa destacada na tela</span>
+    <span class="fn">box</span>(<span class="str">"STATUS DO SISTEMA"</span>, <span class="str">"Todos os serviços estão online e operando na porta 8080."</span>);
+
+    <span class="comment"># 4. Barra de progresso animada em tempo real</span>
+    <span class="kw">let</span> i = <span class="num">0</span>;
+    <span class="kw">while</span> (i <= <span class="num">100</span>) {
+        <span class="fn">progress_bar</span>(i, <span class="num">100</span>, <span class="str">"Processando pacotes:"</span>);
+        <span class="fn">sleep</span>(<span class="num">25</span>); <span class="comment"># Pausa 25ms para a animação fluir suavemente</span>
+        i = i + <span class="num">10</span>;
+    }
 }</code></pre>
         </div>
       </section>
 
       <!-- 15. API REST -->
       <section class="doc-section" id="api-servidor">
-        <h2>15. Criando APIs REST e Microserviços (http.serve)</h2>
-        <p>Crie servidores web com rotas GET e POST em menos de 15 linhas:</p>
+        <h2>15. Criando APIs REST e Microserviços de Alto Throughput (http.serve)</h2>
+        
+        <div class="why-box">
+          <strong>🤔 Como funciona o servidor HTTP do Yvira?</strong><br>
+          Imagine que você está criando o backend de um aplicativo web ou mobile. Em vez de configurar Apache, Nginx ou frameworks complexos com 50 arquivos de configuração, o Yvira possui um servidor HTTP embutido em C# nativo. Quando o navegador envia um JSON via POST, o Yvira já entrega os dados parseados dentro de um <code>req.body</code> pronto, sem você precisar chamar nenhum <code>json_decode()</code>!
+        </div>
+
+        <p>Entenda o ciclo de vida de uma requisição no Yvira:</p>
+        <ul style="color: var(--text-dim); line-height: 1.8; margin-bottom: 20px;">
+          <li><code>req.method</code>: Diz se a requisição é <code>"GET"</code> (busca de dados), <code>"POST"</code> (envio/cadastro), <code>"PUT"</code> ou <code>"DELETE"</code>.</li>
+          <li><code>req.path</code>: O endereço solicitado no navegador (ex: <code>"/api/usuarios"</code>).</li>
+          <li><code>req.body</code>: Se quem chamou enviou dados JSON, eles já chegam convertidos em um Mapa nativo do Yvira.</li>
+          <li><strong>Retorno</strong>: Basta sua função retornar um Mapa com <code>{ "status": 200, "json": dados }</code> e o Yvira responde ao cliente instantaneamente.</li>
+        </ul>
 
         <div class="code-block">
           <div class="code-header"><span>servidor_api.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
           <pre><code>import <span class="str">"http"</span> as http;
 
 <span class="kw">fn</span> <span class="fn">meuRoteador</span>(req) {
-    <span class="comment"># Rota GET para listar produtos</span>
+    <span class="comment"># Rota 1: Listagem de produtos (GET /produtos)</span>
     <span class="kw">if</span> (req.method == <span class="str">"GET"</span> && req.path == <span class="str">"/produtos"</span>) {
-        <span class="kw">return</span> { <span class="str">"sucesso"</span>: <span class="kw">true</span>, <span class="str">"itens"</span>: [<span class="str">"Monitor"</span>, <span class="str">"Teclado"</span>] };
+        <span class="kw">return</span> {
+            <span class="str">"status"</span>: <span class="num">200</span>,
+            <span class="str">"sucesso"</span>: <span class="kw">true</span>,
+            <span class="str">"itens"</span>: [<span class="str">"Teclado Mecânico"</span>, <span class="str">"Monitor 144Hz"</span>, <span class="str">"Mouse Gamer"</span>]
+        };
     }
 
-    <span class="comment"># Rota POST para cadastrar (req.body já é um Mapa!)</span>
+    <span class="comment"># Rota 2: Cadastro de novo produto (POST /produtos)</span>
     <span class="kw">if</span> (req.method == <span class="str">"POST"</span> && req.path == <span class="str">"/produtos"</span>) {
-        <span class="kw">let</span> nome = req.body.nome;
-        <span class="kw">return</span> { <span class="str">"status"</span>: <span class="num">201</span>, <span class="str">"mensagem"</span>: <span class="str">"Produto cadastrado: "</span> + nome };
+        <span class="kw">let</span> nomeRecebido = req.body.nome;
+        <span class="kw">let</span> precoRecebido = req.body.preco;
+
+        <span class="fn">print</span>(<span class="str">$"[API] Novo item cadastrado: {nomeRecebido} por R$ {precoRecebido}"</span>);
+
+        <span class="kw">return</span> {
+            <span class="str">"status"</span>: <span class="num">201</span>,
+            <span class="str">"mensagem"</span>: <span class="str">$"Item '{nomeRecebido}' gravado com sucesso!"</span>
+        };
     }
 
-    <span class="kw">return</span> { <span class="str">"status"</span>: <span class="num">404</span>, <span class="str">"erro"</span>: <span class="str">"Rota inexistente"</span> };
+    <span class="comment"># Rota padrão para URLs não encontradas</span>
+    <span class="kw">return</span> { <span class="str">"status"</span>: <span class="num">404</span>, <span class="str">"erro"</span>: <span class="str">"Endpoint não encontrado no servidor Yvira."</span> };
 }
 
-<span class="comment"># Coloca a API no ar ouvindo na porta 8080</span>
+<span class="comment"># Inicializa o servidor web escutando na porta 8080</span>
+<span class="fn">print</span>(<span class="str">"Servidor Yvira rodando em http://localhost:8080"</span>);
 http.<span class="fn">serve</span>(<span class="num">8080</span>, meuRoteador);</code></pre>
         </div>
       </section>
 
       <!-- 16. SQLITE DB -->
       <section class="doc-section" id="banco-db">
-        <h2>16. Banco de Dados SQLite Embutido (@db, @exec & @query)</h2>
-        <p>Salve dados para sempre no disco sem precisar instalar PostgreSQL, MySQL ou qualquer driver:</p>
+        <h2>16. Banco de Dados SQLite Embutido (@db, @exec, @query & @transaction)</h2>
+        
+        <div class="why-box">
+          <strong>🤔 O que é o sistema @db e por que ele é diferente?</strong><br>
+          Em outras linguagens, salvar dados em banco exige instalar pacotes, drivers ODBC e configurar conexões frágeis. No Yvira, <strong>o banco de dados relacional SQLite é uma instrução nativa da própria linguagem</strong>. Além disso, o Yvira possui um sistema de <strong>Anti-SQL Injection automático</strong> que rejeita comandos SQL montados por concatenação insegura, forçando o uso de parâmetros <code>?</code> para blindar seu sistema contra hackers.
+        </div>
+
+        <p>Conheça os 4 comandos essenciais do banco de dados:</p>
+        <ul style="color: var(--text-dim); line-height: 1.8; margin-bottom: 20px;">
+          <li><code>@db("banco.db")</code>: Conecta instantaneamente. Se o arquivo não existir, o Yvira cria ele no disco na hora.</li>
+          <li><code>@exec("SQL", [parametros])</code>: Executa comandos que alteram dados (criar tabelas, inserir, atualizar ou apagar linhas).</li>
+          <li><code>@query("SQL", [parametros])</code>: Faz consultas e devolve uma <strong>Lista de Mapas</strong>. Você acessa os campos diretamente pelo nome da coluna (ex: <code>linha.nome</code>).</li>
+          <li><code>@transaction { ... }</code>: Executa tudo em bloco atômico. Se faltar energia ou der qualquer erro no meio, tudo é desfeito (Rollback) automaticamente!</li>
+        </ul>
 
         <div class="code-block">
           <div class="code-header"><span>banco_dados.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
-          <pre><code><span class="comment"># Conecta ao arquivo (ele cria o arquivo se não existir)</span>
-<span class="at">@db</span>(<span class="str">"sqlite://dados_armazem.db"</span>);
+          <pre><code><span class="comment"># 1. Conecta ao banco de dados SQLite local</span>
+<span class="at">@db</span>(<span class="str">"sistema_vendas.db"</span>);
 
-<span class="comment"># 1. Cria tabelas e insere dados com @exec (usando ? para evitar invasões)</span>
+<span class="comment"># 2. Criação de tabelas com chaves primárias e tipos</span>
 <span class="at">@exec</span>(<span class="str">"CREATE TABLE IF NOT EXISTS clientes (id INTEGER PRIMARY KEY, nome TEXT, saldo REAL);"</span>);
-<span class="at">@exec</span>(<span class="str">"INSERT INTO clientes (nome, saldo) VALUES (?, ?);"</span>, [<span class="str">"Santhyago"</span>, <span class="num">1500.0</span>]);
 
-<span class="comment"># 2. Faz buscas com @query (Devolve uma Lista de Mapas!)</span>
-<span class="kw">let</span> lista = <span class="at">@query</span>(<span class="str">"SELECT id, nome, saldo FROM clientes;"</span>);
-<span class="kw">for</span> (c <span class="kw">in</span> lista) {
-    <span class="fn">print</span>(<span class="str">$"Cliente: {c.nome} | Saldo: R$ {c.saldo}"</span>);
+<span class="comment"># 3. Transação atômica segura (tudo ou nada)</span>
+<span class="at">@transaction</span> {
+    <span class="comment"># Insere registros usando ? como parâmetros seguros contra invasões</span>
+    <span class="at">@exec</span>(<span class="str">"INSERT INTO clientes (nome, saldo) VALUES (?, ?);"</span>, [<span class="str">"Alice Santos"</span>, <span class="num">2500.50</span>]);
+    <span class="at">@exec</span>(<span class="str">"INSERT INTO clientes (nome, saldo) VALUES (?, ?);"</span>, [<span class="str">"Roberto Lima"</span>, <span class="num">1200.00</span>]);
+}
+
+<span class="comment"># 4. Consulta relacional com filtro</span>
+<span class="kw">let</span> clientesVip = <span class="at">@query</span>(<span class="str">"SELECT id, nome, saldo FROM clientes WHERE saldo > ? ORDER BY saldo DESC;"</span>, [<span class="num">1000.0</span>]);
+
+<span class="kw">for</span> cliente <span class="kw">in</span> clientesVip {
+    <span class="fn">print</span>(<span class="str">$"[CLIENTE VIP] ID: {cliente.id} | Nome: {cliente.nome} | Saldo: R$ {cliente.saldo}"</span>);
 }</code></pre>
         </div>
       </section>
@@ -1068,61 +1128,94 @@ http.<span class="fn">serve</span>(<span class="num">8080</span>, meuRoteador);<
       <!-- 17. CACHE MEMÓRIA -->
       <section class="doc-section" id="cache-memoria">
         <h2>17. Cache em Memória de Alta Vazão (cache)</h2>
-        <p>Precisa processar milhares de operações por segundo sem engargalar o disco rígido?</p>
+        
+        <div class="why-box">
+          <strong>🤔 Por que usar cache em memória RAM?</strong><br>
+          Gravar e ler coisas no disco rígido leva milissegundos preciosos. A memória RAM opera em nanossegundos (milhares de vezes mais rápida!). Quando seu sistema recebe milhões de cliques por minuto ou precisa autenticar tokens de sessão e códigos de SMS, o módulo <code>cache</code> guarda tudo na memória de forma atômica e limpa os dados automaticamente quando o tempo de vida (TTL) expira.
+        </div>
 
         <div class="code-block">
           <div class="code-header"><span>cache_fast.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
-          <pre><code>import <span class="str">"cache"</span>;
+          <pre><code>import <span class="str">"cache"</span> as cache;
 
-<span class="comment"># Guarda e pega da memória RAM instantaneamente</span>
-cache.<span class="fn">set</span>(<span class="str">"saldo:pix:10"</span>, <span class="num">2000.0</span>);
-<span class="kw">let</span> saldoAtual = cache.<span class="fn">get</span>(<span class="str">"saldo:pix:10"</span>);
+<span class="comment"># 1. Guarda dados na memória RAM com acesso instantâneo</span>
+cache.<span class="fn">set</span>(<span class="str">"config_sistema"</span>, { <span class="str">"modo"</span>: <span class="str">"producao"</span>, <span class="str">"limite"</span>: <span class="num">5000</span> });
+<span class="kw">let</span> config = cache.<span class="fn">get</span>(<span class="str">"config_sistema"</span>);
 
-<span class="comment"># Soma valores de forma atômica (sem correr risco de colisão de threads)</span>
-cache.<span class="fn">incr</span>(<span class="str">"saldo:pix:10"</span>, <span class="num">500.0</span>); <span class="comment"># vira 2500.0</span>
+<span class="comment"># 2. Operação de incremento atômico (ideal para contadores de visualizações ou saldos)</span>
+cache.<span class="fn">set</span>(<span class="str">"contador_acessos"</span>, <span class="num">100</span>);
+cache.<span class="fn">incr</span>(<span class="str">"contador_acessos"</span>, <span class="num">1</span>); <span class="comment"># vira 101 sem risco de condição de corrida</span>
 
-<span class="comment"># Código que expira e some sozinho da memória após 60 segundos (TTL)</span>
-cache.<span class="fn">set</span>(<span class="str">"codigo_sms:user_9"</span>, <span class="str">"998124"</span>, <span class="num">60</span>);</code></pre>
+<span class="comment"># 3. Chave com TTL (Time-To-Live): expira e desaparece após 60 segundos</span>
+cache.<span class="fn">set</span>(<span class="str">"token_login:user_42"</span>, <span class="str">"AUTH_XYZ_2026"</span>, <span class="num">60</span>);
+
+<span class="kw">if</span> (cache.<span class="fn">has</span>(<span class="str">"token_login:user_42"</span>)) {
+    <span class="fn">print</span>(<span class="str">"Sessão válida na memória RAM!"</span>);
+}</code></pre>
         </div>
       </section>
 
       <!-- 18. AGENDADOR TIME -->
       <section class="doc-section" id="agendador-time">
-        <h2>18. Agendador em Background sem Travar a Tela (@time)</h2>
-        <p>Como fazer tarefas rodarem a cada 1 segundo sem travar a interface gráfica do usuário:</p>
+        <h2>18. Agendador em Background sem Travar a Tela (@time & @stop)</h2>
+        
+        <div class="why-box">
+          <strong>🤔 Por que o @time é fundamental para apps modernos?</strong><br>
+          Se você usar um laço comum <code>while(true) { sleep(1000); }</code> na thread principal, a sua tela congela, os botões param de responder e o Windows avisa que o programa travou. A diretiva <code>@time</code> resolve isso delegando a execução para a threadpool nativa do Yvira: o agendamento roda em segundo plano, consome quase zero de CPU e atualiza suas telas suavemente.
+        </div>
 
         <div class="code-block">
           <div class="code-header"><span>agendamento.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
-          <pre><code><span class="kw">fn</span> <span class="fn">atualizarCotacoes</span>() {
-    <span class="kw">let</span> precoBitcoin = <span class="fn">random</span>(<span class="num">60000</span>, <span class="num">65000</span>);
-    app.<span class="fn">emit</span>(<span class="str">"novo_preco"</span>, { <span class="str">"btc"</span>: precoBitcoin });
+          <pre><code><span class="comment"># Esta função será executada a cada 2 segundos sem congelar sua janela</span>
+<span class="kw">fn</span> <span class="fn">verificarPrecosMercado</span>() {
+    <span class="kw">let</span> variacao = <span class="fn">random</span>(<span class="num">100</span>, <span class="num">250</span>);
+    <span class="fn">print</span>(<span class="str">$"[AGENDADOR] Nova cotação calculada: R$ {variacao}"</span>);
+    
+    <span class="comment"># Se houver janela aberta, envia os dados para a tela</span>
+    <span class="kw">if</span> (app != <span class="kw">null</span>) {
+        app.<span class="fn">emit</span>(<span class="str">"tick_mercado"</span>, { <span class="str">"preco"</span>: variacao });
+    }
 }
 
-<span class="comment"># Roda a função a cada 1.5 segundos em segundo plano!</span>
-<span class="at">@time</span>.<span class="fn">atualizarCotacoes</span>(<span class="num">1.5</span>);</code></pre>
+<span class="comment"># 1. Inicia o agendamento a cada 2.0 segundos</span>
+<span class="at">@time</span>.<span class="fn">verificarPrecosMercado</span>(<span class="num">2.0</span>);
+
+<span class="comment"># 2. Quando você quiser parar a rotina:</span>
+<span class="comment"># @stop.verificarPrecosMercado();</span></code></pre>
         </div>
       </section>
 
       <!-- 19. CONCORRÊNCIA -->
       <section class="doc-section" id="concorrencia-spawn">
         <h2>19. Concorrência e Threads Paralelas (@spawn & @worker)</h2>
-        <p>Faça seu computador usar todos os núcleos do processador para cálculos pesados:</p>
+        
+        <div class="why-box">
+          <strong>🤔 Qual a diferença entre @spawn e @worker.pool?</strong><br>
+          - <code>@spawn</code> é para <strong>tarefas pontuais assíncronas</strong>: você quer disparar o envio de um e-mail ou uma gravação pesada sem esperar o retorno imediato.<br>
+          - <code>@worker.pool(N)</code> é para <strong>processamento massivo paralelo</strong>: você tem 1 milhão de imagens ou números para calcular e quer usar todos os núcleos (Cores) do seu processador Intel/AMD ao mesmo tempo.
+        </div>
 
         <div class="code-block">
           <div class="code-header"><span>tarefas_paralelas.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
-          <pre><code><span class="kw">fn</span> <span class="fn">processarRelatorio</span>(id) {
-    <span class="fn">sleep</span>(<span class="num">500</span>);
-    <span class="kw">return</span> id * <span class="num">10</span>;
+          <pre><code><span class="kw">fn</span> <span class="fn">processarBloco</span>(id) {
+    <span class="fn">sleep</span>(<span class="num">100</span>); <span class="comment"># Simula cálculo pesado de física ou compressão</span>
+    <span class="kw">return</span> id * <span class="num">100</span>;
 }
 
-<span class="comment"># 1. Dispara em outra thread sem esperar</span>
-<span class="kw">let</span> promessa = <span class="at">@spawn</span>.<span class="fn">processarRelatorio</span>(<span class="num">5</span>);
-<span class="comment"># Quando precisar do resultado:</span>
-<span class="kw">let</span> valor = promessa.<span class="fn">esperar</span>();
+<span class="comment"># 1. Dispara em uma thread isolada com @spawn</span>
+<span class="kw">let</span> promessa = <span class="at">@spawn</span>.<span class="fn">processarBloco</span>(<span class="num">7</span>);
+<span class="fn">print</span>(<span class="str">"A thread principal continua livre para responder ao usuário..."</span>);
 
-<span class="comment"># 2. Pool com 8 Workers trabalhando juntos ao mesmo tempo</span>
-<span class="kw">let</span> pool = <span class="at">@worker.pool</span>(<span class="num">8</span>);
-<span class="kw">let</span> resultados = pool.<span class="fn">map</span>([<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>], processarRelatorio);
+<span class="comment"># Quando você realmente precisar do resultado final:</span>
+<span class="kw">let</span> valorCalculado = promessa.<span class="fn">esperar</span>();
+<span class="fn">print</span>(<span class="str">"Resultado pronto: "</span> + valorCalculado);
+
+<span class="comment"># 2. Processamento massivo multicore com @worker.pool</span>
+<span class="kw">let</span> pool = <span class="at">@worker.pool</span>(<span class="num">4</span>); <span class="comment"># 4 workers paralelos trabalhando ao mesmo tempo</span>
+<span class="kw">let</span> listaIds = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>, <span class="num">6</span>, <span class="num">7</span>, <span class="num">8</span>];
+
+<span class="kw">let</span> resultados = pool.<span class="fn">map</span>(listaIds, processarBloco);
+<span class="fn">print</span>(<span class="str">"Todos os blocos foram calculados pelos 4 núcleos:"</span>, resultados);
 pool.<span class="fn">fechar</span>();</code></pre>
         </div>
       </section>
@@ -1130,23 +1223,60 @@ pool.<span class="fn">fechar</span>();</code></pre>
       <!-- 20. REALTIME MULTIPLAYER -->
       <section class="doc-section" id="realtime-multiplayer">
         <h2>20. Realtime Multiplayer com Criptografia (@realtime)</h2>
-        <p>Para construir chats estilo Discord com canais ou jogos multiplayer onde 2 ou mais pessoas jogam juntas pela rede:</p>
+        
+        <div class="why-box">
+          <strong>🤔 Como criar chats estilo Discord ou jogos online com @realtime?</strong><br>
+          Construir conexões WebSockets do zero com tratamento de desconexões, sincronização de salas e criptografia é complexo. O Yvira simplifica tudo com <strong>mensagens orientadas a eventos e salas isoladas</strong>. Se você estiver na sala <code>#geral</code>, só quem está nela recebe suas mensagens, com cada pacote protegido por criptografia de ponta a ponta (E2E) AES-256.
+        </div>
 
         <div class="code-block">
-          <div class="code-header"><span>server.yv (Servidor Central)</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
-          <pre><code><span class="kw">let</span> server = <span class="at">@realtime.server</span>({
+          <div class="code-header"><span>servidor_chat.yv (Lado do Servidor)</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="comment"># Inicializa o servidor com chave mestre de criptografia</span>
+<span class="kw">let</span> server = <span class="at">@realtime.server</span>({
     <span class="str">"port"</span>: <span class="num">7080</span>,
-    <span class="str">"secret"</span>: <span class="str">"CHAVE_SECRETA_2026"</span>
+    <span class="str">"secret"</span>: <span class="str">"CHAVE_E2E_SUPER_SECRETA_2026"</span>
 });
 
-<span class="comment"># Quando alguém manda mensagem:</span>
-<span class="kw">fn</span> <span class="fn">aoReceberMsg</span>(cliente, dados) {
-    <span class="comment"># Envia apenas para as pessoas que estão na mesma sala!</span>
-    server.<span class="fn">to</span>(dados.salaId).<span class="fn">emit</span>(<span class="str">"nova_mensagem"</span>, dados);
+<span class="comment"># Ouvinte de mensagens: quando um usuário envia texto</span>
+<span class="kw">fn</span> <span class="fn">aoReceberMensagem</span>(cliente, dados) {
+    <span class="fn">print</span>(<span class="str">$"[SALA {dados.salaId}] {dados.usuario}: {dados.texto}"</span>);
+
+    <span class="comment"># server.to(salaId) transmite a mensagem exclusivamente para os membros daquela sala</span>
+    server.<span class="fn">to</span>(dados.salaId).<span class="fn">emit</span>(<span class="str">"nova_mensagem"</span>, {
+        <span class="str">"usuario"</span>: dados.usuario,
+        <span class="str">"texto"</span>: dados.texto,
+        <span class="str">"hora"</span>: <span class="str">"21:25"</span>
+    });
 }
-server.<span class="fn">on</span>(<span class="str">"enviar_msg"</span>, aoReceberMsg);
-server.<span class="fn">start</span>();</code></pre>
+
+server.<span class="fn">on</span>(<span class="str">"enviar_msg"</span>, aoReceberMensagem);
+server.<span class="fn">start</span>();
+<span class="fn">print</span>(<span class="str">"Servidor Realtime pronto na porta 7080."</span>);</code></pre>
         </div>
+
+        <div class="code-block" style="margin-top: 15px;">
+          <div class="code-header"><span>cliente_chat.yv (Lado do Jogador / Usuário)</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="kw">let</span> cliente = <span class="at">@realtime.client</span>({
+    <span class="str">"host"</span>: <span class="str">"127.0.0.1"</span>,
+    <span class="str">"port"</span>: <span class="num">7080</span>,
+    <span class="str">"secret"</span>: <span class="str">"CHAVE_E2E_SUPER_SECRETA_2026"</span>
+});
+
+<span class="comment"># Registra callback para quando chegar mensagem do servidor</span>
+cliente.<span class="fn">on</span>(<span class="str">"nova_mensagem"</span>, <span class="kw">fn</span>(msg) {
+    <span class="fn">print</span>(<span class="str">$"[{msg.hora}] {msg.usuario}: {msg.texto}"</span>);
+});
+
+cliente.<span class="fn">connect</span>();
+
+<span class="comment"># Envia pacote para o servidor</span>
+cliente.<span class="fn">emit</span>(<span class="str">"enviar_msg"</span>, {
+    <span class="str">"salaId"</span>: <span class="str">"canal_geral"</span>,
+    <span class="str">"usuario"</span>: <span class="str">"Santhyago"</span>,
+    <span class="str">"texto"</span>: <span class="str">"E aí pessoal, tudo pronto no Yvira!"</span>
+});</code></pre>
+        </div>
+      </section>
 
         <div class="code-block">
           <div class="code-header"><span>client.yv (Cada Jogador / Usuário)</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
@@ -1299,43 +1429,74 @@ client.<span class="fn">emit</span>(<span class="str">"enviar_msg"</span>, { <sp
 
       <!-- 22. IA REFORÇO -->
       <section class="doc-section" id="ia-reforco">
-        <h2>22. Inteligência Artificial por Reforço (Q-Learning)</h2>
-        <p>Um robozinho embutido no Yvira que aprende sozinho através de acertos e erros (recompensas):</p>
+        <h2>22. Inteligência Artificial por Reforço Nativa (Q-Learning)</h2>
+        
+        <div class="why-box">
+          <strong>🤔 Como funciona a IA embutida do Yvira?</strong><br>
+          Imagine ensinar um cachorrinho a fazer um truque: quando ele acerta, você dá um biscoito (recompensa positiva). Quando ele erra, não ganha nada. O módulo <code>@ia.qlearning</code> é exatamente isso! Um agente matemático que não precisa de modelos pesados de 50GB. Ele cria uma tabela cerebral de estados e ações, toma decisões e aprende sozinho através da equação de Bellman até atingir a rota perfeita!
+        </div>
+
+        <p>Os 4 parâmetros do cérebro da IA:</p>
+        <ul style="color: var(--text-dim); line-height: 1.8; margin-bottom: 20px;">
+          <li><code>states</code>: Quantas situações ou posições diferentes existem no mundo do jogo/problema.</li>
+          <li><code>actions</code>: Quantas escolhas o agente pode tomar em cada estado (ex: 4 direções: Cima, Baixo, Esquerda, Direita).</li>
+          <li><code>alpha</code>: Taxa de aprendizado (velocidade com que a IA assimila novas informações).</li>
+          <li><code>gamma</code>: Fator de desconto (quanto a IA valoriza recompensas futuras em relação às imediatas).</li>
+        </ul>
 
         <div class="code-block">
           <div class="code-header"><span>robo_ia.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
-          <pre><code><span class="kw">let</span> robo = <span class="at">@ia.qlearning</span>({
-    <span class="str">"states"</span>: <span class="num">16</span>,  <span class="comment"># 16 posições no mapa</span>
-    <span class="str">"actions"</span>: <span class="num">4</span>,  <span class="comment"># Andar: Cima, Baixo, Esquerda, Direita</span>
-    <span class="str">"alpha"</span>: <span class="num">0.1</span>,
+          <pre><code><span class="comment"># 1. Cria o cérebro da IA para um labirinto de 16 casas com 4 movimentos</span>
+<span class="kw">let</span> robo = <span class="at">@ia.qlearning</span>({
+    <span class="str">"states"</span>: <span class="num">16</span>,  <span class="comment"># Posições de 0 a 15 no mapa</span>
+    <span class="str">"actions"</span>: <span class="num">4</span>,  <span class="comment"># 0: Cima, 1: Baixo, 2: Esquerda, 3: Direita</span>
+    <span class="str">"alpha"</span>: <span class="num">0.2</span>,
     <span class="str">"gamma"</span>: <span class="num">0.9</span>
 });
 
-<span class="comment"># 1. O robô escolhe a melhor ação</span>
-<span class="kw">let</span> acaoEscolhida = robo.<span class="fn">escolher_acao</span>(<span class="num">0</span>);
+<span class="kw">let</span> posicaoAtual = <span class="num">0</span>;
 
-<span class="comment"># 2. Se ele achou a saída, damos 100 pontos de recompensa para ele aprender!</span>
-robo.<span class="fn">aprender</span>(<span class="num">0</span>, acaoEscolhida, <span class="num">100.0</span>, <span class="num">1</span>);</code></pre>
+<span class="comment"># 2. O robô escolhe o melhor movimento baseado no que já aprendeu</span>
+<span class="kw">let</span> movimento = robo.<span class="fn">escolher_acao</span>(posicaoAtual);
+
+<span class="comment"># 3. Se ele chegou na casa final (saída), premiamos com 100 pontos!</span>
+<span class="kw">let</span> novaPosicao = <span class="num">1</span>;
+<span class="kw">let</span> recompensa = (novaPosicao == <span class="num">15</span>) ? <span class="num">100.0</span> : <span class="num">0.0</span>;
+
+robo.<span class="fn">aprender</span>(posicaoAtual, movimento, recompensa, novaPosicao);
+<span class="fn">print</span>(<span class="str">$"IA treinou movimento {movimento} com recompensa {recompensa}!"</span>);</code></pre>
         </div>
       </section>
 
       <!-- 23. FS ARQUIVOS -->
       <section class="doc-section" id="fs-arquivos">
-        <h2>23. Gravar e Ler Arquivos do Disco (fs & CSV)</h2>
-        <p>Como salvar anotações, relatórios e tabelas no HD:</p>
+        <h2>23. Gravar e Ler Arquivos do Disco com Segurança (fs)</h2>
+        
+        <div class="why-box">
+          <strong>🤔 Por que o módulo 'fs' do Yvira é tão direto?</strong><br>
+          Escrever e ler arquivos em muitas linguagens exige abrir 'streams', controlar 'buffers', tratar 'encodings' UTF-8 manualmente e lembrar de fechar o arquivo para não dar vazamento de memória. No Yvira, o módulo <code>fs</code> resolve leitura, escrita, checagem de existência e deleção em <strong>1 única linha de comando limpa</strong>, com suporte nativo a caminhos relativos e absolutos no Windows.
+        </div>
 
         <div class="code-block">
           <div class="code-header"><span>arquivos.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
           <pre><code>import <span class="str">"fs"</span> as fs;
 
-<span class="comment"># Escreve um arquivo de texto</span>
-fs.<span class="fn">write</span>(<span class="str">"clientes.txt"</span>, <span class="str">"Primeira linha\n"</span>);
-fs.<span class="fn">append</span>(<span class="str">"clientes.txt"</span>, <span class="str">"Segunda linha adicionada\n"</span>);
+<span class="comment"># 1. Escreve um arquivo (sobrescreve se já existir)</span>
+fs.<span class="fn">write</span>(<span class="str">"logs_sistema.txt"</span>, <span class="str">"[LOG] Sistema iniciado com sucesso!\n"</span>);
 
-<span class="comment"># Lê o texto de volta</span>
-<span class="kw">if</span> (fs.<span class="fn">exists</span>(<span class="str">"clientes.txt"</span>)) {
-    <span class="kw">let</span> conteudo = fs.<span class="fn">read</span>(<span class="str">"clientes.txt"</span>);
-    <span class="fn">print</span>(conteudo);
+<span class="comment"># 2. Adiciona texto ao final do arquivo sem apagar o que já estava lá</span>
+fs.<span class="fn">append</span>(<span class="str">"logs_sistema.txt"</span>, <span class="str">"[LOG] Usuário admin efetuou login.\n"</span>);
+
+<span class="comment"># 3. Verifica se o arquivo existe antes de ler</span>
+<span class="kw">if</span> (fs.<span class="fn">exists</span>(<span class="str">"logs_sistema.txt"</span>)) {
+    <span class="kw">let</span> historico = fs.<span class="fn">read</span>(<span class="str">"logs_sistema.txt"</span>);
+    <span class="fn">print</span>(<span class="str">"Conteúdo do log lido do disco:"</span>);
+    <span class="fn">print</span>(historico);
+}
+
+<span class="comment"># 4. Criação de pastas</span>
+<span class="kw">if</span> (!fs.<span class="fn">exists</span>(<span class="str">"backups"</span>)) {
+    fs.<span class="fn">mkdir</span>(<span class="str">"backups"</span>);
 }</code></pre>
         </div>
       </section>
@@ -1343,86 +1504,124 @@ fs.<span class="fn">append</span>(<span class="str">"clientes.txt"</span>, <span
       <!-- 24. PDF E EXCEL -->
       <section class="doc-section" id="pdf-excel">
         <h2>24. Gerando Arquivos PDF e Planilhas Excel (.xlsx)</h2>
-        <p>Crie relatórios com tabelas para empresas sem instalar Office ou programas externos:</p>
+        
+        <div class="why-box">
+          <strong>🤔 Como gerar recibos e planilhas sem instalar o Microsoft Office?</strong><br>
+          Empresas precisam emitir relatórios diários, faturas e planilhas contábeis. O Yvira possui dois motores nativos para isso:<br>
+          1. <strong>PDF via View</strong>: Você desenha seu recibo em HTML e CSS bonito (com logotipos, cores e tabelas) e o Yvira injeta os dados do banco e exporta em PDF pronto para impressão.<br>
+          2. <strong>Excel Nativo (.xlsx)</strong>: Cria arquivos reais do Excel com células alinhadas, tipos numéricos corretos e títulos sem depender de nenhum plugin de terceiros.
+        </div>
 
         <div class="code-block">
           <div class="code-header"><span>exportar_documentos.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
           <pre><code>import <span class="str">"doc"</span> as doc;
 
-<span class="comment"># 1. Transforma seu arquivo HTML/CSS em um PDF de alta qualidade</span>
-doc.<span class="fn">fromView</span>(<span class="str">"views/recibo.html"</span>, <span class="str">"ReciboFinal.pdf"</span>, {
-    <span class="str">"cliente"</span>: <span class="str">"Transportadora Yvira"</span>,
-    <span class="str">"valor"</span>: <span class="num">4500.0</span>
+<span class="comment"># 1. Transforma template HTML/CSS em PDF oficial com dados dinâmicos</span>
+doc.<span class="fn">fromView</span>(<span class="str">"views/recibo_pagamento.html"</span>, <span class="str">"Recibo_1042.pdf"</span>, {
+    <span class="str">"cliente"</span>: <span class="str">"Metalúrgica Brasil S/A"</span>,
+    <span class="str">"cnpj"</span>: <span class="str">"12.345.678/0001-90"</span>,
+    <span class="str">"valor_total"</span>: <span class="num">8950.00</span>,
+    <span class="str">"status"</span>: <span class="str">"LIQUIDADO"</span>
 });
+<span class="fn">print</span>(<span class="str">"Recibo PDF gerado com sucesso!"</span>);
 
-<span class="comment"># 2. Cria uma planilha Excel real (.xlsx)</span>
-doc.<span class="fn">writeExcel</span>(<span class="str">"Estoque.xlsx"</span>, {
-    <span class="str">"title"</span>: <span class="str">"Relatório de Peças 2026"</span>,
-    <span class="str">"headers"</span>: [<span class="str">"Código"</span>, <span class="str">"Produto"</span>, <span class="str">"Quantidade"</span>],
+<span class="comment"># 2. Cria planilha Excel profissional com cabeçalhos e linhas formatadas</span>
+doc.<span class="fn">writeExcel</span>(<span class="str">"Relatorio_Estoque_2026.xlsx"</span>, {
+    <span class="str">"title"</span>: <span class="str">"Balanço de Materiais"</span>,
+    <span class="str">"headers"</span>: [<span class="str">"Código"</span>, <span class="str">"Descrição do Item"</span>, <span class="str">"Quantidade"</span>, <span class="str">"Preço Unitário"</span>],
     <span class="str">"rows"</span>: [
-        [<span class="num">101</span>, <span class="str">"Sensor Ultrassônico"</span>, <span class="num">45</span>],
-        [<span class="num">102</span>, <span class="str">"Cabo Blindado"</span>, <span class="num">120</span>]
+        [<span class="num">101</span>, <span class="str">"Válvula Hidráulica 3/4"</span>, <span class="num">25</span>, <span class="num">180.50</span>],
+        [<span class="num">102</span>, <span class="str">"Sensor Fotoelétrico"</span>, <span class="num">80</span>, <span class="num">95.00</span>],
+        [<span class="num">103</span>, <span class="str">"Cabo Coaxial Blindado 50m"</span>, <span class="num">12</span>, <span class="num">340.00</span>]
     ]
-});</code></pre>
+});
+<span class="fn">print</span>(<span class="str">"Planilha Excel (.xlsx) exportada para a pasta local!"</span>);</code></pre>
         </div>
       </section>
 
       <!-- 25. CRIPTOGRAFIA DEFESA -->
       <section class="doc-section" id="criptografia-defesa">
-        <h2>25. Criptografia Segura de Senhas e Cifras (crypto)</h2>
-        <p>Nunca salve senhas puras em bancos de dados. Use o padrão de segurança corporativo:</p>
+        <h2>25. Criptografia Segura de Senhas e Cifras Defensivas (crypto)</h2>
+        
+        <div class="why-box">
+          <strong>🤔 Por que nunca devemos guardar senhas em texto puro?</strong><br>
+          Se o banco de dados for exposto, senhas puras revelam a vida do usuário. O módulo <code>crypto</code> do Yvira utiliza <strong>PBKDF2 com Salt criptográfico e 100.000 iterações de SHA-256</strong>, tornando matematicamente impossível reverter o hash por força bruta. E para dados confidenciais (como cartões ou prontuários), utilize a cifra simétrica <strong>AES-256</strong>.
+        </div>
 
         <div class="code-block">
           <div class="code-header"><span>senhas_seguras.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
           <pre><code>import <span class="str">"crypto"</span> as crypto;
 
-<span class="comment"># 1. Gera um hash seguro com Salt (100.000 iterações PBKDF2)</span>
-<span class="kw">let</span> hashProtegido = crypto.<span class="fn">hashPassword</span>(<span class="str">"MinhaSenhaForte2026!"</span>);
+<span class="comment"># 1. HASH DE SENHA: Gera uma chave irreversível com Salt individual</span>
+<span class="kw">let</span> senhaDigitada = <span class="str">"Engenharia@2026!"</span>;
+<span class="kw">let</span> hashProtegido = crypto.<span class="fn">hashPassword</span>(senhaDigitada);
+<span class="fn">print</span>(<span class="str">"Hash gerado para o Banco de Dados:"</span>, hashProtegido);
 
-<span class="comment"># 2. Na hora do login, verifica se a senha bate com o hash</span>
-<span class="kw">let</span> estaCorreta = crypto.<span class="fn">verifyPassword</span>(<span class="str">"MinhaSenhaForte2026!"</span>, hashProtegido);
-<span class="fn">print</span>(<span class="str">$"Senha aprovada? {estaCorreta}"</span>); <span class="comment"># true</span>
+<span class="comment"># 2. VERIFICAÇÃO DE LOGIN: Compara com o hash sem nunca saber a senha original</span>
+<span class="kw">let</span> autenticado = crypto.<span class="fn">verifyPassword</span>(<span class="str">"Engenharia@2026!"</span>, hashProtegido);
+<span class="fn">print</span>(<span class="str">$"Senha correta? {autenticado}"</span>); <span class="comment"># true</span>
 
-<span class="comment"># 3. Cifra arquivos com chave secreta AES-256</span>
-<span class="kw">let</span> textoCifrado = crypto.<span class="fn">encrypt</span>(<span class="str">"Dado Secreto"</span>, <span class="str">"MINHA_CHAVE_MESTRA"</span>);
-<span class="kw">let</span> original = crypto.<span class="fn">decrypt</span>(textoCifrado, <span class="str">"MINHA_CHAVE_MESTRA"</span>);</code></pre>
+<span class="kw">let</span> invasor = crypto.<span class="fn">verifyPassword</span>(<span class="str">"SenhaErrada123"</span>, hashProtegido);
+<span class="fn">print</span>(<span class="str">$"Invasor bloqueado? {!invasor}"</span>); <span class="comment"># true</span>
+
+<span class="comment"># 3. CIFRA SIMÉTRICA AES-256: Para mensagens e dados confidenciais</span>
+<span class="kw">let</span> chaveMestra = <span class="str">"CHAVE_SUPER_SECRETA_32_BYTES_YVIRA"</span>;
+<span class="kw">let</span> textoSecreto = <span class="str">"Documento Confidencial: Saldo R$ 1.500.000,00"</span>;
+
+<span class="kw">let</span> cifrado = crypto.<span class="fn">encrypt</span>(textoSecreto, chaveMestra);
+<span class="fn">print</span>(<span class="str">"Cifrado incompreensível:"</span>, cifrado);
+
+<span class="kw">let</span> descriptografado = crypto.<span class="fn">decrypt</span>(cifrado, chaveMestra);
+<span class="fn">print</span>(<span class="str">"Texto original recuperado:"</span>, descriptografado);</code></pre>
         </div>
       </section>
 
       <!-- 26. SANDBOX -->
       <section class="doc-section" id="sandbox-anti-taint">
         <h2>26. Sandbox Corporativo e Proteção Anti-Invasão</h2>
-        <p>Se você permitir que usuários rodem códigos no seu servidor, trave o ambiente para ninguém apagar arquivos do seu Windows:</p>
+        
+        <div class="why-box">
+          <strong>🤔 O que é o Sandbox e o sistema Anti-Taint?</strong><br>
+          Se a sua empresa permite que clientes executem scripts ou fórmulas dentro da plataforma, você não pode permitir que eles acessem <code>C:\Windows</code> ou abram o PowerShell para formatar a máquina. O Yvira possui uma gaiola de segurança (Sandbox): com uma simples instrução, você desativa gravação em disco, restringe acesso a certas pastas e bloqueia comandos perigosos automaticamente.
+        </div>
 
         <div class="code-block">
           <div class="code-header"><span>sandbox.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
-          <pre><code><span class="comment"># Bloqueia gravação em disco e subprocessos do sistema</span>
-<span class="at">@security.sandbox</span>({
-    <span class="str">"allowWriteDisk"</span>: <span class="kw">false</span>,
-    <span class="str">"allowSubprocess"</span>: <span class="kw">false</span>,
-    <span class="str">"allowedHosts"</span>: [<span class="str">"api.minhaempresa.com"</span>]
+          <pre><code>import <span class="str">"security"</span> as sec;
+
+<span class="comment"># 1. Ativa a gaiola de isolamento (Sandbox) para scripts de terceiros</span>
+sec.<span class="fn">sandbox</span>({
+    <span class="str">"allowWriteDisk"</span>: <span class="kw">false</span>,       <span class="comment"># Proíbe criar ou apagar arquivos do sistema</span>
+    <span class="str">"allowSubprocess"</span>: <span class="kw">false</span>,      <span class="comment"># Impede chamar 'cmd.exe' ou comandos externos</span>
+    <span class="str">"allowedDirectories"</span>: [<span class="str">"dados/publicos"</span>], <span class="comment"># Só enxerga esta pasta</span>
+    <span class="str">"maxMemoryMb"</span>: <span class="num">256</span>             <span class="comment"># Limita memória para evitar travamento da CPU</span>
 });
 
-<span class="comment"># Qualquer tentativa maliciosa é abortada na hora pelo Yvira</span></code></pre>
+<span class="comment"># Se o script tentar executar algo fora das permissões:
+# O Yvira bloqueia imediatamente e dispara um SecurityException!</span></code></pre>
         </div>
       </section>
 
       <!-- 27. BUILD COMPILADOR -->
       <section class="doc-section" id="build-compilador">
-        <h2>27. Gerando o Executável Final (.exe) em 1 Clique</h2>
-        <p>Seu sistema está pronto e você quer mandar para o cliente ou para um amigo sem ele precisar instalar nada?</p>
-
+        <h2>27. Gerando o Executável Final (.exe) em 1 Clique (yvira bundle)</h2>
+        
         <div class="why-box">
-          <strong>🤔 O que o comando build faz?</strong> Ele pega seu código `.yv`, sua pasta de HTML/CSS (`views/`), coloca o ícone oficial do Yvira e junta tudo em um <strong>único arquivo executável `.exe`</strong>!
+          <strong>🤔 Como entregar seu programa para qualquer pessoa no Windows?</strong><br>
+          Normalmente, rodar programas feitos em Python, Node ou Java exige que o cliente instale runtimes gigantescos, configure variáveis de ambiente PATH e instale bibliotecas pelo terminal. O comando <code>yvira bundle</code> junta seu código compilado, o motor de execução nativo e sua pasta de telas HTML/CSS em um <strong>único arquivo `.exe` executável standalone</strong>. Você envia pelo WhatsApp ou pendrive, a pessoa dá 2 cliques e o app abre instantaneamente!
         </div>
 
         <div class="code-block">
           <div class="code-header"><span>Terminal (PowerShell / CMD)</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
-          <pre><code>yvira build main.yv --output MeuApp.exe</code></pre>
+          <pre><code><span class="comment"># 1. Empacota seu script principal e a pasta de telas em um único .exe</span>
+yvira bundle --entry main.yv --output MeuSistema.exe
+
+<span class="comment"># 2. Se quiser embutir sua pasta de telas HTML/CSS:</span>
+yvira bundle --entry main.yv --views views --output MeuSistemaCompleto.exe</code></pre>
         </div>
 
-        <div class="callout amber">
-          <strong>🎉 Resultado:</strong> Um arquivo <code>MeuApp.exe</code> que você dá dois cliques no Windows e ele abre na hora com seu ícone na barra de tarefas!
+        <div class="callout amber" style="margin-top: 15px;">
+          <strong>🎉 Pronto para Produção:</strong> O executável final é 100% nativo para Windows x64, inclui o ícone da aplicação e funciona perfeitamente sem necessidade de instalar o Yvira na máquina do usuário final.
         </div>
       </section>
 
