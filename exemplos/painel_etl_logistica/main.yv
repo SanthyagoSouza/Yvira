@@ -1,0 +1,162 @@
+# =========================================================
+# PIPELINE ETL & STREAMING LOGÍSTICO EM TEMPO REAL - YVIRA
+# =========================================================
+
+print("=========================================================");
+print("     YVIRA LOGISTICS WMS & SUPPLY CHAIN ETL DASHBOARD    ");
+print("=========================================================\n");
+
+let app = criar_janela({
+    "titulo": "Yvira WMS Logistics - Pipeline ETL & Analytics",
+    "view": "views/index.html",
+    "largura": 1280,
+    "altura": 820,
+    "min_largura": 1024,
+    "min_altura": 700,
+    "modo_tela": "semi-full",
+    "barra_customizada": true,
+    "redimensionavel": true,
+    "cor_fundo": "#0b0f19"
+});
+
+# Estado do Armazém / WMS (Centro de Distribuição)
+let metricas = {
+    "totalSeparado": 14250,
+    "metaSeparacao": 20000,
+    "totalConferido": 13980,
+    "acuracidade": 99.4,
+    "movVertical": 840,
+    "movHorizontal": 2150,
+    "vendasDia": 384500.0,
+    "pedidosFaturados": 1240,
+    "taxaOcupacaoCD": 87.5
+};
+
+# Histórico de Separação por Hora (08:00 às 18:00)
+let horasLotes = [
+    {"hora": "08:00", "qtd": 1120, "meta": 1200},
+    {"hora": "09:00", "qtd": 1450, "meta": 1400},
+    {"hora": "10:00", "qtd": 1820, "meta": 1600},
+    {"hora": "11:00", "qtd": 1690, "meta": 1600},
+    {"hora": "12:00", "qtd": 980,  "meta": 1000},
+    {"hora": "13:00", "qtd": 1540, "meta": 1500},
+    {"hora": "14:00", "qtd": 1780, "meta": 1700},
+    {"hora": "15:00", "qtd": 1920, "meta": 1800},
+    {"hora": "16:00", "qtd": 1230, "meta": 1800},
+    {"hora": "17:00", "qtd": 720,  "meta": 1600}
+];
+
+# Zonas do Armazém
+let zonasCD = [
+    {"zona": "Zona A - Eletrônicos", "ocupacao": 91.2, "status": "Crítico", "operadores": 14},
+    {"zona": "Zona B - Alimentícios", "ocupacao": 76.5, "status": "Normal", "operadores": 22},
+    {"zona": "Zona C - Farmacêutico", "ocupacao": 64.0, "status": "Normal", "operadores": 8},
+    {"zona": "Zona D - Linha Branca", "ocupacao": 88.0, "status": "Atenção", "operadores": 18},
+    {"zona": "Zona E - Doca de Expedição", "ocupacao": 45.0, "status": "Livre", "operadores": 12}
+];
+
+let ultimosEventos = [];
+let operadores = ["Carlos Silva", "Ana Souza", "Marcos Dias", "Juliana Prado", "Lucas Rocha", "Beatriz Lima", "Rafael Costa"];
+let tiposMovimento = [
+    "Separação de Palete #LOTE-",
+    "Conferência Cega de Carga #LOTE-",
+    "Movimentação Vertical (Empilhadeira Trilateral) #RACK-",
+    "Translação Horizontal (Transpaleteira) #RUA-",
+    "Faturamento de Pedido VIP #NF-",
+    "Auditoria de Picking Concluída #SETOR-"
+];
+
+fn gerarEventoAleatorio() {
+    let opIndex = random(0, len(operadores) - 1);
+    let tipoIndex = random(0, len(tiposMovimento) - 1);
+    let op = operadores[opIndex];
+    let prefixo = tiposMovimento[tipoIndex];
+    let codigo = random(1000, 9999);
+    
+    let evento = {
+        "id": "EVT-" + random(10000, 99999),
+        "tempo": "Agora",
+        "descricao": prefixo + codigo + " por " + op,
+        "tipo": tipoIndex
+    };
+
+    ultimosEventos.insert(0, evento);
+    if (len(ultimosEventos) > 8) {
+        ultimosEventos.pop();
+    }
+}
+
+# Preenche eventos iniciais
+let idx = 0;
+while (idx < 5) {
+    gerarEventoAleatorio();
+    idx = idx + 1;
+}
+
+# Pipeline ETL - Engine de Extração, Transformação e Carga Contínua
+fn executarEtlCiclo() {
+    # 1. Simula novas separações e conferências de picking
+    let deltaSeparacao = random(12, 38);
+    let deltaConferido = random(10, 35);
+    metricas.totalSeparado = metricas.totalSeparado + deltaSeparacao;
+    metricas.totalConferido = metricas.totalConferido + deltaConferido;
+
+    # 2. Movimentações de Armazém
+    let deltaVert = random(2, 6);
+    let deltaHoriz = random(5, 14);
+    metricas.movVertical = metricas.movVertical + deltaVert;
+    metricas.movHorizontal = metricas.movHorizontal + deltaHoriz;
+
+    # 3. Flutuação de Acuracidade WMS
+    let variacaoAcuracia = (random(991, 998)) / 10.0;
+    metricas.acuracidade = variacaoAcuracia;
+
+    # 4. Indicador de Vendas & Faturamento em tempo real
+    let deltaVendas = random(1200, 4800);
+    metricas.vendasDia = metricas.vendasDia + deltaVendas;
+    metricas.pedidosFaturados = metricas.pedidosFaturados + random(1, 4);
+
+    # 5. Atualiza o lote da hora corrente
+    let horaAtualIndex = len(horasLotes) - 1; # Última hora aberta
+    horasLotes[horaAtualIndex].qtd = horasLotes[horaAtualIndex].qtd + deltaSeparacao;
+
+    # 6. Flutuação leve de ocupação das zonas
+    for (z in zonasCD) {
+        let oscilacao = (random(-8, 8)) / 10.0;
+        z.ocupacao = z.ocupacao + oscilacao;
+        if (z.ocupacao > 98.0) { z.ocupacao = 98.0; }
+        if (z.ocupacao < 35.0) { z.ocupacao = 35.0; }
+    }
+
+    # 7. Adiciona novo evento no feed em tempo real
+    gerarEventoAleatorio();
+
+    # 8. Despacha o pacote completo e transformado (Load) para o Frontend
+    let pacoteDashboard = {
+        "metricas": metricas,
+        "horasLotes": horasLotes,
+        "zonas": zonasCD,
+        "eventos": ultimosEventos
+    };
+
+    app.emitir("receber_dados_etl", pacoteDashboard);
+}
+
+# Inicialização quando a tela solicitar carga inicial
+fn aoPedirDadosIniciais(dados) {
+    let pacoteInicial = {
+        "metricas": metricas,
+        "horasLotes": horasLotes,
+        "zonas": zonasCD,
+        "eventos": ultimosEventos
+    };
+    app.emitir("receber_dados_etl", pacoteInicial);
+}
+
+app.ao_evento("obter_dados_iniciais", aoPedirDadosIniciais);
+
+# Dispara o Pipeline ETL a cada 1.5 segundos via @time nativo do Yvira
+@time.executarEtlCiclo(1.5);
+
+app.exibir();
+app.esperar();

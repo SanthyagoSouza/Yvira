@@ -1,0 +1,718 @@
+================================================================================
+                    GRAMÁTICA E SINTAXE COMPLETA DA LINGUAGEM YVIRA
+================================================================================
+Documento Oficial de Especificação da Sintaxe da Linguagem Yvira
+Versão: 2.0 (Padronização Internacional de APIs em Inglês com Explicações em PT-BR)
+Ambiente Alvo: Yvira Virtual Machine / Compilador Nativo Windows x64 .NET 10
+
+Este documento descreve 100% da gramática formal, regras de escrita, palavras-chave,
+operadores, estruturas de controle, tipos literais, diretivas com '@' e biblioteca nativa.
+
+--------------------------------------------------------------------------------
+ÍNDICE
+--------------------------------------------------------------------------------
+1. ESTRUTURA LÉXICA & COMENTÁRIOS
+2. LITERAIS E TIPOS PRIMITIVOS
+3. DECLARAÇÃO DE VARIÁVEIS E CONSTANTES (let / const)
+4. OPERADORES COMPLETOS (Aritméticos, Comparação, Lógicos, Atribuição, Ternário)
+5. INTERPOLAÇÃO DE STRINGS ($"...")
+6. ESTRUTURAS DE CONTROLE CONDICIONAL (if, elif, else)
+7. ESTRUTURA DE CORRESPONDÊNCIA DE PADRÕES (match / switch)
+8. LAÇOS DE REPETIÇÃO (while, for tradicional, foreach / for..in, break, continue)
+9. FUNÇÕES (fn / function, parâmetros, retorno, arrow)
+10. TRATAMENTO DE ERROS (try, catch, finally, throw)
+11. PROGRAMAÇÃO ORIENTADA A OBJETOS (class, constructor, extends, static, this)
+12. SISTEMA DE MÓDULOS E IMPORTAÇÕES (import .. as ..)
+13. COLEÇÕES NATIVAS E MATRIZES (List, Map, Matrix, Indexação)
+14. DIRETIVAS DO SISTEMA COM '@' (@db, @time, @spawn, @worker, @realtime, @pdf, @sleep, @die)
+15. TABELA DE MÉTODOS E BUILT-INS DA BIBLIOTECA PADRÃO
+
+
+================================================================================
+1. ESTRUTURA LÉXICA & COMENTÁRIOS
+================================================================================
+
+1.1 Comentário de Linha Única:
+   Inicia com '#' e se estende até o fim da linha atual.
+   Exemplo:
+       # Isto é um comentário de linha única
+       let total = 100; # Comentário ao final da linha
+
+1.2 Comentário de Bloco (Multi-linha):
+   Inicia com '#-' e fecha com '-#'.
+   Exemplo:
+       #-
+          Este é um comentário
+          de múltiplas linhas
+          no Yvira.
+       -#
+
+1.3 Ponto e Vírgula (Semicolon ';'):
+   O uso de ';' é padrão ao final de cada instrução/comando (Statement).
+   Exemplo:
+       let x = 10;
+       print(x);
+
+1.4 Delimitadores de Bloco:
+   Blocos de código de funções, laços, condicionais e classes usam chaves '{' e '}'.
+
+
+================================================================================
+2. LITERAIS E TIPOS PRIMITIVOS
+================================================================================
+
+2.1 Números (Inteiros e Decimais de Ponto Flutuante):
+   Internamente representados com precisão dupla de 64 bits (double).
+   Exemplos:
+       0
+       42
+       -15
+       3.14159
+       0.005
+
+2.2 Strings (Cadeias de Caracteres):
+   Delimitadas por aspas duplas ("..."). Suportam caracteres de escape como \n, \t, \", \\.
+   Exemplo:
+       "Olá, Mundo Yvira!"
+       "Linha 1\nLinha 2"
+
+2.3 Booleanos:
+   Valores lógicos puros:
+       true
+       false
+
+2.4 Nulo:
+   Representa ausência de valor:
+       null
+
+2.5 Coleções Literais:
+   - Lista / Vetor: [1, 2, "texto", true, null]
+   - Dicionário / Mapa (Objeto Chave-Valor): { "nome": "Carlos", "idade": 30 }
+   - Matriz Numérica Automática: [[1, 2], [3, 4]] ou [1.0, 2.0, 3.0]
+
+
+================================================================================
+3. DECLARAÇÃO DE VARIÁVEIS E CONSTANTES (let / const)
+================================================================================
+
+3.1 Variável Mutável ('let'):
+   Cria uma variável que pode receber novos valores ao longo da execução.
+   Sintaxe:
+       let <identificador> = <expressão>;
+       let <identificador> : <TipoOpcional> = <expressão>;
+   Exemplos:
+       let contador = 0;
+       contador = contador + 1;
+       let nome: String = "Yvira";
+
+3.2 Constante Imutável ('const'):
+   Cria um identificador cujo valor não pode ser reatribuído após a declaração.
+   Sintaxe:
+       const <identificador> = <expressão>;
+   Exemplo:
+       const PI = 3.14159265359;
+       const PORTA_PADRAO = 8080;
+
+
+================================================================================
+4. OPERADORES COMPLETOS
+================================================================================
+
+4.1 Operadores Aritméticos:
+   +    Adição ou concatenação de strings: 10 + 5 -> 15 | "A" + "B" -> "AB"
+   -    Subtração: 10 - 3 -> 7
+   *    Multiplicação (números escalares ou multiplicação de matrizes): 4 * 2 -> 8
+   /    Divisão: 10 / 2 -> 5.0
+   %    Módulo (resto da divisão inteira): 10 % 3 -> 1
+   **   Exponenciação / Potência: 2 ** 3 -> 8.0
+   ++   Incremento unitário: x++
+   --   Decremento unitário: x--
+   -x   Negação unária: let negativo = -valor;
+   +x   Positivo unário: let positivo = +valor;
+
+4.2 Operadores de Atribuição Composta:
+   =    Atribuição simples: x = 10
+   +=   Adiciona e atribui: x += 5   (equivale a x = x + 5)
+   -=   Subtrai e atribui: x -= 2    (equivale a x = x - 2)
+   *=   Multiplica e atribui: x *= 3 (equivale a x = x * 3)
+   /=   Divide e atribui: x /= 2     (equivale a x = x / 2)
+   %=   Módulo e atribui: x %= 4     (equivale a x = x % 4)
+   **=  Potência e atribui: x **= 2  (equivale a x = x ** 2)
+
+4.3 Operadores de Comparação (Relacionais):
+   ==   Igual a: 5 == 5 -> true
+   !=   Diferente de: 5 != 3 -> true (também aceita '<>')
+   <    Menor que: 3 < 5 -> true
+   >    Maior que: 8 > 2 -> true
+   <=   Menor ou igual a: 5 <= 5 -> true
+   >=   Maior ou igual a: 10 >= 4 -> true
+
+4.4 Operadores Lógicos:
+   O Yvira suporta tanto a notação clássica por símbolos quanto palavras em inglês:
+   &&  ou  and   (E lógico - ambas condições verdadeiras)
+   ||  ou  or    (OU lógico - ao menos uma condição verdadeira)
+   !   ou  not   (NÃO lógico - inverte o valor booleano)
+
+   Exemplo:
+       if (idade >= 18 and ativo == true) {
+           print("Acesso permitido.");
+       }
+       if (!bloqueado || status == "admin") {
+           print("Liberado.");
+       }
+
+4.5 Operador Ternário Condicional:
+   Avalia uma expressão em uma única linha:
+   Sintaxe:
+       <condicao> ? <valor_se_verdadeiro> : <valor_se_falso>
+   Exemplo:
+       let status = idade >= 18 ? "Maior de idade" : "Menor de idade";
+       let desconto = vip ? total * 0.15 : 0.0;
+
+
+================================================================================
+5. INTERPOLAÇÃO DE STRINGS ($"...")
+================================================================================
+
+O Yvira suporta injeção direta de expressões dentro de strings usando o prefixo '$':
+Sintaxe:
+    $"Texto com {expressao} embutida"
+
+Exemplos:
+    let usuario = "Alice";
+    let saldo = 1250.75;
+    let msg = $"Olá, {usuario}! Seu saldo atual é R$ {saldo}.";
+    print(msg);
+
+    # Suporta expressões arbitrárias dentro das chaves:
+    print($"Total com imposto: {saldo * 1.10}");
+
+
+================================================================================
+6. ESTRUTURAS DE CONTROLE CONDICIONAL (if, elif, else)
+================================================================================
+
+Sintaxe Geral:
+    if (<condicao1>) {
+        # Bloco executado se condicao1 for verdadeira
+    } elif (<condicao2>) {
+        # Bloco opcional executado se condicao2 for verdadeira
+    } else {
+        # Bloco opcional executado se nenhuma condição anterior for satisfeita
+    }
+
+Exemplo Completo:
+    let nota = 85;
+
+    if (nota >= 90) {
+        print("Conceito A - Excelente!");
+    } elif (nota >= 70) {
+        print("Conceito B - Aprovado!");
+    } elif (nota >= 50) {
+        print("Conceito C - Recuperação!");
+    } else {
+        print("Conceito D - Reprovado.");
+    }
+
+Nota: Os parênteses na condição são opcionais:
+    if nota >= 70 { ... }
+
+
+================================================================================
+7. ESTRUTURA DE CORRESPONDÊNCIA DE PADRÕES (match / switch)
+================================================================================
+
+O Yvira oferece a sintaxe moderna 'match' (também aceitando a palavra 'switch')
+com operadores de flecha '=>':
+
+Sintaxe Geral:
+    match (<expressao>) {
+        case <valor1> => { <comandos> }
+        case <valor2> => <comando_ou_expressao>;
+        default => { <caso_padrao> }
+    }
+
+Também aceita sem a palavra 'case' e com '_' ou 'default' como coringa (wildcard):
+    match (comando) {
+        "iniciar" => iniciarSistema(),
+        "parar"   => pararSistema(),
+        "status"  => exibirPainel(),
+        _         => print("Comando não reconhecido!")
+    }
+
+Exemplo:
+    let codigoHttp = 404;
+    match (codigoHttp) {
+        200 => print("Sucesso (OK)"),
+        400 => print("Requisição Inválida (Bad Request)"),
+        404 => print("Não Encontrado (Not Found)"),
+        500 => print("Erro Interno do Servidor"),
+        default => print("Código desconhecido: " + str(codigoHttp))
+    }
+
+
+================================================================================
+8. LAÇOS DE REPETIÇÃO
+================================================================================
+
+8.1 Laço 'while':
+   Executa o bloco enquanto a condição for verdadeira.
+   Sintaxe:
+       while (<condicao>) {
+           # instruções
+       }
+   Exemplo:
+       let i = 1;
+       while (i <= 5) {
+           print($"Contador: {i}");
+           i += 1;
+       }
+
+8.2 Laço 'for' Tradicional (Estilo C):
+   Sintaxe:
+       for (let <var> = <inicio>; <condicao>; <passo>) {
+           # instruções
+       }
+   Exemplo:
+       for (let i = 0; i < 10; i = i + 1) {
+           print($"Índice: {i}");
+       }
+
+8.3 Laço 'for .. in' ou 'foreach .. in' com 'range(...)':
+   Sintaxe:
+       for <item> in range(<limite>) { ... }
+       for <item> in range(<inicio>, <fim>) { ... }
+       for <item> in range(<inicio>, <fim>, <passo>) { ... }
+   Exemplo:
+       for i in range(5) {
+           print(i); # 0, 1, 2, 3, 4
+       }
+
+       for valor in range(10, 50, 10) {
+           print(valor); # 10, 20, 30, 40
+       }
+
+8.4 Iteração em Coleções (Listas, Strings, Matrizes):
+   Sintaxe:
+       for <elemento> in <colecao> { ... }
+       foreach <elemento> in <colecao> { ... }
+   Exemplo:
+       let frutas = ["Maçã", "Banana", "Laranja", "Uva"];
+       for f in frutas {
+           print($"Fruta: {f}");
+       }
+
+8.5 Instruções de Interrupção de Fluxo:
+   - 'break': Encerra imediatamente a execução do laço atual.
+   - 'continue': Pula para a próxima iteração do laço atual.
+
+   Exemplo:
+       for n in range(10) {
+           if (n == 3) {
+               continue; # Pula o número 3
+           }
+           if (n == 7) {
+               break; # Para o laço ao chegar no 7
+           }
+           print(n);
+       }
+
+
+================================================================================
+9. FUNÇÕES (fn / function)
+================================================================================
+
+9.1 Declaração Padrão:
+   Utiliza a palavra-chave 'fn' (ou 'function'):
+   Sintaxe:
+       fn <nome_da_funcao>(<param1>, <param2>, ...) {
+           # corpo da função
+           return <valor_de_retorno>;
+       }
+
+   Exemplo:
+       fn somar(a, b) {
+           return a + b;
+       }
+
+       let resultado = somar(15, 25);
+       print(resultado); # 40
+
+9.2 Funções sem Retorno Explícito:
+   Se uma função não executar 'return', ela retorna implicitamente 'null':
+       fn saudar(nome) {
+           print($"Olá, {nome}!");
+       }
+       saudar("Beatriz");
+
+9.3 Funções de Primeira Classe e Callbacks:
+   Funções podem ser armazenadas em variáveis, passadas como argumentos e invocadas:
+       fn aplicar(lista, transformador) {
+           let novaLista = [];
+           for item in lista {
+               novaLista.add(transformador(item));
+           }
+           return novaLista;
+       }
+
+       fn dobrar(x) { return x * 2; }
+       let numeros = [1, 2, 3, 4];
+       let dobrados = aplicar(numeros, dobrar); # [2, 4, 6, 8]
+
+
+================================================================================
+10. TRATAMENTO DE ERROS (try, catch, finally, throw)
+================================================================================
+
+O Yvira fornece um sistema robusto de captura e lançamento de exceções.
+
+10.1 Sintaxe Geral:
+    try {
+        # Código crítico sujeito a falhas
+    } catch <variavel_erro> {
+        # Bloco executado se ocorrer qualquer erro dentro do try
+    } finally {
+        # Bloco SEMPRE executado ao final (dando erro ou não)
+    }
+
+10.2 Disparando Erros Manuais com 'throw':
+    Sintaxe:
+        throw <mensagem_ou_objeto>;
+
+10.3 Exemplo Completo:
+    fn dividir(a, b) {
+        if (b == 0) {
+            throw "Erro Crítico: Impossível dividir por zero!";
+        }
+        return a / b;
+    }
+
+    try {
+        print("Tentando efetuar divisão...");
+        let res = dividir(50, 0);
+        print("Resultado: " + str(res));
+    } catch erro {
+        print("Capturado no Catch: " + str(erro));
+    } finally {
+        print("Bloco Finally: Limpeza de recursos e fechamento concluídos.");
+    }
+
+
+================================================================================
+11. PROGRAMAÇÃO ORIENTADA A OBJETOS (POO)
+================================================================================
+
+11.1 Declaração de Classe e Construtor:
+    As classes agrupam propriedades (atributos) e métodos.
+    O método construtor deve ser nomeado 'constructor' ou 'init'.
+    A palavra-chave 'this' referencia a instância atual do objeto.
+
+    Sintaxe:
+        class <NomeDaClasse> {
+            fn constructor(<params>) {
+                this.<campo> = <param>;
+            }
+
+            fn <nomeMetodo>(<params>) {
+                # método de instância
+            }
+        }
+
+11.2 Instanciação de Objetos:
+    No Yvira, você pode instanciar invocando o nome da classe diretamente como função:
+        let obj = NomeDaClasse(args...);
+
+11.3 Métodos Estáticos ('static'):
+    Métodos que pertencem à classe em si, sem exigir instanciação prévia:
+        class Calculadora {
+            static fn somar(x, y) {
+                return x + y;
+            }
+        }
+        let total = Calculadora.somar(10, 20);
+
+11.4 Herança ('extends'):
+    Uma classe filha herda os métodos e propriedades da classe base:
+        class Animal {
+            fn constructor(nome) {
+                this.nome = nome;
+            }
+            fn falar() {
+                return "Som genérico";
+            }
+        }
+
+        class Cachorro extends Animal {
+            fn latir() {
+                return $"{this.nome} diz: Au Au!";
+            }
+        }
+
+        let dog = Cachorro("Rex");
+        print(dog.latir()); # Rex diz: Au Au!
+
+
+================================================================================
+12. SISTEMA DE MÓDULOS E IMPORTAÇÕES (import .. as ..)
+================================================================================
+
+12.1 Sintaxe de Importação:
+    import "<modulo_ou_arquivo>" as <alias>;
+    import "<modulo_ou_arquivo>";
+
+12.2 Importação de Arquivos de Código Yvira (.yv):
+    Permite modularizar o projeto em múltiplos arquivos:
+        import "src/servicos/auth.yv" as auth;
+        let token = auth.gerarToken("admin");
+
+12.3 Importação de Arquivos de Dados (.json e .env):
+    O Yvira converte nativamente arquivos JSON em Mapas/Listas e lê variáveis de ambiente:
+        import "config.json" as config;
+        print(config.porta_banco);
+
+        import ".env" as env;
+        print(env.SECRET_KEY);
+
+12.4 Módulos Nativos Embutidos (Built-in Standard Library):
+    - import "fs" as fs;          # Sistema de Arquivos (leitura, escrita, diretórios)
+    - import "http" as http;      # Servidor HTTP RESTful de alto throughput
+    - import "cache" as cache;    # Cache ultra-rápido em memória com TTL
+    - import "doc" as doc;        # Geração de PDF e planilhas Excel (.xlsx)
+    - import "crypto" as crypto;  # Criptografia AES-256 e Hash de senhas
+    - import "security" as sec;   # Políticas de Sandbox e Anti-Taint
+
+
+================================================================================
+13. COLEÇÕES NATIVAS E MATRIZES
+================================================================================
+
+13.1 Listas (YviraList):
+    Criadas com colchetes: let l = [10, 20, 30];
+    - l.add(item) / l.append(item) / l.push(item): Adiciona elemento ao final
+    - l.pop(): Remove e retorna o último elemento (ou por índice l.pop(0))
+    - l.insert(indice, item): Insere em posição específica
+    - l.remove(item): Remove a primeira ocorrência do elemento
+    - l.contains(item): Verifica existência (retorna true/false)
+    - l.indexOf(item): Retorna a posição do item ou -1
+    - l.clear(): Limpa todos os itens da lista
+    - l.length / l.len / l.count: Retorna o tamanho
+    - l.join(separador): Concatena todos os itens em uma String
+
+13.2 Mapas / Dicionários (YviraMap):
+    Criados com chaves: let m = { "chave": "valor", "ativo": true };
+    - m["chave"] ou m.chave: Acesso a valores
+    - m["nova"] = 123 ou m.set("nova", 123): Atribuição
+    - m.get("chave"): Busca valor
+    - m.contains("chave") / m.has("chave"): Verifica se a chave existe
+    - m.remove("chave") / m.delete("chave"): Remove a chave
+    - m.clear(): Limpa o mapa
+    - m.keys: Retorna lista com todas as chaves
+    - m.values: Retorna lista com todos os valores
+    - m.length / m.count: Quantidade de pares
+
+13.3 Matrizes Numéricas e Álgebra Linear (YviraMatrix):
+    Qualquer array numérico 1D ou 2D declarado em Yvira é automaticamente promovido
+    ao tipo nativo 'YviraMatrix', com aceleração matemática, computação sem laços (FOR-less)
+    e algoritmos de álgebra linear científica de precisão dupla.
+
+    A) Declaração Literal de Vetores e Matrizes:
+       let v = [10, 20, 30, 40, 50];                    # Vetor 1D (1 linha x 5 colunas)
+       let A = [                                         # Matriz 2D (2 linhas x 3 colunas)
+           [1, 2, 3],
+           [4, 5, 6]
+       ];
+
+    B) Geradores Rápidos Globais (Alocação Instantânea sem Laços):
+       - zeros(linhas, colunas) ou zeros(tamanho): Cria matriz preenchida com zeros 0.0.
+         Exemplo: let z = zeros(2, 3);
+       - ones(linhas, colunas) ou ones(tamanho): Cria matriz preenchida com 1.0.
+         Exemplo: let u = ones(3, 3);
+       - eye(tamanho) ou identity(tamanho): Cria Matriz Identidade quadrada com diagonal = 1.0.
+         Exemplo: let I = eye(3);
+       - randMat(linhas, colunas, [min], [max]): Gera matriz preenchida com valores aleatórios.
+         Exemplo: let r = randMat(2, 4, 10, 50);
+
+    C) Acesso a Elementos, Fatiamento e Indexação:
+       - v[0] / v[4]: Acesso a elemento de vetor.
+       - A[linha, coluna]: Acesso a célula bidimensional. Ex: A[0, 1] ou A[1, 2].
+       - A.row(i): Extrai uma linha completa como novo vetor (sem precisar de laço for).
+       - A.col(j): Extrai uma coluna completa como novo vetor coluna.
+       - A.rows ou A.linhas: Quantidade de linhas da matriz.
+       - A.cols ou A.colunas: Quantidade de colunas da matriz.
+       - A.length: Total de elementos (linhas * colunas).
+
+    D) Operações Matemáticas Aritméticas e por Escalar (Vetorizadas):
+       - Soma por Escalar: A + 10 (soma 10 em todas as células sem laços).
+       - Subtração por Escalar: A - 5.
+       - Multiplicação por Escalar: A * 2 (dobra todos os valores).
+       - Soma de Matrizes: A + B (dimensões compatíveis).
+       - Subtração de Matrizes: A - B.
+
+    E) Álgebra Linear Avançada:
+       - Multiplicação Matricial (Dot Product): A * B
+         Regra: O número de colunas de A deve ser igual ao número de linhas de B.
+         Exemplo: (2x3) * (3x2) produz uma nova matriz (2x2).
+       - Transposição: A.transpose() ou A.T
+         Inverte instantaneamente linhas por colunas ((NxM) vira (MxN)).
+       - Inversão de Matriz Quadrada: A.inverse() ou A.inv()
+         Calculada usando Eliminação de Gauss-Jordan com Pivoteamento Parcial.
+         Comprovação clássica: A * A.inverse() resulta na Matriz Identidade 'eye(N)'.
+       - Determinante: A.det() ou A.determinant()
+         Calculado por decomposição triangular / eliminação gaussiana com inversão de sinal por troca de linhas.
+       - Traço da Matriz: A.trace() ou A.trace
+         Soma de todos os elementos da diagonal principal (apenas para matrizes quadradas).
+
+    F) Estatísticas e Reduções sem Laços (FOR-less Reductions):
+       - A.sum ou A.sum(): Soma de todas as células da matriz.
+       - A.mean ou A.mean(): Média aritmética de todas as células.
+       - A.max ou A.max(): Maior valor presente na matriz.
+       - A.min ou A.min(): Menor valor presente na matriz.
+
+    G) Resolução de Sistemas de Equações Lineares (A * x = b):
+       O Yvira resolve sistemas de equações de física e engenharia automaticamente
+       através da função global 'solve(A, b)' ou do método 'A.solve(b)':
+       Exemplo Real:
+           # Sistema de 2 equações e 2 incógnitas:
+           # 2x +  y =   8
+           #  x - 3y = -10
+           let A = [
+               [2, 1],
+               [1, -3]
+           ];
+           let b = [8, -10];
+
+           let x = solve(A, b);
+           print("Solução calculada:", x); # [2, 4]
+           # Comprovação: A * x deve ser igual a b!
+           let checagem = A * x;
+           print("Comprovação:", checagem); # [8, -10]
+
+
+================================================================================
+14. DIRETIVAS DO SISTEMA COM '@'
+================================================================================
+
+O Yvira utiliza o símbolo '@' para superpoderes integrados ao núcleo da linguagem:
+
+14.1 Banco de Dados Relacional SQLite:
+    - @db("caminho/banco.db");                   # Conecta ao banco de dados SQLite
+    - @db.alias("caminho/outro.db");             # Conexão nomeada
+    - @exec("CREATE TABLE ...", []);             # Executa DDL / INSERT / UPDATE / DELETE
+    - @query("SELECT * FROM ...", [params]);     # Executa consulta e retorna Lista de Mapas
+    - @transaction { ... }                       # Bloco com Commit/Rollback atômico automático
+
+    Exemplo:
+        @db("loja.db");
+        @exec("CREATE TABLE IF NOT EXISTS clientes (id INTEGER PRIMARY KEY, nome TEXT);");
+        @exec("INSERT INTO clientes (nome) VALUES (?);", ["Marina Silva"]);
+        let lista = @query("SELECT * FROM clientes WHERE nome LIKE ?;", ["%Marina%"]);
+
+14.2 Agendamento de Tarefas em Segundo Plano:
+    - @time.nomeDaFuncao(intervalo_em_segundos, ...argumentos);
+      Dispara a execução recorrente da função em thread assíncrona isolada.
+    - @stop.nomeDaFuncao();
+      Cancela o agendador daquela função.
+
+14.3 Concorrência Real e Workers Multicore:
+    - @spawn { ... }                             # Executa o bloco em thread concorrente independente
+    - @spawn.nomeFuncao(args...)                 # Despacha função para threadpool nativa
+    - let pool = @worker.pool(numThreads);       # Cria pool dedicado para paralelismo pesado
+
+14.4 Comunicação Multiplayer & Realtime (WebSockets + AES-256):
+    - let srv = @realtime.server({ "port": 7080, "secret": "CHAVE" });
+    - let cli = @realtime.client({ "host": "127.0.0.1", "port": 7080, "secret": "CHAVE" });
+
+14.5 Geração de Documentos PDF:
+    - @pdf.fromView("template.html", "saida.pdf", dados);
+    - @pdf("relatorio.pdf") { ... }
+
+14.6 Controle de Processo:
+    - @sleep(segundos);                          # Pausa temporária sem travar o event loop
+    - @die("Mensagem");                          # Encerra o interpretador imediatamente com status de erro
+
+
+================================================================================
+15. TABELA DE MÉTODOS E BUILT-INS DA BIBLIOTECA PADRÃO
+================================================================================
+
+15.1 Entrada / Saída e Terminal:
+    - print(v1, v2, ...): Imprime valores no console com quebra de linha
+    - input("Digite: "): Solicita texto do usuário via prompt interativo
+    - clear(): Limpa a tela do terminal
+    - sleep(ms): Pausa a execução por N milissegundos
+
+15.2 Interface Rica TUI no Terminal:
+    - menu(titulo, ["Opção 1", "Opção 2"]): Menu interativo navegável por setas ↑/↓ e Enter
+    - confirm("Deseja continuar?"): Pergunta interativa Sim/Não (retorna true/false)
+    - box(titulo, conteudo): Desenha caixa estilizada com bordas Unicode
+    - progress_bar(atual, total, prefixo): Desenha barra de progresso animada
+    - table(cabecalhos, linhas): Desenha tabela ASCII formatada com colunas alinhadas
+
+15.3 Conversão de Tipos e Matemática:
+    - toNumber(x): Converte String/Int em número de ponto flutuante
+    - toInt(x): Trunca/converte para inteiro (ou floor)
+    - toString(x): Converte qualquer tipo em String
+    - round(num, decimais): Arredonda número para N casas decimais
+    - random(min, max): Gera número inteiro aleatório no intervalo
+    - random(): Gera float aleatório entre 0.0 e 1.0
+    - seed(val): Define semente para números pseudo-aleatórios
+    - clock() / time(): Retorna timestamp atual em milissegundos Unix
+    - len(colecao) / length(colecao): Retorna o tamanho de listas, strings ou mapas
+    - range(stop) / range(start, stop, step): Gera lista sequencial de números
+
+15.4 Construtores de Matrizes:
+    - zeros(linhas, colunas) ou zeros(tamanho): Cria matriz preenchida com zeros
+    - ones(linhas, colunas) ou ones(tamanho): Cria matriz preenchida com 1.0
+    - eye(tamanho) / identity(tamanho): Cria matriz identidade quadrada
+    - randMat(linhas, colunas, min, max): Cria matriz preenchida com valores aleatórios
+    - solve(A, b): Resolve o sistema linear A * x = b
+
+15.5 Motor Desktop de Janelas WebView2:
+    - let app = create_window({
+          "title": "Minha Janela",
+          "view": "views/index.html",
+          "width": 1200,
+          "height": 750,
+          "resizable": true,
+          "custom_titlebar": true,
+          "window_mode": "normal"
+      });
+    - app.show(): Exibe a janela desktop
+    - app.wait(): Mantém o processo vivo aguardando o fechamento da janela
+    - app.close(): Fecha o programa e a janela
+    - app.emit("evento", dados): Envia dados nativos para o JavaScript no HTML
+    - app.on("evento", callback): Registra ouvinte para receber eventos do HTML
+    - app.executeScript("codigoJs()"): Executa script diretamente no DOM do WebView2
+
+15.6 Manipulação de Strings:
+    - str.upper(): Converte para maiúsculas
+    - str.lower(): Converte para minúsculas
+    - str.trim(): Remove espaços nas extremidades
+    - str.contains(sub): Verifica se contém substring
+    - str.startsWith(sub): Verifica início
+    - str.endsWith(sub): Verifica final
+    - str.indexOf(sub): Posição da primeira ocorrência (-1 se ausente)
+    - str.replace(antigo, novo): Substituição de texto
+    - str.split(delimitador): Divide a string em lista
+    - str.substring(inicio, tamanho): Extrai fatia da string
+
+================================================================================
+16. FORMATADOR OFICIAL DE CÓDIGO (yvira fmt / Format Document)
+================================================================================
+
+O Yvira possui um formatador de código nativo de alta precisão que padroniza
+a indentação, organiza quebras de linhas de comandos múltiplos, alinha chaves,
+espaça operadores e preserva strings e comentários intactos.
+
+16.1 Uso via Linha de Comando (CLI):
+    yvira fmt <arquivo.yv>      # Formata um arquivo específico
+    yvira fmt .                  # Formata todos os arquivos .yv do projeto recursivamente
+
+16.2 Uso no Visual Studio Code:
+    A extensão oficial do Yvira registra o provedor nativo de formatação:
+    - Atalho: Shift + Alt + F (ou 'Format Document' no menu de contexto)
+    - Suporte a 'Format on Save' (formatação automática ao salvar o arquivo).
+
+================================================================================
+FIM DO DOCUMENTO DE SINTAXE YVIRA
+================================================================================

@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Yvira Logistics WMS - ETL Realtime Analytics</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background-color: #0b0f19;
+      color: #e2e8f0;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* BARRA DE TÍTULO */
+    .titlebar {
+      height: 36px;
+      background-color: #080b12;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      border-bottom: 1px solid #1e293b;
+      app-region: drag;
+      -webkit-app-region: drag;
+    }
+
+    .titlebar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .titlebar-left img {
+      width: 18px;
+      height: 18px;
+    }
+
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      background: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .titlebar-controls {
+      display: flex;
+      gap: 6px;
+      app-region: no-drag;
+      -webkit-app-region: no-drag;
+    }
+
+    .win-btn {
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #94a3b8;
+      font-size: 13px;
+      transition: all 0.15s;
+    }
+
+    .win-btn:hover {
+      background: #1e293b;
+      color: #fff;
+    }
+
+    .win-btn.close:hover {
+      background: #ef4444;
+      color: #fff;
+    }
+
+    /* CONTAINER PRINCIPAL */
+    .dashboard-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* HEADER COM STATS RÁPIDOS */
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .dashboard-title h1 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: -0.02em;
+    }
+
+    .dashboard-title p {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 2px;
+    }
+
+    .etl-status-pill {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #131b2e;
+      border: 1px solid #1e293b;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .etl-pulse-text {
+      color: #38bdf8;
+      font-weight: 600;
+    }
+
+    /* CARDS DE INDICADORES (KPIs) */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+    }
+
+    .kpi-card {
+      background: #131b2e;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .kpi-card:hover {
+      border-color: #334155;
+      transform: translateY(-2px);
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+    }
+
+    .kpi-card.blue::before { background: #38bdf8; }
+    .kpi-card.green::before { background: #10b981; }
+    .kpi-card.amber::before { background: #f59e0b; }
+    .kpi-card.purple::before { background: #a855f7; }
+    .kpi-card.rose::before { background: #f43f5e; }
+
+    .kpi-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .kpi-value {
+      font-size: 26px;
+      font-weight: 800;
+      color: #f8fafc;
+      letter-spacing: -0.03em;
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+
+    .kpi-sub {
+      font-size: 11px;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .kpi-sub.up { color: #10b981; }
+    .kpi-sub.down { color: #ef4444; }
+
+    /* SEÇÃO CENTRAL: GRÁFICO DE HORAS & DETALHES DE MOVIMENTAÇÃO */
+    .grid-duo {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 16px;
+    }
+
+    .panel-card {
+      background: #131b2e;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .panel-header h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-badge {
+      font-size: 11px;
+      background: #1e293b;
+      padding: 3px 8px;
+      border-radius: 6px;
+      color: #94a3b8;
+    }
+
+    /* BARRAS DE HORAS (CHART MANUAL NATIVO CSS) */
+    .bars-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      height: 180px;
+      padding-top: 15px;
+      border-bottom: 1px solid #1e293b;
+    }
+
+    .bar-column {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      height: 100%;
+      justify-content: flex-end;
+    }
+
+    .bar-wrapper {
+      width: 100%;
+      height: 100%;
+      background: rgba(30, 41, 59, 0.4);
+      border-radius: 4px 4px 0 0;
+      display: flex;
+      align-items: flex-end;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bar-fill {
+      width: 100%;
+      background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+      border-radius: 4px 4px 0 0;
+      transition: height 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .bar-meta-line {
+      position: absolute;
+      width: 100%;
+      height: 2px;
+      background: #f59e0b;
+      opacity: 0.6;
+    }
+
+    .bar-label {
+      font-size: 10px;
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    .bar-val {
+      font-size: 10px;
+      color: #94a3b8;
+      font-weight: 700;
+    }
+
+    /* MOVIMENTAÇÃO VERTICAL X HORIZONTAL */
+    .move-metrics {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      justify-content: center;
+      height: 100%;
+    }
+
+    .move-bar-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .move-bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      color: #94a3b8;
+    }
+
+    .move-bar-track {
+      height: 8px;
+      background: #1e293b;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .move-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .move-bar-fill.vert { background: linear-gradient(90deg, #a855f7, #c084fc); }
+    .move-bar-fill.horiz { background: linear-gradient(90deg, #38bdf8, #60a5fa); }
+
+    /* SEÇÃO INFERIOR: ZONAS DO CD E LIVE FEED */
+    .grid-bottom {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 16px;
+    }
+
+    .zones-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .zones-table th {
+      text-align: left;
+      padding: 8px 10px;
+      color: #64748b;
+      font-weight: 700;
+      border-bottom: 1px solid #1e293b;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.05em;
+    }
+
+    .zones-table td {
+      padding: 10px;
+      border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+      color: #cbd5e1;
+    }
+
+    .zone-status-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .status-Crítico { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+    .status-Atenção { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+    .status-Normal { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+    .status-Livre { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+
+    /* FEED DE EVENTOS */
+    .events-feed {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+
+    .event-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 10px;
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 6px;
+      font-size: 11.5px;
+      border-left: 3px solid #38bdf8;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .event-time {
+      font-size: 10px;
+      color: #64748b;
+      font-weight: 700;
+      min-width: 45px;
+    }
+
+    .event-desc {
+      color: #cbd5e1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+    }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TITLEBAR -->
+  <div class="titlebar">
+    <div class="titlebar-left">
+      <img src="yvira-logo.svg" alt="Yvira">
+      <span>Yvira Supply Chain - WMS Logistics Analytics & ETL Realtime</span>
+      <div class="live-badge">
+        <span class="live-dot"></span>
+        <span>STREAMING ATIVO</span>
+      </div>
+    </div>
+    <div class="titlebar-controls">
+      <div class="win-btn" onclick="minJanela()">—</div>
+      <div class="win-btn" onclick="maxJanela()">□</div>
+      <div class="win-btn close" onclick="fecharJanela()">✕</div>
+    </div>
+  </div>
+
+  <div class="dashboard-container">
+    <!-- CABEÇALHO -->
+    <div class="dashboard-header">
+      <div class="dashboard-title">
+        <h1>Centro de Distribuição & Logística Inteligente</h1>
+        <p>Monitoramento contínuo de separação, conferência, movimentações de carga e faturamento.</p>
+      </div>
+      <div class="etl-status-pill">
+        <span>Pipeline ETL: <strong class="etl-pulse-text">Sync a cada 1.5s</strong></span>
+        <span>|</span>
+        <span id="lastSyncLabel">Última Carga: Conectando...</span>
+      </div>
+    </div>
+
+    <!-- CARDS DE METRICAS PRINCIPAIS (KPIs) -->
+    <div class="kpi-grid">
+      <!-- 1. Separação -->
+      <div class="kpi-card blue">
+        <div class="kpi-header">
+          <span>Total Separado (Picking)</span>
+          <span>📦</span>
+        </div>
+        <div class="kpi-value" id="kpiSeparado">--</div>
+        <div class="kpi-sub up">
+          <span>▲ Meta: 20.000 un</span>
+          <span id="pctSeparado" style="margin-left:auto; font-weight:700;">--%</span>
+        </div>
+      </div>
+
+      <!-- 2. Conferência -->
+      <div class="kpi-card green">
+        <div class="kpi-header">
+          <span>Conferência Cega</span>
+          <span>✓</span>
+        </div>
+        <div class="kpi-value" id="kpiConferido">--</div>
+        <div class="kpi-sub up">
+          <span>Acuracidade: <strong id="kpiAcuracia">99.4%</strong></span>
+        </div>
+      </div>
+
+      <!-- 3. Movimentações Armazém -->
+      <div class="kpi-card purple">
+        <div class="kpi-header">
+          <span>Movimentações Internas</span>
+          <span>🚜</span>
+        </div>
+        <div class="kpi-value" id="kpiMovimentacoes">--</div>
+        <div class="kpi-sub">
+          <span>Vertical & Horizontal</span>
+        </div>
+      </div>
+
+      <!-- 4. Vendas & Faturamento Logístico -->
+      <div class="kpi-card amber">
+        <div class="kpi-header">
+          <span>Faturamento do Dia</span>
+          <span>💰</span>
+        </div>
+        <div class="kpi-value" id="kpiVendas">R$ --</div>
+        <div class="kpi-sub up">
+          <span id="kpiPedidos">-- pedidos faturados</span>
+        </div>
+      </div>
+
+      <!-- 5. Ocupação do Armazém -->
+      <div class="kpi-card rose">
+        <div class="kpi-header">
+          <span>Ocupação Global CD</span>
+          <span>🏢</span>
+        </div>
+        <div class="kpi-value" id="kpiOcupacao">--%</div>
+        <div class="kpi-sub">
+          <span>Capacidade de Porta-Paletes</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEÇÃO CENTRAL: SEPARAÇÃO POR HORA & MOVIMENTAÇÃO -->
+    <div class="grid-duo">
+      <!-- Painel Gráfico: Separação por Hora -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <h3>
+            <span>📈 Lotes de Separação por Faixa Horária</span>
+          </h3>
+          <span class="panel-badge">Histórico Dinâmico (Unidades / Hora)</span>
+        </div>
+        <div class="bars-chart" id="barsChart">
+          <!-- Renderizado via JS -->
+        </div>
+      </div>
+
+      <!-- Painel: Movimentação Vertical vs Horizontal -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <h3>
+            <span>⚙️ Movimentação Operacional</span>
+          </h3>
+          <span class="panel-badge">Equipamentos Ativos</span>
+        </div>
+        <div class="move-metrics">
+          <div class="move-bar-item">
+            <div class="move-bar-label">
+              <span>Vertical (Empilhadeiras / Racks)</span>
+              <strong id="labelMovVert">-- un</strong>
+            </div>
+            <div class="move-bar-track">
+              <div class="move-bar-fill vert" id="fillMovVert" style="width: 30%;"></div>
+            </div>
+          </div>
+
+          <div class="move-bar-item">
+            <div class="move-bar-label">
+              <span>Horizontal (Transpaleteiras / Ruas)</span>
+              <strong id="labelMovHoriz">-- un</strong>
+            </div>
+            <div class="move-bar-track">
+              <div class="move-bar-fill horiz" id="fillMovHoriz" style="width: 70%;"></div>
+            </div>
+          </div>
+
+          <div style="font-size:11px; color:#64748b; line-height: 1.4; margin-top: 6px;">
+            A relação ideal de transporte interno mantém a movimentação horizontal 2.5x acima da vertical para evitar gargalos em corredores estreitos.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEÇÃO INFERIOR: ZONAS DO CD E STREAM DE EVENTOS -->
+    <div class="grid-bottom">
+      <!-- Zonas do CD -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <h3>
+            <span>📍 Status por Zona de Armazenagem</span>
+          </h3>
+          <span class="panel-badge">5 Áreas Monitoradas</span>
+        </div>
+        <table class="zones-table">
+          <thead>
+            <tr>
+              <th>Zona / Departamento</th>
+              <th>Ocupação</th>
+              <th>Status</th>
+              <th>Operadores</th>
+            </tr>
+          </thead>
+          <tbody id="zonesTableBody">
+            <!-- Renderizado dinamicamente -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Eventos em Tempo Real -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <h3>
+            <span>⚡ Feed de Operações (ETL Ingestion)</span>
+          </h3>
+          <span class="panel-badge">Ao Vivo</span>
+        </div>
+        <div class="events-feed" id="eventsFeed">
+          <!-- Renderizado dinamicamente -->
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // CONTROLES DE JANELA NATIVA YVIRA
+    function minJanela() {
+      if (window.yvira && window.yvira.minimizar) window.yvira.minimizar();
+    }
+    function maxJanela() {
+      if (window.yvira && window.yvira.maximizar) window.yvira.maximizar();
+    }
+    function fecharJanela() {
+      if (window.yvira && window.yvira.fechar) window.yvira.fechar();
+    }
+
+    // FORMATAÇÃO
+    function formatarNumero(num) {
+      return new Intl.NumberFormat('pt-BR').format(Math.round(num));
+    }
+    function formatarMoeda(num) {
+      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
+    }
+
+    // ATUALIZAÇÃO DO DASHBOARD VINDA DO PIPELINE ETL YVIRA
+    window.receber_dados_etl = function(dados) {
+      if (!dados) return;
+
+      const m = dados.metricas;
+      if (m) {
+        document.getElementById('kpiSeparado').innerText = formatarNumero(m.totalSeparado);
+        const pct = ((m.totalSeparado / m.metaSeparacao) * 100).toFixed(1);
+        document.getElementById('pctSeparado').innerText = pct + '% da meta';
+
+        document.getElementById('kpiConferido').innerText = formatarNumero(m.totalConferido);
+        document.getElementById('kpiAcuracia').innerText = m.acuracidade.toFixed(1) + '%';
+
+        const totalMov = m.movVertical + m.movHorizontal;
+        document.getElementById('kpiMovimentacoes').innerText = formatarNumero(totalMov);
+
+        document.getElementById('kpiVendas').innerText = formatarMoeda(m.vendasDia);
+        document.getElementById('kpiPedidos').innerText = formatarNumero(m.pedidosFaturados) + ' pedidos faturados';
+
+        document.getElementById('kpiOcupacao').innerText = m.taxaOcupacaoCD.toFixed(1) + '%';
+
+        // Barras Vert/Horiz
+        document.getElementById('labelMovVert').innerText = formatarNumero(m.movVertical) + ' un';
+        document.getElementById('labelMovHoriz').innerText = formatarNumero(m.movHorizontal) + ' un';
+        const pctVert = totalMov > 0 ? (m.movVertical / totalMov) * 100 : 30;
+        const pctHoriz = totalMov > 0 ? (m.movHorizontal / totalMov) * 100 : 70;
+        document.getElementById('fillMovVert').style.width = pctVert + '%';
+        document.getElementById('fillMovHoriz').style.width = pctHoriz + '%';
+      }
+
+      // Horas Lotes Chart
+      if (dados.horasLotes) {
+        renderizarGraficoHoras(dados.horasLotes);
+      }
+
+      // Tabela de Zonas
+      if (dados.zonas) {
+        renderizarZonas(dados.zonas);
+      }
+
+      // Eventos Feed
+      if (dados.eventos) {
+        renderizarEventos(dados.eventos);
+      }
+
+      const agora = new Date();
+      const hStr = agora.toLocaleTimeString('pt-BR');
+      document.getElementById('lastSyncLabel').innerText = `Última Carga: ${hStr}`;
+    };
+
+    function renderizarGraficoHoras(horas) {
+      const container = document.getElementById('barsChart');
+      container.innerHTML = '';
+
+      let maxVal = 2200;
+
+      horas.forEach(h => {
+        const col = document.createElement('div');
+        col.className = 'bar-column';
+
+        const pctAltura = Math.min(100, Math.max(10, (h.qtd / maxVal) * 100));
+
+        col.innerHTML = `
+          <div class="bar-val">${formatarNumero(h.qtd)}</div>
+          <div class="bar-wrapper">
+            <div class="bar-fill" style="height: ${pctAltura}%;"></div>
+          </div>
+          <div class="bar-label">${h.hora}</div>
+        `;
+        container.appendChild(col);
+      });
+    }
+
+    function renderizarZonas(zonas) {
+      const tbody = document.getElementById('zonesTableBody');
+      tbody.innerHTML = '';
+
+      zonas.forEach(z => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${z.zona}</strong></td>
+          <td>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span>${z.ocupacao.toFixed(1)}%</span>
+              <div style="flex:1; height:4px; background:#1e293b; border-radius:2px; max-width:80px; overflow:hidden;">
+                <div style="height:100%; width:${z.ocupacao}%; background:${z.ocupacao > 90 ? '#ef4444' : (z.ocupacao > 75 ? '#f59e0b' : '#38bdf8')};"></div>
+              </div>
+            </div>
+          </td>
+          <td><span class="zone-status-badge status-${z.status}">${z.status}</span></td>
+          <td>${z.operadores} operadores</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderizarEventos(eventos) {
+      const feed = document.getElementById('eventsFeed');
+      feed.innerHTML = '';
+
+      eventos.forEach(e => {
+        const row = document.createElement('div');
+        row.className = 'event-row';
+        row.innerHTML = `
+          <div class="event-time">${e.tempo}</div>
+          <div class="event-desc">${e.descricao}</div>
+        `;
+        feed.appendChild(row);
+      });
+    }
+
+    // Solicita os dados iniciais assim que carregar
+    window.onload = function() {
+      if (window.yvira && window.yvira.emit) {
+        window.yvira.emit('obter_dados_iniciais', {});
+      }
+    };
+  </script>
+</body>
+</html>

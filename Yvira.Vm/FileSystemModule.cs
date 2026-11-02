@@ -7,7 +7,7 @@ namespace Yvira.Vm;
 
 public static class FileSystemModule
 {
-    public static YviraMap CreateModule(string baseDirectory)
+    public static YviraMap CreateModule(string baseDirectory, SecurityPolicy? securityPolicy = null)
     {
         var methods = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
 
@@ -17,6 +17,7 @@ public static class FileSystemModule
             if (args.Count == 0 || args[0] == null)
                 throw new Exception("fs.read requer o caminho do arquivo.");
             string path = ResolvePath(baseDirectory, args[0]!.ToString()!);
+            (interp?.SecurityPolicy ?? securityPolicy)?.AssertFsRead(path, baseDirectory);
             if (!File.Exists(path))
                 throw new FileNotFoundException($"Arquivo não encontrado: {path}");
             return File.ReadAllText(path);
@@ -28,6 +29,7 @@ public static class FileSystemModule
             if (args.Count == 0 || args[0] == null)
                 throw new Exception("fs.readLines requer o caminho do arquivo.");
             string path = ResolvePath(baseDirectory, args[0]!.ToString()!);
+            (interp?.SecurityPolicy ?? securityPolicy)?.AssertFsRead(path, baseDirectory);
             if (!File.Exists(path))
                 throw new FileNotFoundException($"Arquivo não encontrado: {path}");
             var lines = File.ReadAllLines(path);
@@ -40,6 +42,7 @@ public static class FileSystemModule
             if (args.Count < 2)
                 throw new Exception("fs.write requer caminho e conteúdo.");
             string path = ResolvePath(baseDirectory, args[0]?.ToString() ?? "");
+            (interp?.SecurityPolicy ?? securityPolicy)?.AssertFsWrite(path, baseDirectory);
             string content = args[1]?.ToString() ?? "";
             string? dir = Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
@@ -56,6 +59,7 @@ public static class FileSystemModule
             if (args.Count < 2)
                 throw new Exception("fs.append requer caminho e conteúdo.");
             string path = ResolvePath(baseDirectory, args[0]?.ToString() ?? "");
+            (interp?.SecurityPolicy ?? securityPolicy)?.AssertFsWrite(path, baseDirectory);
             string content = args[1]?.ToString() ?? "";
             string? dir = Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
@@ -79,6 +83,7 @@ public static class FileSystemModule
         {
             if (args.Count == 0 || args[0] == null) return false;
             string path = ResolvePath(baseDirectory, args[0]!.ToString()!);
+            (interp?.SecurityPolicy ?? securityPolicy)?.AssertFsWrite(path, baseDirectory);
             if (File.Exists(path))
             {
                 File.Delete(path);
@@ -108,6 +113,7 @@ public static class FileSystemModule
             if (args.Count == 0 || args[0] == null)
                 throw new Exception("fs.readCsv requer o caminho do arquivo .csv.");
             string path = ResolvePath(baseDirectory, args[0]!.ToString()!);
+            (interp?.SecurityPolicy ?? securityPolicy)?.AssertFsRead(path, baseDirectory);
             if (!File.Exists(path))
                 throw new FileNotFoundException($"Arquivo CSV não encontrado: {path}");
 

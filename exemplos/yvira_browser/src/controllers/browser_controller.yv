@@ -1,0 +1,91 @@
+# Controlador de Eventos e Ponte entre a UI (HTML/JS) e o Engine Yvira
+import "../services/browser_engine.yv" as Engine
+
+# Variável de estado global para callbacks
+let g_engine = null
+let g_janela = null
+
+fn sincronizarUi() {
+    if (g_engine != null && g_janela != null) {
+        let estado = g_engine.obterEstadoGeral()
+        g_janela.enviar_dados("receberEstadoNavegador", estado)
+    }
+}
+
+fn onNavegar(payload) {
+    if (g_engine != null) {
+        let url = payload != null && payload.url != null ? payload.url : ""
+        g_engine.navegarAbaAtiva(url)
+        sincronizarUi()
+    }
+}
+
+fn onVoltar(payload) {
+    if (g_engine != null) {
+        g_engine.voltarAbaAtiva()
+        sincronizarUi()
+    }
+}
+
+fn onAvancar(payload) {
+    if (g_engine != null) {
+        g_engine.avancarAbaAtiva()
+        sincronizarUi()
+    }
+}
+
+fn onNovaAba(payload) {
+    if (g_engine != null) {
+        let url = payload != null && payload.url != null ? payload.url : "https://www.google.com"
+        g_engine.criarNovaAba(url, "Nova Guia")
+        sincronizarUi()
+    }
+}
+
+fn onSelecionarAba(payload) {
+    if (g_engine != null && payload != null && payload.id != null) {
+        g_engine.selecionarAbaPorId(payload.id)
+        sincronizarUi()
+    }
+}
+
+fn onFecharAba(payload) {
+    if (g_engine != null && payload != null && payload.id != null) {
+        g_engine.fecharAbaPorId(payload.id)
+        sincronizarUi()
+    }
+}
+
+fn onTituloAtualizado(payload) {
+    if (g_engine != null && g_janela != null && payload != null && payload.titulo != null) {
+        let aba = g_engine.obterAbaAtiva()
+        if (aba != null) {
+            aba.titulo = payload.titulo
+            g_janela.enviar_dados("atualizarTituloAba", { id: aba.id, titulo: aba.titulo })
+        }
+    }
+}
+
+fn onUiPronta(payload) {
+    sincronizarUi()
+}
+
+class BrowserController {
+    fn constructor(janela) {
+        g_janela = janela
+        g_engine = Engine.BrowserEngine()
+        this.engine = g_engine
+        this.janela = g_janela
+    }
+
+    fn registrarEventos() {
+        this.janela.ao_evento("navegar", onNavegar)
+        this.janela.ao_evento("voltar", onVoltar)
+        this.janela.ao_evento("avancar", onAvancar)
+        this.janela.ao_evento("nova_aba", onNovaAba)
+        this.janela.ao_evento("selecionar_aba", onSelecionarAba)
+        this.janela.ao_evento("fechar_aba", onFecharAba)
+        this.janela.ao_evento("titulo_atualizado", onTituloAtualizado)
+        this.janela.ao_evento("ui_pronta", onUiPronta)
+    }
+}

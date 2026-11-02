@@ -88,11 +88,25 @@ public class HttpServerInstance : IDisposable
 
         try
         {
-            // 1. Extrai Body com proteção de tamanho máximo (Anti-DoS Payload - Max 10MB)
+            // Verificação de Rate Limit por IP (Anti-DoS / Anti-BruteForce)
+            string clientIp = req.RemoteEndPoint?.Address?.ToString() ?? "127.0.0.1";
+            var policy = _interpreter.SecurityPolicy;
+            if (policy != null && !policy.HttpRateLimiter.IsAllowed(clientIp))
+            {
+                res.StatusCode = 429; // 429 Too Many Requests
+                byte[] rateBytes = Encoding.UTF8.GetBytes("{\"erro\":\"Muitas requisicoes. Rate limit excedido pelo firewall do Yvira.\"}");
+                res.ContentType = "application/json";
+                res.OutputStream.Write(rateBytes, 0, rateBytes.Length);
+                res.Close();
+                return;
+            }
+
+            // 1. Extrai Body com proteção de tamanho máximo configurável (Anti-DoS Payload)
+            int maxPayload = policy != null ? policy.HttpMaxPayloadBytes : 10 * 1024 * 1024;
             string bodyString = "";
             if (req.HasEntityBody)
             {
-                if (req.ContentLength64 > 10 * 1024 * 1024)
+                if (req.ContentLength64 > maxPayload)
                 {
                     res.StatusCode = 413; // Payload Too Large
                     res.Close();
@@ -101,7 +115,6 @@ public class HttpServerInstance : IDisposable
                 using var reader = new StreamReader(req.InputStream, req.ContentEncoding ?? Encoding.UTF8);
                 bodyString = reader.ReadToEnd();
             }
-
             object? parsedBody = bodyString;
             if (!string.IsNullOrWhiteSpace(bodyString))
             {

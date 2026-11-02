@@ -1,0 +1,34 @@
+# ==============================================================================
+# YVIRA BROWSER - NAVEGADOR WEB DESKTOP NATIVO
+# ==============================================================================
+import "src/controllers/browser_controller.yv" as Controller
+
+print("==================================================")
+print("🚀 INICIALIZANDO O MOTOR DO YVIRA BROWSER...")
+print("==================================================")
+
+# 1. Configura a Janela Desktop Nativa com DWM sem bordas do Windows
+let janela = criar_janela({
+    titulo: "Yvira Browser",
+    largura: 1100,
+    altura: 750,
+    min_largura: 640,
+    min_altura: 480,
+    barra_customizada: true,
+    redimensionavel: true,
+    cor_fundo: "#07080d",
+    view: "janela-yvira.html"
+})
+
+# 2. Inicializa o Controlador do Navegador
+let controller = Controller.BrowserController(janela)
+controller.registrarEventos()
+
+print("[Yvira Browser] Interface carregada com sucesso!")
+print("[Yvira Browser] Abrindo janela desktop...")
+
+# 3. Exibe a janela e aguarda interação do usuário
+janela.exibir()
+janela.esperar()
+
+print("[Yvira Browser] Sessão encerrada.")

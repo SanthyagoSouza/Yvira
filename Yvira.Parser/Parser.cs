@@ -1147,7 +1147,16 @@ public class Parser
                 {
                     while (true)
                     {
-                        var keyExpr = ParseExpression();
+                        ExpressionNode keyExpr;
+                        if (Current.Type == TokenType.Identifier)
+                        {
+                            var mapKeyId = Advance();
+                            keyExpr = new StringLiteralNode(mapKeyId.Text);
+                        }
+                        else
+                        {
+                            keyExpr = ParseExpression();
+                        }
                         Match(TokenType.Colon);
                         var valueExpr = ParseExpression();
                         mapEntries.Add((keyExpr, valueExpr));

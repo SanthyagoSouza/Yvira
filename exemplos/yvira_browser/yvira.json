@@ -1,0 +1,7 @@
+{
+  "name": "yvira_browser",
+  "version": "1.0.0",
+  "description": "Navegador Web Desktop nativo desenvolvido em Yvira",
+  "entry": "main.yv",
+  "dependencies": {}
+}

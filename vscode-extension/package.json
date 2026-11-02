@@ -2,7 +2,7 @@
   "name": "yvira-language",
   "displayName": "Yvira Language Support",
   "description": "Suporte à linguagem Yvira (.yv): destaque de sintaxe, reconhecimento de tipo, ícone e configurações.",
-  "version": "0.0.4",
+  "version": "0.0.6",
   "main": "./extension.js",
   "activationEvents": [
     "onLanguage:yvira"
@@ -46,5 +46,6 @@
         "path": "./icon-theme.json"
       }
     ]
-  }
+  },
+  "icon": "icons/yvira.png"
 }

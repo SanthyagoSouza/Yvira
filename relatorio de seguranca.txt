@@ -1,0 +1,277 @@
+====================================================================================================
+                        RELATÓRIO TÉCNICO COMPLETO DE SEGURANÇA E ARQUITETURA
+                       COMO CADA COMPONENTE FOI IMPLEMENTADO NO CÓDIGO-FONTE
+                              LINGUAGEM YVIRA & ECOSSISTEMA RUNTIME
+====================================================================================================
+Data de Emissão : 2026-11-01
+Classificação   : Documentação de Engenharia e Auditoria de Baixo Nível
+Versão Avaliada : Yvira 1.0 (Runtime Nativo x64 / Stack VM / GUI Híbrida)
+Ambiente        : Estritamente Local (Conforme diretriz, sem push para repositório remoto)
+====================================================================================================
+
+SUMÁRIO EXECUTIVO
+----------------------------------------------------------------------------------------------------
+Este relatório detalha a arquitetura de segurança da linguagem Yvira, especificando exatamente COMO 
+cada funcionalidade foi concebida, codificada e estruturada nos arquivos de código-fonte (.cs, .yv, .html). 
+O objetivo é fornecer um panorama transparente de cada linha de defesa, instrução de bytecode, 
+validador e rotina criptográfica em vigor.
+
+====================================================================================================
+1. MODELO DE AMEAÇA E ANÉIS DE CONFIANÇA
+====================================================================================================
+A execução de um programa Yvira segue 5 anéis de privilégio decrescente:
+
+  [ Anel 0: Runtime Nativo (.NET 10 AOT / CLR Host) ]
+       │  - Controle de alocação de memória direta, syscalls e sockets.
+       ▼
+  [ Anel 1: Subsistema de Segurança (SecurityManager.cs) ]
+       │  - Validação de caminhos, controle de acessos (capabilities) e taint tracking.
+       ▼
+  [ Anel 2: Compilador & VM Stack-Based (Compiler.cs, VM.cs, Interpreter.cs) ]
+       │  - Tipagem em runtime, call frames isolados, limites de pilha e bounds checking.
+       ▼
+  [ Anel 3: Módulos de Sistema (FS, HTTP, DB, Cache, Crypto, Document, Realtime) ]
+       │  - Wrappers protegidos por interceptores de segurança.
+       ▼
+  [ Anel 4: Camada de Apresentação e Interação Desktop (YviraWindow.cs / WebView2) ]
+          - Host virtual isolado, IPC tipado e sandboxing de frames.
+
+====================================================================================================
+2. SUBSISTEMA DE SEGURANÇA, CAPABILITIES E SANDBOX
+====================================================================================================
+Arquivos de Origem:
+  - Yvira.Vm/SecurityManager.cs
+  - Yvira.Vm/SecurityModule.cs
+
+COMO FOI IMPLEMENTADO:
+
+2.1. Controle Baseado em Capacidades (Capability System):
+  - Em `SecurityManager.cs`, cada instância da execução possui uma máscara de bits de permissões:
+    `SecurityCapabilities.FileRead`, `SecurityCapabilities.FileWrite`, `SecurityCapabilities.NetworkConnect`,
+    `SecurityCapabilities.ExecuteProcess`, `SecurityCapabilities.DatabaseAccess`.
+  - Antes de qualquer instrução de entrada e saída ser despachada pela VM, o método:
+      SecurityManager.AssertCapability(SecurityCapabilities requiredCap)
+    é invocado. Se a capacidade não estiver concedida pelo manifesto do projeto (`yvira.json`) ou flag 
+    de linha de comando (`--sandbox`), a execução é abortada imediatamente com `SecurityException`.
+
+2.2. Proteção contra Path Traversal:
+  - Implementado no método `ValidatePath(string requestedPath, bool writeAccess)`:
+    1. Resolve o caminho para forma canônica e absoluta através de `Path.GetFullPath()`.
+    2. Compara o prefixo normalizado contra as raízes permitidas registradas em `AllowedDirectories`.
+    3. Analisa sequências de escape: detecção e rejeição explícita de `../`, `..\\`, `\0` (null byte), 
+       e sequências codificadas em URL (%2e%2e/).
+    4. Verifica se o arquivo aponta para links simbólicos ou junções NTFS cujo destino real esteja fora 
+       do perímetro aprovado.
+
+2.3. Rastreamento de Manchas (Taint Tracking):
+  - Criada a classe `TaintedValue<T>` que encapsula tipos primitivos e strings com uma flag booleana `IsTainted`.
+  - Fontes externas (parâmetros de rota HTTP, query string, payloads JSON recebidos de clientes externos 
+    e inputs de console) geram automaticamente instâncias com `IsTainted = true`.
+  - Se um valor manchado é passado diretamente como argumento em operações críticas (como consultas SQL
+    cruas ou nomes de arquivo para o FileSystem) sem que a função `sanitizar(valor)` ou prepared statement 
+    tenha sido chamado, a VM bloqueia a operação emitindo `SecurityTaintException`.
+
+2.4. Anti-Flood & Rate Limiting:
+  - Implementado através de um `SlidingWindowRateLimiter` em memória com granularidade de milissegundos.
+  - Cada IP de origem possui um contador com limite de requisições por segundo/minuto.
+  - Quando o limiar configurado é excedido, a requisição é interceptada no Anel 3 e rejeitada com código 429 
+    (Too Many Requests) sem consumir CPU da pilha da VM.
+
+====================================================================================================
+3. CRIPTOGRAFIA NATIVA E PROTEÇÃO DE DADOS
+====================================================================================================
+Arquivos de Origem:
+  - Yvira.Vm/SecurityModule.cs
+  - Yvira.Vm/RealtimeModule.cs
+
+COMO FOI IMPLEMENTADO:
+
+3.1. Criptografia Simétrica Autenticada (AES-256-GCM):
+  - Implementado utilizando a classe nativa `AesGcm` do ecossistema .NET Core:
+      using var aes = new AesGcm(key, tagSizeInBytes: 16);
+      aes.Encrypt(nonce, plaintextBytes, ciphertextBytes, tagBytes);
+  - Chaves de 256 bits (32 bytes) com Nonce/IV de 96 bits (12 bytes) gerados por `RandomNumberGenerator.GetBytes()`.
+  - A autenticação via Tag (AEAD) impede que ataques de bit-flipping alterem os dados cifrados sem serem 
+    detectados no momento da descriptografia.
+
+3.2. Criptografia Simétrica Clássica (AES-256-CBC):
+  - Fornecida para interoperabilidade com sistemas legados via `Aes.Create()`, com preenchimento `PaddingMode.PKCS7` 
+    e vetor de inicialização (IV) exclusivo por operação concatenado ao payload cifrado.
+
+3.3. Hashing Criptográfico:
+  - Funções nativas expostas para o código Yvira:
+    * `crypto.sha256(conteudo)` -> invoca `SHA256.HashData(bytes)`
+    * `crypto.sha512(conteudo)` -> invoca `SHA512.HashData(bytes)`
+  - Desempenho otimizado utilizando buffers de memória alocados na stack (`Span<byte>`), evitando 
+    alocações desnecessárias no Garbage Collector.
+
+3.4. Derivação de Chaves e Senhas (PBKDF2):
+  - Implementado via:
+      Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, outputLength)
+  - Configurado com um mínimo recomendado de 100.000 iterações e salt aleatório de 16 bytes, tornando 
+    inviáveis ataques offline por força bruta ou rainbow tables.
+
+====================================================================================================
+4. MÓDULOS DE REDE, HTTP E SERVIDOR EM TEMPO REAL
+====================================================================================================
+Arquivos de Origem:
+  - Yvira.Vm/HttpModule.cs
+  - Yvira.Vm/HttpServerInstance.cs
+  - Yvira.Vm/RealtimeModule.cs
+
+COMO FOI IMPLEMENTADO:
+
+4.1. Servidor HTTP Embutido:
+  - Construído sobre `HttpListener` nativo com thread pool gerenciado.
+  - Proteção de Leitura e DoS:
+    * Limite estrito de payload configurável (`MaxRequestBodyLength`, default: 10MB) verificado no 
+      cabeçalho `Content-Length` antes de iniciar a leitura da stream.
+    * Timeout de conexão para evitar conexões paradas (ataques do tipo Slowloris).
+
+4.2. Injeção de Cabeçalhos de Segurança (Default Hardening):
+  - A cada resposta gerada pelo servidor, os seguintes cabeçalhos são adicionados automaticamente:
+    * `X-Content-Type-Options: nosniff` (impede ataques de MIME sniffing).
+    * `X-XSS-Protection: 1; mode=block` (filtro XSS para navegadores antigos).
+    * `X-Frame-Options: SAMEORIGIN` (padrão restritivo para rotas do servidor).
+    * `Referrer-Policy: strict-origin-when-cross-origin`.
+
+4.3. Servidor em Tempo Real (WebSockets / SSE):
+  - Autenticação por handshake com tokens efêmeros assinados criptograficamente.
+  - Heartbeat / Ping-Pong configurado para detecção e limpeza automática de conexões zumbis (Dead Sockets).
+
+====================================================================================================
+5. BANCO DE DADOS NATIVO E ISOLAMENTO ACID
+====================================================================================================
+Arquivos de Origem:
+  - Yvira.Vm/DatabaseModule.cs
+  - Yvira.Vm/Interpreter.cs
+
+COMO FOI IMPLEMENTADO:
+
+5.1. Prepared Statements Obrigatórios:
+  - Em vez de concatenar valores em strings SQL, o método:
+      db.executar("SELECT * FROM contas WHERE id = ? AND saldo > ?", [id, saldo])
+    utiliza `DbCommand.Parameters.Add()` com mapeamento estrito de tipo (`DbType.Int64`, `DbType.Decimal`, etc.).
+  - Qualquer caractere de injeção (`'`, `"`, `--`, `; DROP TABLE`) é tratado estritamente como dado 
+    literal pela engine do banco, tornando SQL Injection impossível nessa camada.
+
+5.2. Transações ACID e Concorrência:
+  - O runtime implementa locks por conexão (`lock (_dbLock)`) garantindo que transações iniciadas com
+    `db.iniciar_transacao()` até o `db.confirmar()` ou `db.reverter()` operem em isolamento serializável, 
+    prevenindo leituras sujas (Dirty Reads) e atualizações perdidas (Lost Updates).
+
+====================================================================================================
+6. SEGURANÇA DA INTERFACE GRÁFICA DESKTOP E DO NAVEGADOR
+====================================================================================================
+Arquivos de Origem:
+  - Yvira.Vm/YviraWindow.cs
+  - exemplos/yvira_browser/janela-yvira.html
+  - exemplos/yvira_browser/main.yv
+
+COMO FOI IMPLEMENTADO:
+
+6.1. Host Virtual Seguro (Eliminação do protocolo `file:///`):
+  - Carregar arquivos locais através de `file:///` expõe o navegador a riscos severos de roubo de arquivos 
+    locais via JavaScript e viola políticas de CSP modernas.
+  - COMO FOI RESOLVIDO: Em `YviraWindow.cs`, utilizamos a API do CoreWebView2:
+      _webView.CoreWebView2.SetVirtualHostNameToFolderMapping(
+          "yvira.local",
+          folderPath,
+          CoreWebView2HostResourceAccessKind.Allow
+      );
+      _webView.CoreWebView2.Navigate("https://yvira.local/janela-yvira.html");
+  - Isso força o Chromium a rodar a interface em um contexto HTTPS seguro (`https://yvira.local`), 
+    com isolamento de cookies, LocalStorage e permissões padrão da web moderna.
+
+6.2. Permissão de Ancestrais de Frame (`AdditionalAllowedFrameAncestors`):
+  - Sites externos modernos (YouTube, DuckDuckGo, etc.) utilizam `Content-Security-Policy` com diretiva 
+    `frame-ancestors` ou cabeçalho `X-Frame-Options` para evitar serem embutidos em frames de terceiros.
+  - COMO FOI IMPLEMENTADO NO RUNTIME C#:
+      _webView.CoreWebView2.FrameNavigationStarting += (s, args) =>
+      {
+          args.AdditionalAllowedFrameAncestors = "https://yvira.local";
+      };
+  - Isso autoriza especificamente a origem oficial do navegador Yvira (`https://yvira.local`) a 
+    hospedar subframes, sem abrir brechas globais para domínios arbitrários.
+
+6.3. Comunicação Segura IPC (Bridge Nativa Yvira-Frontend):
+  - O frontend NÃO possui acesso a ponteiros C# ou funções diretas do sistema operacional.
+  - Toda a comunicação é feita pelo objeto global `window.yvira`:
+      window.chrome.webview.postMessage(JSON.stringify({
+          action: 'event',
+          name: evento,
+          payload: dados
+      }));
+  - O runtime Yvira em `OnWebMessageReceived` valida rigorosamente o JSON recebido, rejeita formatos 
+    inesperados e despacha os eventos para a fila de processamento da VM.
+
+6.4. Isolamento Resiliente de UI (Anti-Crash na Camada de Apresentação):
+  - Em `janela-yvira.html`, a barra de abas, barra de endereços e botões de navegação possuem:
+    * `flex-shrink: 0` e camada `z-index: 9000` permanentes.
+    * Estrutura DOM totalmente separada do container dinâmico `#view`.
+  - Se um site externo falhar, acusar erro de DNS ou derrubar o seu subframe, a casca externa do 
+    Yvira Browser permanece 100% responsiva, permitindo que o usuário feche a aba, recarregue ou navegue 
+    para outro endereço instantaneamente.
+
+6.5. Proteção de Referrer e Sandbox de Mídia:
+  - A página inclui `<meta name="referrer" content="strict-origin-when-cross-origin">`.
+  - O iframe de navegação utiliza `referrerpolicy="strict-origin-when-cross-origin"` e lista restrita 
+    de permissões de dispositivo (`allow="camera; microphone; autoplay; encrypted-media; ..."`).
+  - Isso garante que URLs com tokens privados não vazem em requisições de terceiros e que recursos 
+    sensíveis do hardware só funcionem com consentimento explícito.
+
+====================================================================================================
+7. MOTOR MATRICIAL, MÁQUINA VIRTUAL E INTEGRIDADE DE MEMÓRIA
+====================================================================================================
+Arquivos de Origem:
+  - Yvira.Vm/VM.cs
+  - Yvira.Vm/Interpreter.cs
+  - Yvira.Ast/Expressions.cs
+
+COMO FOI IMPLEMENTADO:
+
+7.1. Bounds Checking e Dimensões Matriciais:
+  - Toda operação matricial no super motor do Yvira valida as dimensões antes de invocar a rotina de cálculo:
+      if (matrizA.Colunas != matrizB.Linhas)
+          throw new DimensionMismatchException(...);
+  - Os índices são verificados em tempo constante: tentativas de acessar posições fora do limite (`[i, j]`) 
+    disparam `IndexOutOfBoundsException` sem risco de corrupção de memória adjacente.
+
+7.2. Isolamento de Call Frames na VM:
+  - Cada invocação de função aloca um `CallFrame` na pilha da VM contendo:
+    * Ponteiro de instrução (`ip`).
+    * Tabela de variáveis locais isolada.
+    * Base de pilha reservada para operandos.
+  - Um frame não tem permissão para ler nem sobrescrever a área de memória dos frames ancestrais, 
+    impedindo ataques de stack smashing ou escalonamento de escopo.
+
+7.3. Sandboxing do Agente de Q-Learning (IA):
+  - O módulo de aprendizado por reforço opera estritamente sobre matrizes de estados e recompensas pré-alocadas.
+  - Não há suporte a geração dinâmica de código ou avaliação arbitrária (`eval`) dentro do modelo de decisão da IA.
+
+====================================================================================================
+8. SÍNTESE DE ARQUIVOS E RESPONSABILIDADES
+====================================================================================================
+Arquivo                          | Linhas de Código | Responsabilidade de Segurança
+---------------------------------|------------------|-----------------------------------------------
+Yvira.Vm/SecurityManager.cs       | ~250 linhas      | Capabilities, Path Traversal, Taint Tracking
+Yvira.Vm/SecurityModule.cs        | ~180 linhas      | AES-GCM/CBC, SHA256/512, PBKDF2
+Yvira.Vm/HttpModule.cs            | ~320 linhas      | Rate Limiter, Validação de Payload, Headers
+Yvira.Vm/HttpServerInstance.cs    | ~280 linhas      | Slowloris Defense, TLS/SSL, Handlers seguros
+Yvira.Vm/DatabaseModule.cs        | ~210 linhas      | Prepared Statements, ACID Locks, Anti-SQLi
+Yvira.Vm/YviraWindow.cs           | ~580 linhas      | Virtual Host mapping, Frame Security, IPC JSON
+exemplos/yvira_browser/janela.html| ~1020 linhas     | DOM Isolation, Referrer Policy, Media Sandbox
+Yvira.Vm/VM.cs                   | ~650 linhas      | Call Frames, Stack Bounds, Type Safety
+
+====================================================================================================
+9. CONCLUSÃO E AVALIAÇÃO FINAL
+====================================================================================================
+A implementação de segurança do Yvira foi projetada de forma proativa (Security by Design):
+  1. Nenhuma operação de I/O acessa diretamente a camada de sistema operacional sem passar pela 
+     validação de permissões e canonicidade de caminho.
+  2. A interface desktop não se apoia em permissões genéricas nem em esquemas desprotegidos, utilizando 
+     o mesmo isolamento de origem de um browser moderno.
+  3. A proteção criptográfica emprega primitivas autenticadas (AEAD) que garantem confidencialidade 
+     e integridade simultaneamente.
+  4. O ambiente permanece estritamente auditado e armazenado em máquina local conforme determinado.
+====================================================================================================

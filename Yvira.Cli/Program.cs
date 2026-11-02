@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using Yvira.Cli;
 using Yvira.Parser;
@@ -30,6 +30,10 @@ class Program
 
         switch (command)
         {
+            case "fmt":
+            case "format":
+                return RunFormat(args);
+
             case "build":
             case "package":
             case "bundle":
@@ -318,7 +322,56 @@ class Program
 
         var loaded = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (mainFilePath != null) loaded.Add(mainFilePath);
-        var interpreter = new Interpreter(currentDirectory: workingDir, loadedModules: loaded, moduleLoader: ParseOrThrow, scriptArgs: scriptArgs);
+
+        var secPolicy = new SecurityPolicy();
+        var cleanArgs = new List<string>();
+
+        if (scriptArgs != null)
+        {
+            foreach (var arg in scriptArgs)
+            {
+                if (arg.Equals("--sandbox", StringComparison.OrdinalIgnoreCase))
+                {
+                    secPolicy.Enabled = true;
+                }
+                else if (arg.Equals("--deny-net", StringComparison.OrdinalIgnoreCase))
+                {
+                    secPolicy.Enabled = true;
+                    secPolicy.AllowNet = false;
+                }
+                else if (arg.StartsWith("--allow-net=", StringComparison.OrdinalIgnoreCase))
+                {
+                    secPolicy.Enabled = true;
+                    secPolicy.AllowNet = false;
+                    foreach (var h in arg.Substring("--allow-net=".Length).Split(',', StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        secPolicy.AllowedHosts.Add(h.Trim());
+                    }
+                }
+                else if (arg.Equals("--deny-fs-write", StringComparison.OrdinalIgnoreCase))
+                {
+                    secPolicy.Enabled = true;
+                    secPolicy.AllowFsWrite = false;
+                }
+                else if (arg.Equals("--deny-process", StringComparison.OrdinalIgnoreCase))
+                {
+                    secPolicy.Enabled = true;
+                    secPolicy.AllowProcessExecution = false;
+                }
+                else
+                {
+                    cleanArgs.Add(arg);
+                }
+            }
+        }
+
+        var interpreter = new Interpreter(
+            currentDirectory: workingDir,
+            loadedModules: loaded,
+            moduleLoader: ParseOrThrow,
+            scriptArgs: cleanArgs,
+            securityPolicy: secPolicy
+        );
         interpreter.Execute(ast);
 
         // Se houver tarefas de agendamento ativas (@time), mantem o processo vivo ate que sejam finalizadas ou receba Ctrl+C
@@ -691,6 +744,75 @@ class Program
             default:
                 Console.WriteLine("Até logo!");
                 return 0;
+        }
+    }
+
+    static int RunFormat(string[] args)
+    {
+        string targetPath = args.Length >= 2 ? args[1] : Directory.GetCurrentDirectory();
+
+        if (File.Exists(targetPath))
+        {
+            return FormatSingleFile(targetPath);
+        }
+
+        if (Directory.Exists(targetPath))
+        {
+            var files = Directory.GetFiles(targetPath, "*.yv", SearchOption.AllDirectories);
+            if (files.Length == 0)
+            {
+                Console.WriteLine("Nenhum arquivo .yv encontrado para formatar.");
+                return 0;
+            }
+
+            int count = 0;
+            foreach (var f in files)
+            {
+                if (FormatSingleFile(f, silent: true) == 0)
+                    count++;
+            }
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"[Formatador Yvira] {count} arquivo(s) formatado(s) com sucesso!");
+            Console.ResetColor();
+            return 0;
+        }
+
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine($"Erro: Arquivo ou pasta nÃ£o encontrado: '{targetPath}'");
+        Console.ResetColor();
+        return 1;
+    }
+
+    static int FormatSingleFile(string filePath, bool silent = false)
+    {
+        try
+        {
+            string original = File.ReadAllText(filePath);
+            string formatted = CodeFormatter.Format(original);
+
+            if (original != formatted)
+            {
+                File.WriteAllText(filePath, formatted);
+                if (!silent)
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"[Formatador] Arquivo formatado: {Path.GetFileName(filePath)}");
+                    Console.ResetColor();
+                }
+            }
+            else if (!silent)
+            {
+                Console.WriteLine($"[Formatador] Arquivo jÃ¡ estÃ¡ perfeitamente formatado: {Path.GetFileName(filePath)}");
+            }
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"[Formatador] Erro ao formatar {filePath}: {ex.Message}");
+            Console.ResetColor();
+            return 1;
         }
     }
 }

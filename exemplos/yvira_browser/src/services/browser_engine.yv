@@ -1,0 +1,108 @@
+# Motor Central de Abas e Navegação do Yvira Browser
+import "../models/aba.yv" as Modelos
+import "search_service.yv" as Search
+import "historico_db.yv" as Db
+
+class BrowserEngine {
+    fn constructor() {
+        this.abas = []
+        this.indiceAbaAtiva = 0
+        this.contadorId = 1
+        this.db = Db.HistoricoDb()
+
+        # Cria a primeira aba inicial (Página Inicial / Google)
+        this.criarNovaAba("https://www.google.com", "Nova Guia")
+    }
+
+    fn criarNovaAba(urlInicial, tituloInicial) {
+        let urlFinal = Search.SearchService.processarInput(urlInicial)
+        let novaAba = Modelos.Aba(this.contadorId, tituloInicial, urlFinal)
+        this.contadorId = this.contadorId + 1
+
+        this.abas.push(novaAba)
+        this.indiceAbaAtiva = this.abas.length() - 1
+
+        this.db.registrarVisita(urlFinal, tituloInicial)
+        return novaAba
+    }
+
+    fn obterAbaAtiva() {
+        if (this.abas.length() == 0) return null
+        return this.abas[this.indiceAbaAtiva]
+    }
+
+    fn selecionarAbaPorId(id) {
+        for (let i = 0; i < this.abas.length(); i = i + 1) {
+            let aba = this.abas[i]
+            if (aba.id == id) {
+                this.indiceAbaAtiva = i
+                return aba
+            }
+        }
+        return this.obterAbaAtiva()
+    }
+
+    fn fecharAbaPorId(id) {
+        if (this.abas.length() <= 1) {
+            # Mantém pelo menos uma aba aberta
+            let abaUnica = this.abas[0]
+            abaUnica.navegar("https://www.google.com")
+            return abaUnica
+        }
+
+        let novaLista = []
+        for (let i = 0; i < this.abas.length(); i = i + 1) {
+            let aba = this.abas[i]
+            if (aba.id != id) {
+                novaLista.push(aba)
+            }
+        }
+        this.abas = novaLista
+        if (this.indiceAbaAtiva >= this.abas.length()) {
+            this.indiceAbaAtiva = this.abas.length() - 1
+        }
+        return this.obterAbaAtiva()
+    }
+
+    fn navegarAbaAtiva(inputUrl) {
+        let urlDestino = Search.SearchService.processarInput(inputUrl)
+        let aba = this.obterAbaAtiva()
+        if (aba != null) {
+            aba.navegar(urlDestino)
+            this.db.registrarVisita(urlDestino, aba.titulo)
+        }
+        return urlDestino
+    }
+
+    fn voltarAbaAtiva() {
+        let aba = this.obterAbaAtiva()
+        if (aba != null) {
+            return aba.voltar()
+        }
+        return ""
+    }
+
+    fn avancarAbaAtiva() {
+        let aba = this.obterAbaAtiva()
+        if (aba != null) {
+            return aba.avancar()
+        }
+        return ""
+    }
+
+    fn obterEstadoGeral() {
+        let listaDadosAbas = []
+        for (let i = 0; i < this.abas.length(); i = i + 1) {
+            listaDadosAbas.push(this.abas[i].obterDados())
+        }
+
+        let ativa = this.obterAbaAtiva()
+        return {
+            abas: listaDadosAbas,
+            abaAtivaId: ativa != null ? ativa.id : 0,
+            urlAtual: ativa != null ? ativa.url : "",
+            podeVoltar: ativa != null ? ativa.podeVoltar() : false,
+            podeAvancar: ativa != null ? ativa.podeAvancar() : false
+        }
+    }
+}

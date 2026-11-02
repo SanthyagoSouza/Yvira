@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yvira Language — Documentação Oficial & Manual Prático</title>
+  <link rel="icon" type="image/svg+xml" href="yvira-logo.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #080b12;
+      --bg-surface: #0f1422;
+      --bg-sidebar: #0b0f19;
+      --border-color: #1e2638;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent-cyan: #38bdf8;
+      --accent-purple: #818cf8;
+      --accent-green: #34d399;
+      --accent-amber: #fbbf24;
+      --accent-rose: #f43f5e;
+      --code-bg: #05070c;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    aside {
+      width: 330px;
+      background-color: var(--bg-sidebar);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .brand img {
+      width: 36px;
+      height: 36px;
+      filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.4));
+    }
+
+    .brand-title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #fff 30%, var(--accent-cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-badge {
+      font-size: 10px;
+      font-weight: 700;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent-cyan);
+      padding: 2px 7px;
+      border-radius: 12px;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      text-transform: uppercase;
+      margin-left: auto;
+    }
+
+    .search-box {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .search-input {
+      width: 100%;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+      color: var(--text-main);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus { border-color: var(--accent-cyan); }
+
+    .nav-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .nav-category {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      padding: 16px 12px 6px 12px;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-radius: 6px;
+      color: #cbd5e1;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+
+    .nav-link:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+    }
+
+    .nav-link.active {
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--accent-cyan);
+      font-weight: 600;
+    }
+
+    main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 40px 60px;
+      scroll-behavior: smooth;
+    }
+
+    .content-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 50px;
+      padding-bottom: 120px;
+    }
+
+    .hero {
+      background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.15), transparent 70%),
+                  radial-gradient(circle at top right, rgba(129, 140, 248, 0.12), transparent 60%),
+                  var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 36px 32px;
+      position: relative;
+    }
+
+    .hero h1 {
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #fff 40%, var(--accent-cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--text-muted);
+      max-width: 760px;
+    }
+
+    .hero-features {
+      display: flex;
+      gap: 10px;
+      margin-top: 24px;
+      flex-wrap: wrap;
+    }
+
+    .feature-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #e2e8f0;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 5px 12px;
+      border-radius: 20px;
+    }
+
+    .doc-section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .doc-section h2 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: -0.02em;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .doc-section h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin-top: 10px;
+    }
+
+    .doc-section p {
+      font-size: 15px;
+      line-height: 1.7;
+      color: #cbd5e1;
+    }
+
+    .doc-section ul {
+      margin-left: 20px;
+      color: #cbd5e1;
+      line-height: 1.7;
+      font-size: 14.5px;
+    }
+
+    .code-block {
+      background-color: var(--code-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 8px 0;
+    }
+
+    .code-header {
+      background: #0d121c;
+      padding: 9px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .copy-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+      padding: 3px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+
+    .copy-btn:hover {
+      background: var(--accent-cyan);
+      color: #000;
+    }
+
+    pre {
+      padding: 16px;
+      font-family: 'Fira Code', monospace;
+      font-size: 13.5px;
+      line-height: 1.6;
+      overflow-x: auto;
+      color: #e2e8f0;
+    }
+
+    .kw { color: #f472b6; font-weight: 600; }
+    .at { color: #38bdf8; font-weight: 600; }
+    .str { color: #a7f3d0; }
+    .num { color: #fde047; }
+    .comment { color: #64748b; font-style: italic; }
+    .fn { color: #818cf8; }
+
+    .callout {
+      background: rgba(56, 189, 248, 0.08);
+      border-left: 4px solid var(--accent-cyan);
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      font-size: 14px;
+      color: #e2e8f0;
+      line-height: 1.6;
+    }
+
+    .callout.amber {
+      background: rgba(251, 191, 36, 0.08);
+      border-left-color: var(--accent-amber);
+    }
+
+    .callout.green {
+      background: rgba(52, 211, 153, 0.08);
+      border-left-color: var(--accent-green);
+    }
+
+    .why-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px dashed rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13.5px;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+
+    .why-box strong { color: var(--accent-amber); }
+
+    .methods-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+      font-size: 13.5px;
+    }
+
+    .methods-table th {
+      text-align: left;
+      padding: 10px 14px;
+      background: #111624;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 11px;
+    }
+
+    .methods-table td {
+      padding: 10px 14px;
+      border: 1px solid var(--border-color);
+      color: #cbd5e1;
+    }
+
+    .methods-table code {
+      font-family: 'Fira Code', monospace;
+      color: var(--accent-cyan);
+      font-size: 12.5px;
+    }
+
+    ::-webkit-scrollbar { width: 7px; height: 7px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #1e2638; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #2a344d; }
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR LATERAL -->
+  <aside>
+    <div class="brand">
+      <img src="yvira-logo.svg" alt="Yvira Logo">
+      <div>
+        <div class="brand-title">YVIRA DOCS</div>
+      </div>
+      <span class="brand-badge">v2.0</span>
+    </div>
+
+    <div class="search-box">
+      <input type="text" class="search-input" id="searchFilter" placeholder="Buscar comando ou módulo..." oninput="filtrarNavegacao()">
+    </div>
+
+    <nav class="nav-list" id="navList">
+      <div class="nav-category">1. Começando do Zero (CLI & Terminal)</div>
+      <a class="nav-link active" onclick="navegarPara('intro')"><span>⚡ O que é o Yvira?</span></a>
+      <a class="nav-link" onclick="navegarPara('cli-comandos')"><span>💻 Terminal, REPL & Comandos CLI</span></a>
+      <a class="nav-link" onclick="navegarPara('yvira-init')"><span>📁 Criar Projetos (yvira init)</span></a>
+      <a class="nav-link" onclick="navegarPara('gerenciador-pacotes')"><span>📦 Instalar Pacotes (yvira install)</span></a>
+
+      <div class="nav-category">2. Sintaxe Básica Mastigada</div>
+      <a class="nav-link" onclick="navegarPara('variaveis-tipos')"><span>📝 Variáveis, Constantes & Texto ($)</span></a>
+      <a class="nav-link" onclick="navegarPara('operadores-completos')"><span>➕ Todos os Operadores (Matemática & Lógica)</span></a>
+      <a class="nav-link" onclick="navegarPara('input-usuario')"><span>⌨️ Ler Dados do Teclado (input)</span></a>
+      <a class="nav-link" onclick="navegarPara('listas-mapas')"><span>📚 Listas e Mapas (Dicionários)</span></a>
+      <a class="nav-link" onclick="navegarPara('fluxo-match')"><span>🔀 Se, Enquanto e Casamento (Match)</span></a>
+      <a class="nav-link" onclick="navegarPara('erros-try')"><span>⚠️ Tratando Erros (Try / Catch)</span></a>
+      <a class="nav-link" onclick="navegarPara('poo-classes')"><span>🏛️ Classes e Herança (POO)</span></a>
+
+      <div class="nav-category">3. Criando Apps Desktop com HTML/CSS</div>
+      <a class="nav-link" onclick="navegarPara('criar-janela')"><span>🖥️ A Janela Desktop (create_window)</span></a>
+      <a class="nav-link" onclick="navegarPara('titlebar-arrastar')"><span>🪟 Barra Customizada & Arrastar Tela</span></a>
+      <a class="nav-link" onclick="navegarPara('ponte-yvira-js')"><span>🌉 Ponte Yvira ↔ JavaScript (Sem JSON)</span></a>
+      <a class="nav-link" onclick="navegarPara('render-reativo')"><span>✨ Tutorial: Gráficos e Telas Reativas</span></a>
+
+      <div class="nav-category">4. Menus Visuais no Terminal (TUI)</div>
+      <a class="nav-link" onclick="navegarPara('tui-terminal')"><span>📟 Menus com Setas, Caixas e Progresso</span></a>
+
+      <div class="nav-category">5. Backend, Banco & Tempo Real</div>
+      <a class="nav-link" onclick="navegarPara('api-servidor')"><span>🚀 Criar APIs REST (http.serve)</span></a>
+      <a class="nav-link" onclick="navegarPara('banco-db')"><span>💾 Banco SQLite Embutido (@db)</span></a>
+      <a class="nav-link" onclick="navegarPara('cache-memoria')"><span>⚡ Cache em Memória Ultra-Rápido</span></a>
+      <a class="nav-link" onclick="navegarPara('agendador-time')"><span>⏱️ Agendador em Background (@time)</span></a>
+      <a class="nav-link" onclick="navegarPara('concorrencia-spawn')"><span>🧵 Concorrência (@spawn & @worker)</span></a>
+      <a class="nav-link" onclick="navegarPara('realtime-multiplayer')"><span>🛰️ Realtime WebSockets com AES-256</span></a>
+
+      <div class="nav-category">6. Matemática, Ciência & IA</div>
+      <a class="nav-link" onclick="navegarPara('super-matrizes')"><span>🧮 Super Matrizes & Álgebra Linear</span></a>
+      <a class="nav-link" onclick="navegarPara('ia-reforco')"><span>🧠 Inteligência Artificial (Q-Learning)</span></a>
+
+      <div class="nav-category">7. Arquivos, PDF, Excel & Segurança</div>
+      <a class="nav-link" onclick="navegarPara('fs-arquivos')"><span>📁 Gravar e Ler Arquivos (fs & CSV)</span></a>
+      <a class="nav-link" onclick="navegarPara('pdf-excel')"><span>📑 Gerar PDFs e Planilhas Excel</span></a>
+      <a class="nav-link" onclick="navegarPara('criptografia-defesa')"><span>🔐 Criptografia de Senhas e Cifras</span></a>
+      <a class="nav-link" onclick="navegarPara('sandbox-anti-taint')"><span>🛡️ Sandbox e Proteção de Segurança</span></a>
+
+      <div class="nav-category">8. Compilação para Produção</div>
+      <a class="nav-link" onclick="navegarPara('build-compilador')"><span>📦 Gerar Executável (.exe) em 1 Clique</span></a>
+    </nav>
+  </aside>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main id="mainContainer">
+    <div class="content-wrapper">
+
+      <!-- INTRODUÇÃO -->
+      <div class="hero" id="intro">
+        <h1>Linguagem Yvira — O Manual Definitivo</h1>
+        <p>
+          O <strong>Yvira</strong> é uma linguagem de programação moderna feita para resolver um problema real: você cria <strong>aplicações desktop lindas</strong> (com HTML e CSS), <strong>APIs velozes</strong>, <strong>chats em tempo real</strong> e <strong>cálculos matemáticos</strong> sem precisar instalar 50 ferramentas diferentes.
+        </p>
+        <div class="why-box" style="margin-top: 15px;">
+          <strong>👶 Como se explica para uma criança?</strong><br>
+          Imagine que em outras linguagens, para fazer um carrinho andar, você precisa comprar as rodas na China (Node/npm), o motor nos EUA (Python) e o chassi na Alemanha (C#). No Yvira, <strong>o carrinho já vem montado na caixa pronto para pilotar!</strong>
+        </div>
+        <div class="hero-features">
+          <div class="feature-tag">🖥️ GUI Nativa (HTML/CSS)</div>
+          <div class="feature-tag">💻 CLI Central com Menus</div>
+          <div class="feature-tag">💾 SQLite Embutido</div>
+          <div class="feature-tag">⚡ Async @spawn</div>
+          <div class="feature-tag">🔒 Criptografia AES-256</div>
+          <div class="feature-tag">📦 Gera .exe Independente</div>
+        </div>
+      </div>
+
+      <!-- 1. CLI E COMANDOS -->
+      <section class="doc-section" id="cli-comandos">
+        <h2>1. Usando o Yvira no Terminal (PowerShell / CMD)</h2>
+        <p>Depois de instalado, o Yvira fica disponível direto no seu terminal em qualquer pasta do seu computador.</p>
+
+        <div class="why-box">
+          <strong>🤔 Por que isso existe?</strong> Para você não precisar abrir programas pesados só para rodar um script. Você abre o PowerShell ou CMD e o Yvira te responde na hora.
+        </div>
+
+        <h3>A. O Menu Interativo Central</h3>
+        <p>Se você abrir o terminal e digitar apenas <code>yvira</code> (sem nada depois), ele abre uma central de comandos visual onde você usa as setinhas do teclado para escolher o que fazer:</p>
+
+        <div class="code-block">
+          <div class="code-header"><span>PowerShell</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code>yvira</code></pre>
+        </div>
+
+        <h3>B. Rodando um Arquivo de Código (.yv)</h3>
+        <p>Para rodar qualquer código que você escreveu:</p>
+        <div class="code-block">
+          <div class="code-header"><span>PowerShell</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code>yvira run meu_codigo.yv
+<span class="comment"># Passando argumentos para o script:</span>
+yvira run meu_codigo.yv --porta 8080</code></pre>
+        </div>
+
+        <h3>C. Formatador Automático de Código (yvira fmt)</h3>
+        <p>Deixa seu código limpo, alinhado e padronizado automaticamente (também funciona com <code>Shift + Alt + F</code> no VS Code):</p>
+        <div class="code-block">
+          <div class="code-header"><span>PowerShell</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="comment"># Formata um único arquivo:</span>
+yvira fmt meu_codigo.yv
+
+<span class="comment"># Formata todos os arquivos .yv do projeto recursivamente:</span>
+yvira fmt .</code></pre>
+        </div>
+
+        <h3>D. O Console Interativo (REPL)</h3>
+        <p>Quer testar uma conta ou uma função rápida sem criar nenhum arquivo? Abra o REPL com destaque de cores:</p>
+        <div class="code-block">
+          <div class="code-header"><span>PowerShell</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code>yvira repl</code></pre>
+        </div>
+      </section>
+
+      <!-- 2. YVIRA INIT -->
+      <section class="doc-section" id="yvira-init">
+        <h2>2. Criando um Projeto Novo (yvira init)</h2>
+        <p>Para começar um sistema organizado com toda a estrutura pronta de pastas, use o comando <code>yvira init</code>:</p>
+
+        <div class="code-block">
+          <div class="code-header"><span>PowerShell</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code>yvira init meu_sistema</code></pre>
+        </div>
+
+        <p>Ele cria instantaneamente essa árvore de arquivos pronta para você:</p>
+        <div class="code-block">
+          <div class="code-header"><span>Estrutura Gerada</span></div>
+          <pre><code>meu_sistema/
+├── yvira.json      <span class="comment"># Manifesto do projeto (nome, versão, dependências)</span>
+├── main.yv         <span class="comment"># Arquivo de entrada principal do código</span>
+├── .env            <span class="comment"># Configurações de banco e segredos</span>
+└── views/          <span class="comment"># Telas HTML/CSS da sua aplicação</span>
+    └── index.html  <span class="comment"># Sua página visual pronta</span></code></pre>
+        </div>
+      </section>
+
+      <!-- 3. GERENCIADOR DE PACOTES -->
+      <section class="doc-section" id="gerenciador-pacotes">
+        <h2>3. Instalando Pacotes e Módulos (yvira install)</h2>
+        <p>Precisa de uma biblioteca que um amigo ou a comunidade fez? Você pode instalar direto do GitHub ou de uma URL da internet:</p>
+
+        <div class="code-block">
+          <div class="code-header"><span>PowerShell</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="comment"># 1. Instala a partir de um repositório GitHub</span>
+yvira install github:usuario/minha-biblioteca
+
+<span class="comment"># 2. Instala com apelido curto</span>
+yvira install tokenLib=github:usuario/jwt-security
+
+<span class="comment"># 3. Baixa todos os pacotes salvos no yvira.json</span>
+yvira install</code></pre>
+        </div>
+      </section>
+
+      <!-- 4. VARIÁVEIS E TIPOS -->
+      <section class="doc-section" id="variaveis-tipos">
+        <h2>4. Variáveis, Constantes e Textos Inteligentes ($)</h2>
+        <p>Como guardar informações na memória do computador com a sintaxe do Yvira:</p>
+
+        <div class="why-box">
+          <strong>🤔 O que é uma variável?</strong> É como uma caixinha com uma etiqueta. Se a etiqueta diz <code>let nome</code>, você pode guardar um texto lá dentro. Se for <code>const</code>, você passa fita isolante e ninguém nunca mais pode trocar o que está lá dentro!
+        </div>
+
+        <div class="code-block">
+          <div class="code-header"><span>variaveis.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="comment"># let: pode mudar de valor no futuro</span>
+<span class="kw">let</span> jogador = <span class="str">"Santhyago"</span>;
+<span class="kw">let</span> pontos = <span class="num">150</span>;
+<span class="kw">let</span> estaVivo = <span class="kw">true</span>;
+
+<span class="comment"># const: valor fixo que o Yvira impede de mudar</span>
+<span class="kw">const</span> GRAVIDADE = <span class="num">9.8</span>;
+
+<span class="comment"># Interpolação ($): Coloque variáveis dentro do texto sem usar + + +</span>
+<span class="kw">let</span> mensagem = <span class="str">$"O jogador {jogador} tem {pontos} pontos agora!"</span>;
+<span class="fn">print</span>(mensagem);</code></pre>
+        </div>
+      </section>
+
+      <!-- 4.1 OPERADORES DA LINGUAGEM -->
+      <section class="doc-section" id="operadores-completos">
+        <h2>4.1. Todos os Operadores da Linguagem (Matemática, Comparação e Lógica)</h2>
+        <p>No Yvira você pode fazer contas, comparar valores e criar regras lógicas complexas. A linguagem aceita tanto <strong>símbolos matemáticos clássicos</strong> quanto <strong>palavras em inglês</strong> (estilo Python/C#), o que você preferir!</p>
+
+        <div class="why-box">
+          <strong>👶 Como explicar para uma criança?</strong><br>
+          Operadores são como as ferramentas da sua caixa de brinquedos:
+          <br>• Os <strong>aritméticos (+, -, *, /)</strong> são como sua calculadora da escola.
+          <br>• O <strong>incremento (++)</strong> é como subir um degrau da escada de cada vez.
+          <br>• Os <strong>comparadores (==, !=, >, <)</strong> são o juiz do jogo de futebol apitando se foi falta ou não.
+          <br>• Os <strong>lógicos (and, or, not)</strong> são como as regras da sua mãe: <em>"Você só vai passear se arrumar a cama <strong>E</strong> fizer a lição de casa!"</em>
+        </div>
+
+        <h3>A. Operadores Aritméticos (Fazer Contas)</h3>
+        <table class="methods-table">
+          <thead>
+            <tr><th>Operador</th><th>Significado</th><th>Exemplo em Código</th><th>Resultado</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>+</code></td><td>Soma ou Junta Textos</td><td><code>10 + 5</code> ou <code>"Olá " + "Mundo"</code></td><td><code>15</code> ou <code>"Olá Mundo"</code></td></tr>
+            <tr><td><code>-</code></td><td>Subtração</td><td><code>20 - 8</code></td><td><code>12</code></td></tr>
+            <tr><td><code>*</code></td><td>Multiplicação</td><td><code>4 * 5</code></td><td><code>20</code></td></tr>
+            <tr><td><code>/</code></td><td>Divisão</td><td><code>10 / 2</code></td><td><code>5.0</code></td></tr>
+            <tr><td><code>%</code></td><td>Módulo (Resto da Divisão)</td><td><code>10 % 3</code></td><td><code>1</code> (pois 3x3=9, sobra 1)</td></tr>
+            <tr><td><code>**</code></td><td>Exponenciação (Potência)</td><td><code>2 ** 3</code></td><td><code>8</code> (2 x 2 x 2)</td></tr>
+          </tbody>
+        </table>
+
+        <h3>B. Atribuição e Atalhos de Incremento (Poupar Digitação)</h3>
+        <p>Em vez de escrever <code>pontos = pontos + 1</code>, você pode usar os atalhos que toda linguagem profissional tem:</p>
+        <table class="methods-table">
+          <thead>
+            <tr><th>Atalho</th><th>O que ele faz por trás</th><th>Exemplo</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>x++</code></td><td>Aumenta 1 unidade no valor de x</td><td><code>contador++;</code></td></tr>
+            <tr><td><code>x--</code></td><td>Diminui 1 unidade no valor de x</td><td><code>vidas--;</code></td></tr>
+            <tr><td><code>x += 10</code></td><td>Soma 10 e já guarda em x</td><td><code>saldo += 500;</code></td></tr>
+            <tr><td><code>x -= 5</code></td><td>Subtrai 5 e já guarda em x</td><td><code>estoque -= 5;</code></td></tr>
+            <tr><td><code>x *= 2</code></td><td>Dobra o valor e já guarda em x</td><td><code>salario *= 2;</code></td></tr>
+            <tr><td><code>x /= 2</code></td><td>Divide pela metade e guarda</td><td><code>total /= 2;</code></td></tr>
+          </tbody>
+        </table>
+
+        <h3>C. Operadores de Comparação (Fazem Perguntas)</h3>
+        <p>Eles sempre devolvem <code>true</code> (verdadeiro) ou <code>false</code> (falso):</p>
+        <table class="methods-table">
+          <thead>
+            <tr><th>Operador</th><th>Pergunta</th><th>Exemplo</th><th>Resposta</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>==</code></td><td>É exatamente igual?</td><td><code>10 == 10</code></td><td><code>true</code></td></tr>
+            <tr><td><code>!=</code> ou <code>&lt;&gt;</code></td><td>É diferente?</td><td><code>10 != 5</code></td><td><code>true</code></td></tr>
+            <tr><td><code>&gt;</code></td><td>É maior que?</td><td><code>15 &gt; 20</code></td><td><code>false</code></td></tr>
+            <tr><td><code>&lt;</code></td><td>É menor que?</td><td><code>10 &lt; 20</code></td><td><code>true</code></td></tr>
+            <tr><td><code>&gt;=</code></td><td>É maior ou igual?</td><td><code>18 &gt;= 18</code></td><td><code>true</code></td></tr>
+            <tr><td><code>&lt;=</code></td><td>É menor ou igual?</td><td><code>25 &lt;= 20</code></td><td><code>false</code></td></tr>
+          </tbody>
+        </table>
+
+        <h3>D. Operadores Lógicos (Juntar Várias Condições)</h3>
+        <p>O Yvira aceita tanto os símbolos <code>&&</code>, <code>||</code>, <code>!</code> quanto as palavras em inglês <code>and</code>, <code>or</code>, <code>not</code>:</p>
+
+        <div class="code-block">
+          <div class="code-header"><span>operadores_logicos.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="kw">let</span> idade = <span class="num">20</span>;
+<span class="kw">let</span> temCarteira = <span class="kw">true</span>;
+<span class="kw">let</span> estaChovendo = <span class="kw">false</span>;
+
+<span class="comment"># 1. 'and' (ou '&&'): As duas coisas PRECISAM ser verdadeiras ao mesmo tempo</span>
+<span class="kw">if</span> (idade >= <span class="num">18</span> and temCarteira) {
+    <span class="fn">print</span>(<span class="str">"Pode dirigir o carro!"</span>);
+}
+
+<span class="comment"># 2. 'or' (ou '||'): BASTA UMA das coisas ser verdadeira</span>
+<span class="kw">let</span> temCartao = <span class="kw">false</span>;
+<span class="kw">let</span> temDinheiro = <span class="kw">true</span>;
+<span class="kw">if</span> (temCartao or temDinheiro) {
+    <span class="fn">print</span>(<span class="str">"Pode pagar a conta!"</span>);
+}
+
+<span class="comment"># 3. 'not' (ou '!'): Inverte a lógica (O que é falso vira verdadeiro!)</span>
+<span class="kw">if</span> (not estaChovendo) {
+    <span class="fn">print</span>(<span class="str">"Tempo limpo! Pode ir para a praia sem guarda-chuva."</span>);
+}</code></pre>
+        </div>
+      </section>
+
+      <!-- 5. INPUT DO USUÁRIO -->
+      <section class="doc-section" id="input-usuario">
+        <h2>5. Lendo o que o Usuário Digita no Teclado (input)</h2>
+        <p>Para fazer perguntas e esperar o usuário digitar uma resposta e apertar <strong>Enter</strong>, usamos a função nativa <code>input()</code>:</p>
+
+        <div class="code-block">
+          <div class="code-header"><span>perguntar.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="comment"># O computador para, exibe o texto e espera o usuário teclar Enter</span>
+<span class="kw">let</span> nome = <span class="fn">input</span>(<span class="str">"Qual o seu nome? "</span>);
+<span class="kw">let</span> idadeTexto = <span class="fn">input</span>(<span class="str">"Quantos anos você tem? "</span>);
+
+<span class="comment"># Como o que vem do teclado é sempre texto, usamos toNumber para fazer contas</span>
+<span class="kw">let</span> idade = <span class="fn">toNumber</span>(idadeTexto);
+<span class="kw">let</span> anoNascimento = <span class="num">2026</span> - idade;
+
+<span class="fn">print</span>(<span class="str">$"Prazer {nome}! Você nasceu por volta de {anoNascimento}."</span>);</code></pre>
+        </div>
+      </section>
+
+      <!-- 6. LISTAS E MAPAS -->
+      <section class="doc-section" id="listas-mapas">
+        <h2>6. Listas e Mapas (Dicionários)</h2>
+        <p>Guardar muitos dados juntos sem bagunça:</p>
+
+        <div class="why-box">
+          <strong>🤔 Qual a diferença?</strong><br>
+          • <strong>Lista <code>[ ... ]</code>:</strong> É uma fila numerada (0, 1, 2...). Ótimo para rankings ou listas de compras.<br>
+          • <strong>Mapa <code>{ ... }</code>:</strong> É uma ficha de cadastro onde cada informação tem um nome (nome: "Carlos", idade: 25).
+        </div>
+
+        <div class="code-block">
+          <div class="code-header"><span>listas_mapas.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="comment"># 1. Lista</span>
+<span class="kw">let</span> frutas = [<span class="str">"Maçã"</span>, <span class="str">"Banana"</span>];
+frutas.<span class="fn">push</span>(<span class="str">"Uva"</span>);          <span class="comment"># Coloca no final</span>
+frutas.<span class="fn">insert</span>(<span class="num">0</span>, <span class="str">"Morango"</span>); <span class="comment"># Coloca no começo (posição 0)</span>
+<span class="fn">print</span>(<span class="str">$"Total de frutas: {len(frutas)}"</span>);
+
+<span class="comment"># 2. Mapa</span>
+<span class="kw">let</span> produto = {
+    <span class="str">"id"</span>: <span class="num">101</span>,
+    <span class="str">"nome"</span>: <span class="str">"Teclado Gamer"</span>,
+    <span class="str">"preco"</span>: <span class="num">250.0</span>,
+    <span class="str">"emEstoque"</span>: <span class="kw">true</span>
+};
+<span class="fn">print</span>(<span class="str">$"Preço: R$ {produto.preco}"</span>);</code></pre>
+        </div>
+      </section>
+
+      <!-- 7. FLUXO E MATCH -->
+      <section class="doc-section" id="fluxo-match">
+        <h2>7. Tomando Decisões no Código: If, Else, While, For-In e Match</h2>
+        
+        <div class="why-box">
+          <strong>👶 Como explicar para uma criança?</strong><br>
+          Imagine que você é o motorista de um carro e chega numa bifurcação na rua:
+          <br>• O <strong>if</strong> ("SE") é a placa dizendo: <em>"SE o sinal estiver verde, siga em frente."</em>
+          <br>• O <strong>else</strong> ("SENÃO") é o que você faz se a placa for falsa: <em>"SENÃO, pare o carro imediatamente!"</em>
+          <br>• O <strong>while</strong> ("ENQUANTO") é como andar em círculos numa rotatória: <em>"ENQUANTO o combustível não acabar, continue rodando."</em>
+        </div>
+
+        <h3>A. Como o If e Else funcionam por dentro</h3>
+        <p>O computador avalia uma pergunta que só pode ter duas respostas: <strong>Verdadeiro (true)</strong> ou <strong>Falso (false)</strong>. Se for verdadeiro, ele entra nas chaves <code>{ ... }</code> do <code>if</code>. Se for falso, ele pula direto para o <code>else</code>:</p>
+
+        <div class="code-block">
+          <div class="code-header"><span>exemplo_if_else.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="kw">let</span> saldoNoBanco = <span class="num">150.0</span>;
+<span class="kw">let</span> precoDoJogo = <span class="num">200.0</span>;
+
+<span class="comment"># Pergunta: 150 é maior ou igual a 200? FALSO!</span>
+<span class="kw">if</span> (saldoNoBanco >= precoDoJogo) {
+    <span class="fn">print</span>(<span class="str">"Parabéns! Você comprou o jogo!"</span>);
+    saldoNoBanco = saldoNoBanco - precoDoJogo;
+} <span class="kw">else</span> {
+    <span class="comment"># Como a pergunta deu FALSO, o computador é obrigado a vir para cá:</span>
+    <span class="kw">let</span> quantoFalta = precoDoJogo - saldoNoBanco;
+    <span class="fn">print</span>(<span class="str">$"Você não tem dinheiro suficiente. Faltam R$ {quantoFalta}."</span>);
+}</code></pre>
+        </div>
+
+        <h3>B. O While (Repetidor com Condição)</h3>
+        <p>O <code>while</code> repete um bloco de código de novo e de novo enquanto a condição for verdadeira. Tome cuidado para sempre aumentar o contador, senão ele roda para sempre (loop infinito):</p>
+        <div class="code-block">
+          <div class="code-header"><span>exemplo_while.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="kw">let</span> voltasNaPista = <span class="num">1</span>;
+
+<span class="kw">while</span> (voltasNaPista <= <span class="num">3</span>) {
+    <span class="fn">print</span>(<span class="str">$"Completou a volta número: {voltasNaPista}"</span>);
+    <span class="comment"># Aumenta 1 na volta para ele saber quando parar!</span>
+    voltasNaPista = voltasNaPista + <span class="num">1</span>;
+}
+<span class="fn">print</span>(<span class="str">"Fim da corrida! Bandeira quadriculada!"</span>);</code></pre>
+        </div>
+
+        <h3>C. O For-In (Percorrendo Listas sem contar números)</h3>
+        <p>Se você tem uma lista de amigos, produtos ou servidores, o <code>for-in</code> pega um por um automaticamente do começo ao fim:</p>
+        <div class="code-block">
+          <div class="code-header"><span>exemplo_for.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="kw">let</span> amigos = [<span class="str">"Carlos"</span>, <span class="str">"Beatriz"</span>, <span class="str">"Lucas"</span>];
+
+<span class="kw">for</span> (nome <span class="kw">in</span> amigos) {
+    <span class="fn">print</span>(<span class="str">"Enviando convite para: "</span> + nome);
+}</code></pre>
+        </div>
+
+        <h3>D. O Match (O Selecionador Elegante)</h3>
+        <p>Quando você tem uma variável que pode ter 5 ou 10 valores diferentes (ex: cargos, códigos de erro), ficar escrevendo <code>if, else if, else if, else if</code> é horrível. O <code>match</code> resolve isso numa tacada só:</p>
+        <div class="code-block">
+          <div class="code-header"><span>exemplo_match.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="kw">let</span> semaforo = <span class="str">"amarelo"</span>;
+
+<span class="kw">let</span> acao = <span class="kw">match</span> semaforo {
+    <span class="str">"verde"</span>    => <span class="str">"Pode acelerar!"</span>,
+    <span class="str">"amarelo"</span>  => <span class="str">"Atenção! Comece a frear!"</span>,
+    <span class="str">"vermelho"</span> => <span class="str">"Pare totalmente!"</span>,
+    _          => <span class="str">"Sinal quebrado! Ande com muito cuidado."</span> <span class="comment"># O _ é o padrão para qualquer outra coisa</span>
+};
+<span class="fn">print</span>(acao);</code></pre>
+        </div>
+      </section>
+
+      <!-- 8. TRATAMENTO DE ERROS -->
+      <section class="doc-section" id="erros-try">
+        <h2>8. Tratamento de Erros: Try, Catch, Finally e Throw (Para que serve cada um?)</h2>
+
+        <div class="why-box">
+          <strong>👶 Como explicar para uma criança?</strong><br>
+          Imagine que você está brincando de malabarismo com pratos de louça caros:
+          <br>• O <strong>try</strong> ("TENTE") é você dizendo: <em>"Eu vou TENTAR equilibrar esses pratos aqui."</em>
+          <br>• O <strong>throw</strong> ("LANCE / JOGUE") é o alarme de emergência: <em>"SOCORRO! O prato escorregou da minha mão e vai cair!"</em>
+          <br>• O <strong>catch</strong> ("PEGUE / CAPTURE") é a rede de segurança esticada no chão: <em>Ela SEGURA o prato para não estraçalhar no chão e o programa não morrer!</em>
+          <br>• O <strong>finally</strong> ("FINALMENTE / SEMPRE"): <em>É a sua mãe dizendo: "Dando certo o malabarismo ou quebrando tudo, no FINAL você vai ter que lavar as mãos e arrumar a sala!"</em>
+        </div>
+
+        <h3>Por que isso é tão importante em sistemas reais?</h3>
+        <p>Se você fizer um app de banco ou logística e a internet cair, o programa normal travaria e fecharia na cara do usuário. Com <code>try/catch</code>, você captura o erro, exibe uma mensagem bonita ("Por favor, verifique sua conexão") e a janela continua aberta e funcionando!</p>
+
+        <div class="code-block">
+          <div class="code-header"><span>exemplo_erros_completo.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="comment"># Função que valida uma transferência bancária</span>
+<span class="kw">fn</span> <span class="fn">transferirPix</span>(saldoAtual, valorPix) {
+    <span class="comment"># 1. THROW: Nós mesmos criamos e disparamos um erro proposital</span>
+    <span class="kw">if</span> (valorPix <= <span class="num">0</span>) {
+        <span class="kw">throw</span> <span class="str">"O valor do PIX deve ser maior que zero!"</span>;
+    }
+
+    <span class="kw">if</span> (valorPix > saldoAtual) {
+        <span class="kw">throw</span> <span class="str">"Saldo insuficiente! Você não pode transferir o que não tem."</span>;
+    }
+
+    <span class="kw">return</span> saldoAtual - valorPix;
+}
+
+<span class="comment"># 2. TRY: Colocamos o código perigoso dentro do bloco de proteção</span>
+<span class="kw">try</span> {
+    <span class="fn">print</span>(<span class="str">"[1] Iniciando transferência PIX..."</span>);
+    
+    <span class="comment"># Tentamos transferir R$ 800 tendo apenas R$ 200 de saldo (Vai disparar o throw!)</span>
+    <span class="kw">let</span> saldoRestante = <span class="fn">transferirPix</span>(<span class="num">200.0</span>, <span class="num">800.0</span>);
+    
+    <span class="comment"># Esta linha abaixo NEM VAI RODAR, porque o throw pula direto para o catch!</span>
+    <span class="fn">print</span>(<span class="str">$"Sucesso! Novo saldo: R$ {saldoRestante}"</span>);
+
+} <span class="kw">catch</span> (motivoDaFalha) {
+    <span class="comment"># 3. CATCH: O programa não morreu! Ele caiu suavemente aqui:</span>
+    <span class="fn">print</span>(<span class="str">"[2] Operação cancelada com segurança pelo sistema:"</span>);
+    <span class="fn">print</span>(<span class="str">"    Motivo: "</span> + motivoDaFalha);
+
+} <span class="kw">finally</span> {
+    <span class="comment"># 4. FINALLY: Limpeza de recursos (fecha conexões, desliga câmera, etc.)</span>
+    <span class="comment"># RODA SEMPRE, mesmo se deu erro ou se deu tudo certo!</span>
+    <span class="fn">print</span>(<span class="str">"[3] Fechando sessão segura com o Banco Central."</span>);
+}
+
+<span class="comment"># Prova viva de que o app continua rodando:</span>
+<span class="fn">print</span>(<span class="str">"[4] O sistema Yvira continua ligado normalmente!"</span>);</code></pre>
+        </div>
+      </section>
+
+      <!-- 9. POO -->
+      <section class="doc-section" id="poo-classes">
+        <h2>9. Orientação a Objetos (POO): O que é, Para que serve e Como usar?</h2>
+
+        <div class="why-box">
+          <strong>👶 Como explicar para uma criança?</strong><br>
+          Imagine uma <strong>forma de fazer bolo</strong> no formato de coração:
+          <br>• A <strong>classe (class)</strong> é a <em>forma de metal</em>. Ela não se come, ela é apenas o molde que define o tamanho e as características do bolo.
+          <br>• O <strong>objeto (new)</strong> é o <em>bolo de verdade</em> saindo quentinho do forno. Você pode usar a mesma forma para fazer 10 bolos: um de chocolate com morango, outro de cenoura com brigadeiro!
+          <br>• Os <strong>atributos (this.nome, this.saldo)</strong> são os <em>ingredientes</em> daquele bolo específico.
+          <br>• Os <strong>métodos (funções dentro da classe)</strong> são as <em>coisas que o bolo faz</em> (ex: estragar, esfriar, ser fatiado).
+          <br>• A <strong>herança (extends)</strong>: Imagine que você inventou um bolo especial com recheio duplo. Em vez de criar uma forma do zero, você pega a forma antiga e só adiciona um detalhe novo!
+        </div>
+
+        <h3>Por que usamos Classes em vez de variáveis soltas?</h3>
+        <p>Se você tiver 100 usuários no seu sistema, criar variáveis soltas como <code>nome1, saldo1, nome2, saldo2, nome100, saldo100</code> deixaria seu código impossível de ler. Com classes, você agrupa as informações e os comportamentos em um único lugar organizado.</p>
+
+        <h3>Análise Linha por Linha do Código de POO:</h3>
+
+        <div class="code-block">
+          <div class="code-header"><span>exemplo_poo_completo.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="comment"># 1. Definimos o MOLDE básico: ContaBancaria</span>
+<span class="kw">class</span> <span class="fn">ContaBancaria</span> {
+    
+    <span class="comment"># constructor: É a função mágica que é chamada no exato segundo em que o objeto nasce!</span>
+    <span class="kw">fn</span> <span class="fn">constructor</span>(titular, saldoInicial) {
+        <span class="comment"># 'this' significa 'DESTA CONTA ESPECÍFICA'. Cada conta tem o seu titular e seu saldo:</span>
+        this.titular = titular;
+        this.saldo = saldoInicial;
+    }
+
+    <span class="comment"># Método de instância: Uma ação que a conta sabe fazer</span>
+    <span class="kw">fn</span> <span class="fn">depositar</span>(valor) {
+        this.saldo = this.saldo + valor;
+        <span class="fn">print</span>(<span class="str">$"[+] R$ {valor} depositados na conta de {this.titular}."</span>);
+    }
+
+    <span class="kw">fn</span> <span class="fn">obterExtrato</span>() {
+        <span class="kw">return</span> <span class="str">$"Titular: {this.titular} | Saldo Disponível: R$ {this.saldo}"</span>;
+    }
+}
+
+<span class="comment"># 2. HERANÇA (extends): ContaVip herda tudo de ContaBancaria e ganha superpoderes</span>
+<span class="kw">class</span> <span class="fn">ContaVip</span> <span class="kw">extends</span> <span class="fn">ContaBancaria</span> {
+    
+    <span class="comment"># Um método novo que só clientes VIP possuem:</span>
+    <span class="kw">fn</span> <span class="fn">pedirEmprestimoSemJuros</span>(valor) {
+        this.saldo = this.saldo + valor;
+        <span class="fn">print</span>(<span class="str">$"[★ VIP] Empréstimo de R$ {valor} concedido com taxa ZERO para {this.titular}!"</span>);
+    }
+}
+
+<span class="comment"># ==========================================</span>
+<span class="comment"># 3. COLOCANDO O MOLDE EM AÇÃO (INSTANCIAÇÃO)</span>
+<span class="comment"># ==========================================</span>
+
+<span class="comment"># Criamos o primeiro objeto (Conta do Carlos)</span>
+<span class="kw">let</span> contaCarlos = <span class="kw">new</span> <span class="fn">ContaBancaria</span>(<span class="str">"Carlos Silva"</span>, <span class="num">500.0</span>);
+
+<span class="comment"># Criamos o segundo objeto independente (Conta VIP da Ana)</span>
+<span class="kw">let</span> contaAna = <span class="kw">new</span> <span class="fn">ContaVip</span>(<span class="str">"Ana Prado"</span>, <span class="num">50000.0</span>);
+
+<span class="comment"># Usamos os métodos de cada uma:</span>
+contaCarlos.<span class="fn">depositar</span>(<span class="num">200.0</span>); <span class="comment"># O saldo do Carlos sobe para 700.0 (O da Ana continua intocado!)</span>
+contaAna.<span class="fn">pedirEmprestimoSemJuros</span>(<span class="num">10000.0</span>); <span class="comment"># Ana usa o poder VIP dela!</span>
+
+<span class="comment"># Imprime o extrato de cada conta:</span>
+<span class="fn">print</span>(contaCarlos.<span class="fn">obterExtrato</span>());
+<span class="fn">print</span>(contaAna.<span class="fn">obterExtrato</span>());</code></pre>
+        </div>
+      </section>
+
+      <!-- 10. CRIAR JANELA -->
+      <section class="doc-section" id="criar-janela">
+        <h2>10. Criando Janelas Desktop com HTML e CSS (create_window)</h2>
+        <p>Chega de criar telas feias com cara de Windows 95. No Yvira você cria a tela usando **HTML5 e CSS moderno** (com animações, modo escuro e fontes bonitas), e a linguagem abre a janela nativamente com aceleração por GPU (WebView2).</p>
+
+        <div class="why-box">
+          <strong>🤔 Como o Yvira faz isso?</strong> Ele abre um navegador ultrarrápido sem barras, sem abas e transparente. O usuário pensa que é um app comum do Windows, mas por trás é o seu HTML e CSS brilhando!
+        </div>
+
+        <div class="code-block">
+          <div class="code-header"><span>main.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="kw">let</span> app = <span class="fn">create_window</span>({
+    <span class="str">"title"</span>: <span class="str">"Meu Sistema Yvira"</span>,
+    <span class="str">"view"</span>: <span class="str">"views/index.html"</span>,     <span class="comment"># Seu arquivo HTML</span>
+    <span class="str">"width"</span>: <span class="num">1100</span>,
+    <span class="str">"height"</span>: <span class="num">720</span>,
+    <span class="str">"frameless"</span>: <span class="kw">true</span>,              <span class="comment"># Tira a barra feia clássica do Windows</span>
+    <span class="str">"background"</span>: <span class="str">"#0b0f19"</span>
+});
+
+<span class="comment"># Mostra a tela e espera o usuário fechar</span>
+app.<span class="fn">show</span>();
+app.<span class="fn">wait</span>();</code></pre>
+        </div>
+      </section>
+
+      <!-- 11. BARRA CUSTOMIZADA & ARRASTAR -->
+      <section class="doc-section" id="titlebar-arrastar">
+        <h2>11. Barra de Título Customizada & Arrastar a Janela</h2>
+        <p>Como fazer a tela ter botões modernos de fechar e poder ser arrastada pelo mouse na área de trabalho?</p>
+
+        <div class="code-block">
+          <div class="code-header"><span>views/index.html</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code>&lt;!-- Coloque data-arrastavel="true" ou a classe .titlebar na barra superior --&gt;
+&lt;div class="titlebar" data-arrastavel="true" style="display:flex; justify-content:space-between; padding:10px;"&gt;
+  &lt;span&gt;Meu App Yvira&lt;/span&gt;
+  &lt;div&gt;
+    &lt;!-- window.yvira já vem injetado pelo motor do Yvira! --&gt;
+    &lt;button onclick="window.yvira.minimizar()"&gt;─&lt;/button&gt;
+    &lt;button onclick="window.yvira.maximizar()"&gt;□&lt;/button&gt;
+    &lt;button onclick="window.yvira.fechar()"&gt;✕&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+        </div>
+      </section>
+
+      <!-- 12. PONTE YVIRA <-> JS -->
+      <section class="doc-section" id="ponte-yvira-js">
+        <h2>12. A Ponte Yvira ↔ JavaScript (Sem JSON e Sem Enrolação)</h2>
+        <p>A melhor parte do Yvira: <strong>você não precisa fazer JSON.parse nem requisições fetch!</strong></p>
+
+        <div class="why-box">
+          <strong>🤔 Por que é tão fácil?</strong> Porque o Yvira e a janela estão morando na mesma casa (mesma memória RAM). O Yvira joga o dado na bandeja do JavaScript e ele já cai como objeto pronto!
+        </div>
+
+        <div class="callout green">
+          <strong>1. Do Yvira para a Tela (Yvira manda, JS desenha):</strong><br>
+          • No Yvira: <code>app.emit("atualizar_saldo", { valor: 500 });</code><br>
+          • No JS: <code>window.atualizar_saldo = function(dados) { alert(dados.valor); };</code>
+        </div>
+
+        <div class="callout amber" style="margin-top: 10px;">
+          <strong>2. Da Tela para o Yvira (Usuário clica, Yvira processa):</strong><br>
+          • No JS: <code>window.yvira.emit("salvar_cliente", { nome: "Alan" });</code><br>
+          • No Yvira: <code>app.on("salvar_cliente", fn(dados) { print(dados.nome); });</code>
+        </div>
+      </section>
+
+      <!-- 13. TUTORIAL RENDER REATIVO -->
+      <section class="doc-section" id="render-reativo">
+        <h2>13. Tutorial: Fazendo a Tela Atualizar Sozinha ao Vivo</h2>
+        <p>Veja como é simples mudar números e animar barras na tela conforme o Yvira envia dados:</p>
+
+        <div class="code-block">
+          <div class="code-header"><span>views/index.html (JavaScript)</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="comment">// Essa função roda toda vez que o Yvira manda dados novos</span>
+window.receber_dados_etl = <span class="kw">function</span>(pacote) {
+    <span class="kw">const</span> m = pacote.metricas;
+    
+    <span class="comment">// 1. Atualiza o texto do faturamento</span>
+    document.getElementById(<span class="str">'valorVendas'</span>).innerText = <span class="str">"R$ "</span> + m.vendasDia;
+
+    <span class="comment">// 2. Anima a barra de separação mudando a largura no CSS</span>
+    <span class="kw">let</span> porcentagem = (m.totalSeparado / m.meta) * <span class="num">100</span>;
+    document.getElementById(<span class="str">'barraFill'</span>).style.width = porcentagem + <span class="str">"%"</span>;
+};</code></pre>
+        </div>
+      </section>
+
+      <!-- 14. TUI TERMINAL -->
+      <section class="doc-section" id="tui-terminal">
+        <h2>14. Menus Interativos no Terminal (TUI)</h2>
+        <p>Quer criar uma ferramenta sem janela, mas bonita no próprio terminal? O Yvira tem comandos embutidos de console:</p>
+
+        <div class="code-block">
+          <div class="code-header"><span>menu_terminal.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="comment"># 1. Cria um menu navegável pelas setinhas do teclado ↑ / ↓</span>
+<span class="kw">let</span> escolhas = [<span class="str">"Iniciar Servidor"</span>, <span class="str">"Ver Relatório"</span>, <span class="str">"Sair"</span>];
+<span class="kw">let</span> opcao = <span class="fn">menu</span>(<span class="str">"O que você deseja fazer?"</span>, escolhas);
+<span class="fn">print</span>(<span class="str">"Você escolheu: "</span> + escolhas[opcao]);
+
+<span class="comment"># 2. Desenha caixas bonitas com bordas duplas</span>
+<span class="fn">box</span>(<span class="str">"AVISO DO SISTEMA"</span>, <span class="str">"Servidor iniciado com sucesso na porta 8080!"</span>);
+
+<span class="comment"># 3. Barra de progresso animada [████░░]</span>
+<span class="kw">let</span> i = <span class="num">0</span>;
+<span class="kw">while</span> (i <= <span class="num">100</span>) {
+    <span class="fn">progress_bar</span>(i, <span class="num">100</span>, <span class="str">"Baixando dados:"</span>);
+    <span class="fn">sleep</span>(<span class="num">30</span>); <span class="comment"># Dorme 30 milissegundos</span>
+    i = i + <span class="num">10</span>;
+}</code></pre>
+        </div>
+      </section>
+
+      <!-- 15. API REST -->
+      <section class="doc-section" id="api-servidor">
+        <h2>15. Criando APIs REST e Microserviços (http.serve)</h2>
+        <p>Crie servidores web com rotas GET e POST em menos de 15 linhas:</p>
+
+        <div class="code-block">
+          <div class="code-header"><span>servidor_api.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code>import <span class="str">"http"</span> as http;
+
+<span class="kw">fn</span> <span class="fn">meuRoteador</span>(req) {
+    <span class="comment"># Rota GET para listar produtos</span>
+    <span class="kw">if</span> (req.method == <span class="str">"GET"</span> && req.path == <span class="str">"/produtos"</span>) {
+        <span class="kw">return</span> { <span class="str">"sucesso"</span>: <span class="kw">true</span>, <span class="str">"itens"</span>: [<span class="str">"Monitor"</span>, <span class="str">"Teclado"</span>] };
+    }
+
+    <span class="comment"># Rota POST para cadastrar (req.body já é um Mapa!)</span>
+    <span class="kw">if</span> (req.method == <span class="str">"POST"</span> && req.path == <span class="str">"/produtos"</span>) {
+        <span class="kw">let</span> nome = req.body.nome;
+        <span class="kw">return</span> { <span class="str">"status"</span>: <span class="num">201</span>, <span class="str">"mensagem"</span>: <span class="str">"Produto cadastrado: "</span> + nome };
+    }
+
+    <span class="kw">return</span> { <span class="str">"status"</span>: <span class="num">404</span>, <span class="str">"erro"</span>: <span class="str">"Rota inexistente"</span> };
+}
+
+<span class="comment"># Coloca a API no ar ouvindo na porta 8080</span>
+http.<span class="fn">serve</span>(<span class="num">8080</span>, meuRoteador);</code></pre>
+        </div>
+      </section>
+
+      <!-- 16. SQLITE DB -->
+      <section class="doc-section" id="banco-db">
+        <h2>16. Banco de Dados SQLite Embutido (@db, @exec & @query)</h2>
+        <p>Salve dados para sempre no disco sem precisar instalar PostgreSQL, MySQL ou qualquer driver:</p>
+
+        <div class="code-block">
+          <div class="code-header"><span>banco_dados.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="comment"># Conecta ao arquivo (ele cria o arquivo se não existir)</span>
+<span class="at">@db</span>(<span class="str">"sqlite://dados_armazem.db"</span>);
+
+<span class="comment"># 1. Cria tabelas e insere dados com @exec (usando ? para evitar invasões)</span>
+<span class="at">@exec</span>(<span class="str">"CREATE TABLE IF NOT EXISTS clientes (id INTEGER PRIMARY KEY, nome TEXT, saldo REAL);"</span>);
+<span class="at">@exec</span>(<span class="str">"INSERT INTO clientes (nome, saldo) VALUES (?, ?);"</span>, [<span class="str">"Santhyago"</span>, <span class="num">1500.0</span>]);
+
+<span class="comment"># 2. Faz buscas com @query (Devolve uma Lista de Mapas!)</span>
+<span class="kw">let</span> lista = <span class="at">@query</span>(<span class="str">"SELECT id, nome, saldo FROM clientes;"</span>);
+<span class="kw">for</span> (c <span class="kw">in</span> lista) {
+    <span class="fn">print</span>(<span class="str">$"Cliente: {c.nome} | Saldo: R$ {c.saldo}"</span>);
+}</code></pre>
+        </div>
+      </section>
+
+      <!-- 17. CACHE MEMÓRIA -->
+      <section class="doc-section" id="cache-memoria">
+        <h2>17. Cache em Memória de Alta Vazão (cache)</h2>
+        <p>Precisa processar milhares de operações por segundo sem engargalar o disco rígido?</p>
+
+        <div class="code-block">
+          <div class="code-header"><span>cache_fast.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code>import <span class="str">"cache"</span>;
+
+<span class="comment"># Guarda e pega da memória RAM instantaneamente</span>
+cache.<span class="fn">set</span>(<span class="str">"saldo:pix:10"</span>, <span class="num">2000.0</span>);
+<span class="kw">let</span> saldoAtual = cache.<span class="fn">get</span>(<span class="str">"saldo:pix:10"</span>);
+
+<span class="comment"># Soma valores de forma atômica (sem correr risco de colisão de threads)</span>
+cache.<span class="fn">incr</span>(<span class="str">"saldo:pix:10"</span>, <span class="num">500.0</span>); <span class="comment"># vira 2500.0</span>
+
+<span class="comment"># Código que expira e some sozinho da memória após 60 segundos (TTL)</span>
+cache.<span class="fn">set</span>(<span class="str">"codigo_sms:user_9"</span>, <span class="str">"998124"</span>, <span class="num">60</span>);</code></pre>
+        </div>
+      </section>
+
+      <!-- 18. AGENDADOR TIME -->
+      <section class="doc-section" id="agendador-time">
+        <h2>18. Agendador em Background sem Travar a Tela (@time)</h2>
+        <p>Como fazer tarefas rodarem a cada 1 segundo sem travar a interface gráfica do usuário:</p>
+
+        <div class="code-block">
+          <div class="code-header"><span>agendamento.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="kw">fn</span> <span class="fn">atualizarCotacoes</span>() {
+    <span class="kw">let</span> precoBitcoin = <span class="fn">random</span>(<span class="num">60000</span>, <span class="num">65000</span>);
+    app.<span class="fn">emit</span>(<span class="str">"novo_preco"</span>, { <span class="str">"btc"</span>: precoBitcoin });
+}
+
+<span class="comment"># Roda a função a cada 1.5 segundos em segundo plano!</span>
+<span class="at">@time</span>.<span class="fn">atualizarCotacoes</span>(<span class="num">1.5</span>);</code></pre>
+        </div>
+      </section>
+
+      <!-- 19. CONCORRÊNCIA -->
+      <section class="doc-section" id="concorrencia-spawn">
+        <h2>19. Concorrência e Threads Paralelas (@spawn & @worker)</h2>
+        <p>Faça seu computador usar todos os núcleos do processador para cálculos pesados:</p>
+
+        <div class="code-block">
+          <div class="code-header"><span>tarefas_paralelas.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="kw">fn</span> <span class="fn">processarRelatorio</span>(id) {
+    <span class="fn">sleep</span>(<span class="num">500</span>);
+    <span class="kw">return</span> id * <span class="num">10</span>;
+}
+
+<span class="comment"># 1. Dispara em outra thread sem esperar</span>
+<span class="kw">let</span> promessa = <span class="at">@spawn</span>.<span class="fn">processarRelatorio</span>(<span class="num">5</span>);
+<span class="comment"># Quando precisar do resultado:</span>
+<span class="kw">let</span> valor = promessa.<span class="fn">esperar</span>();
+
+<span class="comment"># 2. Pool com 8 Workers trabalhando juntos ao mesmo tempo</span>
+<span class="kw">let</span> pool = <span class="at">@worker.pool</span>(<span class="num">8</span>);
+<span class="kw">let</span> resultados = pool.<span class="fn">map</span>([<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>], processarRelatorio);
+pool.<span class="fn">fechar</span>();</code></pre>
+        </div>
+      </section>
+
+      <!-- 20. REALTIME MULTIPLAYER -->
+      <section class="doc-section" id="realtime-multiplayer">
+        <h2>20. Realtime Multiplayer com Criptografia (@realtime)</h2>
+        <p>Para construir chats estilo Discord com canais ou jogos multiplayer onde 2 ou mais pessoas jogam juntas pela rede:</p>
+
+        <div class="code-block">
+          <div class="code-header"><span>server.yv (Servidor Central)</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="kw">let</span> server = <span class="at">@realtime.server</span>({
+    <span class="str">"port"</span>: <span class="num">7080</span>,
+    <span class="str">"secret"</span>: <span class="str">"CHAVE_SECRETA_2026"</span>
+});
+
+<span class="comment"># Quando alguém manda mensagem:</span>
+<span class="kw">fn</span> <span class="fn">aoReceberMsg</span>(cliente, dados) {
+    <span class="comment"># Envia apenas para as pessoas que estão na mesma sala!</span>
+    server.<span class="fn">to</span>(dados.salaId).<span class="fn">emit</span>(<span class="str">"nova_mensagem"</span>, dados);
+}
+server.<span class="fn">on</span>(<span class="str">"enviar_msg"</span>, aoReceberMsg);
+server.<span class="fn">start</span>();</code></pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header"><span>client.yv (Cada Jogador / Usuário)</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="kw">let</span> client = <span class="at">@realtime.client</span>({
+    <span class="str">"url"</span>: <span class="str">"ws://127.0.0.1:7080"</span>,
+    <span class="str">"secret"</span>: <span class="str">"CHAVE_SECRETA_2026"</span>
+});
+
+client.<span class="fn">on</span>(<span class="str">"nova_mensagem"</span>, <span class="kw">fn</span>(msg) {
+    <span class="fn">print</span>(<span class="str">$"[Chat]: {msg.autor} disse: {msg.texto}"</span>);
+});
+
+client.<span class="fn">connect</span>();
+client.<span class="fn">emit</span>(<span class="str">"enviar_msg"</span>, { <span class="str">"salaId"</span>: <span class="str">"geral"</span>, <span class="str">"autor"</span>: <span class="str">"Ana"</span>, <span class="str">"texto"</span>: <span class="str">"Oi gente!"</span> });</code></pre>
+        </div>
+      </section>
+
+      <!-- 21. SUPER MATRIZES -->
+      <section class="doc-section" id="super-matrizes">
+        <h2>21. Super Matrizes e Álgebra Linear Científica</h2>
+        
+        <div class="card" style="border-left: 4px solid var(--accent); margin-bottom: 24px;">
+          <h4 style="margin: 0 0 8px 0; color: var(--accent);">🤔 Por que o Yvira tem Matrizes nativas de 1ª Classe?</h4>
+          <p style="margin: 0; color: var(--text-dim); font-size: 0.95rem; line-height: 1.6;">
+            Em linguagens tradicionais como Python ou JavaScript, quando você quer multiplicar matrizes ou calcular a física de um jogo ou rede neural, você é obrigado a instalar bibliotecas externas gigantescas (como NumPy). No Yvira, <strong>o compilador e a VM já possuem um motor de álgebra linear científica integrado em C# nativo</strong>! Se você declarar qualquer array numérico simples <code>[1, 2, 3]</code> ou 2D <code>[[1, 2], [3, 4]]</code>, ele vira instantaneamente um objeto <code>YviraMatrix</code> de altíssima performance.
+          </p>
+        </div>
+
+        <h3>A. Geradores Rápidos Globais (Criação sem laços FOR)</h3>
+        <p>Você não precisa fazer laços para criar grades de números. O Yvira traz funções prontas:</p>
+        <div class="code-block">
+          <div class="code-header"><span>geradores_matrizes.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="comment"># 1. Matriz de Zeros (2 linhas x 3 colunas)</span>
+<span class="kw">let</span> z = <span class="fn">zeros</span>(<span class="num">2</span>, <span class="num">3</span>);
+
+<span class="comment"># 2. Matriz de Uns (3x3)</span>
+<span class="kw">let</span> u = <span class="fn">ones</span>(<span class="num">3</span>, <span class="num">3</span>);
+
+<span class="comment"># 3. Matriz Identidade Quadrada (diagonal principal = 1, resto = 0)</span>
+<span class="kw">let</span> i = <span class="fn">eye</span>(<span class="num">3</span>);
+
+<span class="comment"># 4. Matriz com números aleatórios entre 10 e 50 (2 linhas x 4 colunas)</span>
+<span class="kw">let</span> r = <span class="fn">randMat</span>(<span class="num">2</span>, <span class="num">4</span>, <span class="num">10</span>, <span class="num">50</span>);
+
+<span class="fn">print</span>(i);</code></pre>
+        </div>
+
+        <h3>B. Acesso Bidimensional, Linhas e Colunas (Fatiamento Instantâneo)</h3>
+        <p>Você pode acessar qualquer célula com vírgula ou extrair fatias completas sem escrever <code>for</code>:</p>
+        <div class="code-block">
+          <div class="code-header"><span>fatiamento_matrizes.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="kw">let</span> m = [
+    [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>],
+    [<span class="num">4</span>, <span class="num">5</span>, <span class="num">6</span>]
+];
+
+<span class="comment"># Acesso direto linha x coluna</span>
+<span class="fn">print</span>(m[<span class="num">0</span>, <span class="num">1</span>]); <span class="comment"># Linha 0, Coluna 1 -> 2</span>
+<span class="fn">print</span>(m[<span class="num">1</span>, <span class="num">2</span>]); <span class="comment"># Linha 1, Coluna 2 -> 6</span>
+
+<span class="comment"># Extração sem loop FOR!</span>
+<span class="kw">let</span> linha0 = m.<span class="fn">row</span>(<span class="num">0</span>); <span class="comment"># [1, 2, 3]</span>
+<span class="kw">let</span> coluna1 = m.<span class="fn">col</span>(<span class="num">1</span>); <span class="comment"># [2; 5]</span>
+
+<span class="fn">print</span>(<span class="str">"Linhas: "</span> + m.<span class="prop">rows</span> + <span class="str">" | Colunas: "</span> + m.<span class="prop">cols</span>);</code></pre>
+        </div>
+
+        <h3>C. Operações Aritméticas e por Escalar (Vetorizadas)</h3>
+        <p>Faça contas matemáticas em toda a matriz de uma vez só:</p>
+        <div class="code-block">
+          <div class="code-header"><span>escalares.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="kw">let</span> m = [[<span class="num">1</span>, <span class="num">2</span>], [<span class="num">3</span>, <span class="num">4</span>]];
+
+<span class="kw">let</span> dobro = m * <span class="num">2</span>;   <span class="comment"># Multiplica cada célula por 2: [[2, 4], [6, 8]]</span>
+<span class="kw">let</span> somado = m + <span class="num">10</span>; <span class="comment"># Adiciona 10 em todas as células: [[11, 12], [13, 14]]</span>
+<span class="kw">let</span> menos = m - <span class="num">1</span>;   <span class="comment"># Subtrai 1 de cada célula</span></code></pre>
+        </div>
+
+        <h3>D. Álgebra Linear Avançada: Multiplicação, Determinante, Inversa e Traço</h3>
+        <p>Toda a precisão matemática exigida por engenharia, física e inteligência artificial:</p>
+        <div class="code-block">
+          <div class="code-header"><span>algebra_linear.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="kw">let</span> A = [
+    [<span class="num">6</span>, <span class="num">1</span>, <span class="num">1</span>],
+    [<span class="num">4</span>, -<span class="num">2</span>, <span class="num">5</span>],
+    [<span class="num">2</span>, <span class="num">8</span>, <span class="num">7</span>]
+];
+
+<span class="comment"># 1. Determinante exato por Eliminação Gaussiana</span>
+<span class="kw">let</span> detA = A.<span class="fn">det</span>(); <span class="comment"># -306</span>
+
+<span class="comment"># 2. Traço da Matriz (Soma dos elementos da diagonal principal)</span>
+<span class="kw">let</span> traco = A.<span class="fn">trace</span>(); <span class="comment"># 6 + (-2) + 7 = 11</span>
+
+<span class="comment"># 3. Transposição instantânea (inverte linhas por colunas)</span>
+<span class="kw">let</span> trans = A.<span class="fn">transpose</span>(); <span class="comment"># ou A.T</span>
+
+<span class="comment"># 4. Inversão de Gauss-Jordan com Pivoteamento Parcial</span>
+<span class="kw">let</span> quad = [
+    [<span class="num">4</span>, <span class="num">7</span>],
+    [<span class="num">2</span>, <span class="num">6</span>]
+];
+<span class="kw">let</span> inv = quad.<span class="fn">inverse</span>(); <span class="comment"># ou quad.inv()</span>
+
+<span class="comment"># Comprovação matemática: Matriz * Inversa = Matriz Identidade!</span>
+<span class="kw">let</span> identidade = quad * inv;
+<span class="fn">print</span>(identidade); <span class="comment"># [[1, 0], [0, 1]]</span></code></pre>
+        </div>
+
+        <h3>E. Estatísticas e Reduções sem laço FOR</h3>
+        <p>Calcule agregados de milhões de dados numéricos instantaneamente:</p>
+        <div class="code-block">
+          <div class="code-header"><span>estatisticas_matriz.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="kw">let</span> dados = [
+    [<span class="num">10</span>, <span class="num">20</span>, <span class="num">30</span>],
+    [<span class="num">40</span>, <span class="num">50</span>, <span class="num">60</span>]
+];
+
+<span class="fn">print</span>(<span class="str">"Soma total:"</span>, dados.<span class="prop">sum</span>);      <span class="comment"># 210</span>
+<span class="fn">print</span>(<span class="str">"Média:"</span>, dados.<span class="prop">mean</span>);          <span class="comment"># 35</span>
+<span class="fn">print</span>(<span class="str">"Maior valor:"</span>, dados.<span class="prop">max</span>);    <span class="comment"># 60</span>
+<span class="fn">print</span>(<span class="str">"Menor valor:"</span>, dados.<span class="prop">min</span>);    <span class="comment"># 10</span></code></pre>
+        </div>
+
+        <h3>F. Resolução Automática de Sistemas Lineares (A · x = b)</h3>
+        <p>O Yvira resolve sistemas de equações com a função <code>solve(A, b)</code>:</p>
+        <div class="code-block">
+          <div class="code-header"><span>sistema_linear.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="comment"># Vamos resolver o sistema de equações de Física/Engenharia:
+#  2x +  y =   8
+#   x - 3y = -10
+# Solução matemática exata esperada: x = 2, y = 4</span>
+
+<span class="kw">let</span> A = [
+    [<span class="num">2</span>, <span class="num">1</span>],
+    [<span class="num">1</span>, -<span class="num">3</span>]
+];
+<span class="kw">let</span> b = [<span class="num">8</span>, -<span class="num">10</span>];
+
+<span class="comment"># O Yvira calcula o vetor x através de x = A⁻¹ · b</span>
+<span class="kw">let</span> solucao = <span class="fn">solve</span>(A, b);
+
+<span class="fn">print</span>(<span class="str">"Vetor Solução [x, y]:"</span>, solucao); <span class="comment"># [2, 4]</span>
+
+<span class="comment"># Verificação de segurança: A * x DEVE ser igual a b!</span>
+<span class="kw">let</span> checagem = A * solucao;
+<span class="fn">print</span>(<span class="str">"Comprovação A * x:"</span>, checagem);  <span class="comment"># [8, -10] comprovado!</span></code></pre>
+        </div>
+      </section>
+
+      <!-- 22. IA REFORÇO -->
+      <section class="doc-section" id="ia-reforco">
+        <h2>22. Inteligência Artificial por Reforço (Q-Learning)</h2>
+        <p>Um robozinho embutido no Yvira que aprende sozinho através de acertos e erros (recompensas):</p>
+
+        <div class="code-block">
+          <div class="code-header"><span>robo_ia.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="kw">let</span> robo = <span class="at">@ia.qlearning</span>({
+    <span class="str">"states"</span>: <span class="num">16</span>,  <span class="comment"># 16 posições no mapa</span>
+    <span class="str">"actions"</span>: <span class="num">4</span>,  <span class="comment"># Andar: Cima, Baixo, Esquerda, Direita</span>
+    <span class="str">"alpha"</span>: <span class="num">0.1</span>,
+    <span class="str">"gamma"</span>: <span class="num">0.9</span>
+});
+
+<span class="comment"># 1. O robô escolhe a melhor ação</span>
+<span class="kw">let</span> acaoEscolhida = robo.<span class="fn">escolher_acao</span>(<span class="num">0</span>);
+
+<span class="comment"># 2. Se ele achou a saída, damos 100 pontos de recompensa para ele aprender!</span>
+robo.<span class="fn">aprender</span>(<span class="num">0</span>, acaoEscolhida, <span class="num">100.0</span>, <span class="num">1</span>);</code></pre>
+        </div>
+      </section>
+
+      <!-- 23. FS ARQUIVOS -->
+      <section class="doc-section" id="fs-arquivos">
+        <h2>23. Gravar e Ler Arquivos do Disco (fs & CSV)</h2>
+        <p>Como salvar anotações, relatórios e tabelas no HD:</p>
+
+        <div class="code-block">
+          <div class="code-header"><span>arquivos.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code>import <span class="str">"fs"</span> as fs;
+
+<span class="comment"># Escreve um arquivo de texto</span>
+fs.<span class="fn">write</span>(<span class="str">"clientes.txt"</span>, <span class="str">"Primeira linha\n"</span>);
+fs.<span class="fn">append</span>(<span class="str">"clientes.txt"</span>, <span class="str">"Segunda linha adicionada\n"</span>);
+
+<span class="comment"># Lê o texto de volta</span>
+<span class="kw">if</span> (fs.<span class="fn">exists</span>(<span class="str">"clientes.txt"</span>)) {
+    <span class="kw">let</span> conteudo = fs.<span class="fn">read</span>(<span class="str">"clientes.txt"</span>);
+    <span class="fn">print</span>(conteudo);
+}</code></pre>
+        </div>
+      </section>
+
+      <!-- 24. PDF E EXCEL -->
+      <section class="doc-section" id="pdf-excel">
+        <h2>24. Gerando Arquivos PDF e Planilhas Excel (.xlsx)</h2>
+        <p>Crie relatórios com tabelas para empresas sem instalar Office ou programas externos:</p>
+
+        <div class="code-block">
+          <div class="code-header"><span>exportar_documentos.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code>import <span class="str">"doc"</span> as doc;
+
+<span class="comment"># 1. Transforma seu arquivo HTML/CSS em um PDF de alta qualidade</span>
+doc.<span class="fn">fromView</span>(<span class="str">"views/recibo.html"</span>, <span class="str">"ReciboFinal.pdf"</span>, {
+    <span class="str">"cliente"</span>: <span class="str">"Transportadora Yvira"</span>,
+    <span class="str">"valor"</span>: <span class="num">4500.0</span>
+});
+
+<span class="comment"># 2. Cria uma planilha Excel real (.xlsx)</span>
+doc.<span class="fn">writeExcel</span>(<span class="str">"Estoque.xlsx"</span>, {
+    <span class="str">"title"</span>: <span class="str">"Relatório de Peças 2026"</span>,
+    <span class="str">"headers"</span>: [<span class="str">"Código"</span>, <span class="str">"Produto"</span>, <span class="str">"Quantidade"</span>],
+    <span class="str">"rows"</span>: [
+        [<span class="num">101</span>, <span class="str">"Sensor Ultrassônico"</span>, <span class="num">45</span>],
+        [<span class="num">102</span>, <span class="str">"Cabo Blindado"</span>, <span class="num">120</span>]
+    ]
+});</code></pre>
+        </div>
+      </section>
+
+      <!-- 25. CRIPTOGRAFIA DEFESA -->
+      <section class="doc-section" id="criptografia-defesa">
+        <h2>25. Criptografia Segura de Senhas e Cifras (crypto)</h2>
+        <p>Nunca salve senhas puras em bancos de dados. Use o padrão de segurança corporativo:</p>
+
+        <div class="code-block">
+          <div class="code-header"><span>senhas_seguras.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code>import <span class="str">"crypto"</span> as crypto;
+
+<span class="comment"># 1. Gera um hash seguro com Salt (100.000 iterações PBKDF2)</span>
+<span class="kw">let</span> hashProtegido = crypto.<span class="fn">hashPassword</span>(<span class="str">"MinhaSenhaForte2026!"</span>);
+
+<span class="comment"># 2. Na hora do login, verifica se a senha bate com o hash</span>
+<span class="kw">let</span> estaCorreta = crypto.<span class="fn">verifyPassword</span>(<span class="str">"MinhaSenhaForte2026!"</span>, hashProtegido);
+<span class="fn">print</span>(<span class="str">$"Senha aprovada? {estaCorreta}"</span>); <span class="comment"># true</span>
+
+<span class="comment"># 3. Cifra arquivos com chave secreta AES-256</span>
+<span class="kw">let</span> textoCifrado = crypto.<span class="fn">encrypt</span>(<span class="str">"Dado Secreto"</span>, <span class="str">"MINHA_CHAVE_MESTRA"</span>);
+<span class="kw">let</span> original = crypto.<span class="fn">decrypt</span>(textoCifrado, <span class="str">"MINHA_CHAVE_MESTRA"</span>);</code></pre>
+        </div>
+      </section>
+
+      <!-- 26. SANDBOX -->
+      <section class="doc-section" id="sandbox-anti-taint">
+        <h2>26. Sandbox Corporativo e Proteção Anti-Invasão</h2>
+        <p>Se você permitir que usuários rodem códigos no seu servidor, trave o ambiente para ninguém apagar arquivos do seu Windows:</p>
+
+        <div class="code-block">
+          <div class="code-header"><span>sandbox.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code><span class="comment"># Bloqueia gravação em disco e subprocessos do sistema</span>
+<span class="at">@security.sandbox</span>({
+    <span class="str">"allowWriteDisk"</span>: <span class="kw">false</span>,
+    <span class="str">"allowSubprocess"</span>: <span class="kw">false</span>,
+    <span class="str">"allowedHosts"</span>: [<span class="str">"api.minhaempresa.com"</span>]
+});
+
+<span class="comment"># Qualquer tentativa maliciosa é abortada na hora pelo Yvira</span></code></pre>
+        </div>
+      </section>
+
+      <!-- 27. BUILD COMPILADOR -->
+      <section class="doc-section" id="build-compilador">
+        <h2>27. Gerando o Executável Final (.exe) em 1 Clique</h2>
+        <p>Seu sistema está pronto e você quer mandar para o cliente ou para um amigo sem ele precisar instalar nada?</p>
+
+        <div class="why-box">
+          <strong>🤔 O que o comando build faz?</strong> Ele pega seu código `.yv`, sua pasta de HTML/CSS (`views/`), coloca o ícone oficial do Yvira e junta tudo em um <strong>único arquivo executável `.exe`</strong>!
+        </div>
+
+        <div class="code-block">
+          <div class="code-header"><span>Terminal (PowerShell / CMD)</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code>yvira build main.yv --output MeuApp.exe</code></pre>
+        </div>
+
+        <div class="callout amber">
+          <strong>🎉 Resultado:</strong> Um arquivo <code>MeuApp.exe</code> que você dá dois cliques no Windows e ele abre na hora com seu ícone na barra de tarefas!
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script>
+    function navegarPara(id) {
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+
+      document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
+      });
+      event.currentTarget.classList.add('active');
+    }
+
+    function copiarCodigo(btn) {
+      const pre = btn.parentElement.nextElementSibling;
+      const code = pre.innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        const originalText = btn.innerText;
+        btn.innerText = 'Copiado! ✓';
+        btn.style.background = '#34d399';
+        btn.style.color = '#000';
+        setTimeout(() => {
+          btn.innerText = originalText;
+          btn.style.background = '';
+          btn.style.color = '';
+        }, 1800);
+      });
+    }
+
+    function filtrarNavegacao() {
+      const query = document.getElementById('searchFilter').value.toLowerCase();
+      const links = document.querySelectorAll('.nav-link');
+      links.forEach(l => {
+        const text = l.innerText.toLowerCase();
+        if (text.includes(query)) {
+          l.style.display = 'flex';
+        } else {
+          l.style.display = 'none';
+        }
+      });
+    }
+  </script>
+</body>
+</html>

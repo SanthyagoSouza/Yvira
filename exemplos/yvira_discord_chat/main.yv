@@ -1,0 +1,152 @@
+# =========================================================
+# YVIRA CHAT CLIENT - APLICAÇÃO DESKTOP NATIVA
+# =========================================================
+
+print("=========================================================");
+print("       YVIRA CHAT - CLIENTE DISCORD-LIKE NATIVO          ");
+print("=========================================================\n");
+
+let app = criar_janela({
+    "titulo": "Yvira Channels - Comunidade Realtime",
+    "view": "views/index.html",
+    "largura": 1100,
+    "altura": 740,
+    "min_largura": 900,
+    "min_altura": 600,
+    "modo_tela": "semi-full",
+    "barra_customizada": true,
+    "redimensionavel": true,
+    "cor_fundo": "#1e1f22"
+});
+
+# Descoberta de Servidor ou fallback para porta local 7080
+let enderecoServidor = "ws://127.0.0.1:7080";
+
+if (args != null && len(args) > 0 && args[0] != "") {
+    enderecoServidor = args[0];
+} else {
+    print("[Rede]: Procurando servidor Yvira Chat na rede local...");
+    let achou = @realtime.descobrir(1);
+    if (achou.encontrado) {
+        enderecoServidor = achou.url;
+        print($"[Rede]: Servidor localizado via beacon em {achou.url}!");
+    } else {
+        print($"[Rede]: Servidor padrão: {enderecoServidor}");
+    }
+}
+
+let rede = @realtime.cliente({
+    "endereco": enderecoServidor,
+    "segredo": "YVIRA_CHAT_SECRET_2026",
+    "rotacao": 30
+});
+
+# ---------------------------------------------
+# EVENTOS DA REDE -> JANELA WEB
+# ---------------------------------------------
+
+fn aoConectarServidor() {
+    print("[Cliente]: Conectado ao Servidor Yvira Realtime!");
+    app.emitir("status_rede", {
+        "conectado": true,
+        "endereco": enderecoServidor
+    });
+}
+
+rede.ao("conectar", aoConectarServidor);
+
+fn aoLoginSucesso(dados) {
+    print($"[Login Aprovado]: Bem-vindo {dados.meuNome} (ID: {dados.meuId})");
+    app.emitir("login_ok", dados);
+}
+
+rede.ao("login_sucesso", aoLoginSucesso);
+
+fn aoAtualizarCanais(lista) {
+    app.emitir("atualizar_canais", lista);
+}
+
+rede.ao("atualizar_canais", aoAtualizarCanais);
+
+fn aoCanalAlterado(dados) {
+    print($"[Canal]: Entrou em #{dados.nome}");
+    app.emitir("canal_alterado", dados);
+}
+
+rede.ao("canal_alterado", aoCanalAlterado);
+
+fn aoNovaMensagem(msg) {
+    app.emitir("nova_mensagem", msg);
+}
+
+rede.ao("nova_mensagem", aoNovaMensagem);
+
+fn aoUsuarioEntrouCanal(dados) {
+    app.emitir("usuario_entrou_canal", dados);
+}
+
+rede.ao("usuario_entrou_canal", aoUsuarioEntrouCanal);
+
+fn aoUsuarioSaiuCanal(dados) {
+    app.emitir("usuario_saiu_canal", dados);
+}
+
+rede.ao("usuario_saiu_canal", aoUsuarioSaiuCanal);
+
+fn aoUsuarioDigitando(dados) {
+    app.emitir("usuario_digitando", dados);
+}
+
+rede.ao("usuario_digitando", aoUsuarioDigitando);
+
+fn aoDesconectarServidor() {
+    print("[Cliente]: Conexão com o servidor foi perdida.");
+    app.emitir("status_rede", {
+        "conectado": false,
+        "mensagem": "Servidor desconectado. Tentando reconectar..."
+    });
+}
+
+rede.ao("desconectar", aoDesconectarServidor);
+
+# ---------------------------------------------
+# EVENTOS DA JANELA WEB -> REDE
+# ---------------------------------------------
+
+fn frontEntrar(dados) {
+    print("[Front]: Solicitando entrada no chat com nome " + dados.nome);
+    rede.emitir("entrar_chat", dados);
+}
+
+app.ao_evento("front_entrar", frontEntrar);
+
+fn frontCriarCanal(dados) {
+    print("[Front]: Criando novo canal #" + dados.nome);
+    rede.emitir("criar_canal", dados);
+}
+
+app.ao_evento("front_criar_canal", frontCriarCanal);
+
+fn frontMudarCanal(dados) {
+    rede.emitir("mudar_canal", dados);
+}
+
+app.ao_evento("front_mudar_canal", frontMudarCanal);
+
+fn frontEnviarMensagem(dados) {
+    rede.emitir("enviar_mensagem", dados);
+}
+
+app.ao_evento("front_enviar_mensagem", frontEnviarMensagem);
+
+fn frontDigitando(dados) {
+    rede.emitir("digitando", dados);
+}
+
+app.ao_evento("front_digitando", frontDigitando);
+
+# Conecta na rede e exibe a interface
+rede.conectar();
+app.exibir();
+app.esperar();
+

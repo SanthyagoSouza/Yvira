@@ -1,0 +1,333 @@
+# =========================================================
+# YVIRA CHAT REALTIME - SERVIDOR CENTRAL (DISCORD-LIKE)
+# =========================================================
+
+print("=========================================================");
+print("       YVIRA CHAT - SERVIDOR DE CANAIS EM TEMPO REAL     ");
+print("=========================================================\n");
+
+let servidor = @realtime.servidor({
+    "porta": 7080,
+    "segredo": "YVIRA_CHAT_SECRET_2026",
+    "rotacao": 30,
+    "limitePacotes": 200
+});
+
+# Estado do Servidor
+let usuarios = {};     # clienteId -> { id, nome, avatar, status, canalAtual }
+let canais = {
+    "geral": {
+        "id": "geral",
+        "nome": "geral",
+        "descricao": "Bate-papo livre para toda a comunidade",
+        "criador": "Sistema",
+        "criadoEm": "Agora",
+        "mensagens": []
+    },
+    "devs": {
+        "id": "devs",
+        "nome": "desenvolvimento",
+        "descricao": "Discussões sobre a linguagem Yvira e código",
+        "criador": "Sistema",
+        "criadoEm": "Agora",
+        "mensagens": []
+    },
+    "jogos": {
+        "id": "jogos",
+        "nome": "jogos",
+        "descricao": "Combinar partidas e novidades gamer",
+        "criador": "Sistema",
+        "criadoEm": "Agora",
+        "mensagens": []
+    }
+};
+
+let canaisIds = ["geral", "devs", "jogos"];
+let idsUsuariosConectados = [];
+
+fn aoIniciar(info) {
+    print("[Servidor Online]: Yvira Chat ativo na porta " + info.porta);
+    print("  -> Canais padrão criados: #geral, #desenvolvimento, #jogos");
+    print("  -> Criptografia E2E: " + info.criptografia);
+}
+
+servidor.ao("iniciado", aoIniciar);
+
+fn obterListaCanais() {
+    let lista = [];
+    for (cid in canaisIds) {
+        let c = canais[cid];
+        if (c != null) {
+            # Conta membros no canal
+            let qtd = 0;
+            for (uid in idsUsuariosConectados) {
+                let u = usuarios[uid];
+                if (u != null && u.canalAtual == cid) {
+                    qtd = qtd + 1;
+                }
+            }
+            lista.push({
+                "id": c.id,
+                "nome": c.nome,
+                "descricao": c.descricao,
+                "criador": c.criador,
+                "membrosQtd": qtd
+            });
+        }
+    }
+    return lista;
+}
+
+fn obterMembrosDoCanal(canalId) {
+    let membros = [];
+    for (uid in idsUsuariosConectados) {
+        let u = usuarios[uid];
+        if (u != null && u.canalAtual == canalId) {
+            membros.push({
+                "id": u.id,
+                "nome": u.nome,
+                "avatar": u.avatar,
+                "status": u.status
+            });
+        }
+    }
+    return membros;
+}
+
+fn aoConectar(cliente) {
+    print("[Conexão]: Novo usuário conectado ID: " + cliente.id);
+}
+
+servidor.ao("conectar", aoConectar);
+
+fn aoEntrarChat(cliente, dados) {
+    let nome = "Explorador_" + cliente.id;
+    let avatar = "default";
+
+    if (dados != null) {
+        if (dados.nome != null && dados.nome != "") {
+            nome = dados.nome;
+        }
+        if (dados.avatar != null && dados.avatar != "") {
+            avatar = dados.avatar;
+        }
+    }
+
+    usuarios[cliente.id] = {
+        "id": cliente.id,
+        "nome": nome,
+        "avatar": avatar,
+        "status": "online",
+        "canalAtual": "geral"
+    };
+
+    idsUsuariosConectados.push(cliente.id);
+
+    # Coloca o cliente no canal padrão #geral
+    cliente.entrar("geral");
+
+    print("[Login]: " + nome + " entrou no chat. Alocado em #geral.");
+
+    let cGeral = canais["geral"];
+    let historico = [];
+    if (cGeral != null) {
+        historico = cGeral.mensagens;
+    }
+
+    cliente.emitir("login_sucesso", {
+        "meuId": cliente.id,
+        "meuNome": nome,
+        "meuAvatar": avatar,
+        "canais": obterListaCanais(),
+        "canalAtual": "geral",
+        "historico": historico,
+        "membros": obterMembrosDoCanal("geral")
+    });
+
+    # Notifica o canal que o usuário chegou
+    servidor.para("geral").emitir("usuario_entrou_canal", {
+        "canalId": "geral",
+        "usuario": usuarios[cliente.id]
+    });
+
+    # Atualiza lista global de canais com contagens
+    servidor.emitir("atualizar_canais", obterListaCanais());
+}
+
+servidor.ao("entrar_chat", aoEntrarChat);
+
+fn aoCriarCanal(cliente, dados) {
+    let user = usuarios[cliente.id];
+    if (user == null) { return; }
+
+    let nomeCanal = dados.nome;
+    if (nomeCanal == null || nomeCanal == "") {
+        nomeCanal = "novo-canal";
+    }
+
+    # Normaliza nome
+    let idCanal = "c_" + len(canaisIds) + "_" + cliente.id;
+    let descricao = "Canal criado por " + user.nome;
+    if (dados.descricao != null && dados.descricao != "") {
+        descricao = dados.descricao;
+    }
+
+    canais[idCanal] = {
+        "id": idCanal,
+        "nome": nomeCanal,
+        "descricao": descricao,
+        "criador": user.nome,
+        "mensagens": []
+    };
+
+    canaisIds.push(idCanal);
+
+    print("[Novo Canal]: '" + nomeCanal + "' criado por " + user.nome);
+
+    # Transmite atualização de canais para todos
+    servidor.emitir("atualizar_canais", obterListaCanais());
+
+    # Responde para quem criou poder mudar direto para ele
+    cliente.emitir("canal_criado_sucesso", {
+        "id": idCanal,
+        "nome": nomeCanal
+    });
+}
+
+servidor.ao("criar_canal", aoCriarCanal);
+
+fn aoMudarCanal(cliente, dados) {
+    let user = usuarios[cliente.id];
+    if (user == null) { return; }
+
+    let novoCanalId = dados.canalId;
+    let canalDestino = canais[novoCanalId];
+    if (canalDestino == null) { return; }
+
+    let canalAntigo = user.canalAtual;
+
+    # Sai do canal antigo
+    if (canalAntigo != null && canalAntigo != "") {
+        cliente.sair(canalAntigo);
+        servidor.para(canalAntigo).emitir("usuario_saiu_canal", {
+            "canalId": canalAntigo,
+            "usuarioId": cliente.id,
+            "nome": user.nome
+        });
+    }
+
+    # Entra no novo canal
+    user.canalAtual = novoCanalId;
+    cliente.entrar(novoCanalId);
+
+    print("[Mudança de Canal]: " + user.nome + " foi para #" + canalDestino.nome);
+
+    cliente.emitir("canal_alterado", {
+        "canalId": novoCanalId,
+        "nome": canalDestino.nome,
+        "descricao": canalDestino.descricao,
+        "historico": canalDestino.mensagens,
+        "membros": obterMembrosDoCanal(novoCanalId)
+    });
+
+    # Notifica os outros membros do canal
+    servidor.para(novoCanalId).emitir("usuario_entrou_canal", {
+        "canalId": novoCanalId,
+        "usuario": user
+    });
+
+    # Atualiza contagem nos canais
+    servidor.emitir("atualizar_canais", obterListaCanais());
+}
+
+servidor.ao("mudar_canal", aoMudarCanal);
+
+fn aoEnviarMensagem(cliente, dados) {
+    let user = usuarios[cliente.id];
+    if (user == null) { return; }
+
+    let texto = dados.texto;
+    if (texto == null || texto == "") { return; }
+
+    let canalId = user.canalAtual;
+    let canal = canais[canalId];
+    if (canal == null) { return; }
+
+    let hora = "Agora";
+
+    let pacoteMsg = {
+        "id": "msg_" + cliente.id + "_" + len(canal.mensagens),
+        "canalId": canalId,
+        "autorId": cliente.id,
+        "autorNome": user.nome,
+        "autorAvatar": user.avatar,
+        "texto": texto,
+        "hora": hora
+    };
+
+    # Guarda no histórico do canal (máx 50 msgs)
+    canal.mensagens.push(pacoteMsg);
+    if (len(canal.mensagens) > 50) {
+        canal.mensagens.shift();
+    }
+
+    # Emite para todos que estão no canal
+    servidor.para(canalId).emitir("nova_mensagem", pacoteMsg);
+    print("[#" + canal.nome + "] " + user.nome + ": " + texto);
+}
+
+servidor.ao("enviar_mensagem", aoEnviarMensagem);
+
+fn aoDigitando(cliente, dados) {
+    let user = usuarios[cliente.id];
+    if (user == null) { return; }
+
+    let canalId = user.canalAtual;
+    if (canalId != null && canalId != "") {
+        servidor.para(canalId).emitir("usuario_digitando", {
+            "canalId": canalId,
+            "usuarioId": cliente.id,
+            "nome": user.nome
+        });
+    }
+}
+
+servidor.ao("digitando", aoDigitando);
+
+fn aoDesconectar(cliente) {
+    let user = usuarios[cliente.id];
+    if (user != null) {
+        print("[Desconexão]: " + user.nome + " desconectou.");
+        let canalAntigo = user.canalAtual;
+        if (canalAntigo != null && canalAntigo != "") {
+            servidor.para(canalAntigo).emitir("usuario_saiu_canal", {
+                "canalId": canalAntigo,
+                "usuarioId": cliente.id,
+                "nome": user.nome
+            });
+        }
+
+        # Remove dos arrays
+        usuarios[cliente.id] = null;
+        let novoArray = [];
+        for (id in idsUsuariosConectados) {
+            if (id != cliente.id) {
+                novoArray.push(id);
+            }
+        }
+        idsUsuariosConectados = novoArray;
+
+        servidor.emitir("atualizar_canais", obterListaCanais());
+    }
+}
+
+servidor.ao("desconectar", aoDesconectar);
+
+servidor.iniciar();
+print("[Servidor Pronto]: Yvira Chat ativo! Aguardando membros...\n");
+
+let rodando = true;
+while (rodando) {
+    dormir(100);
+}
+

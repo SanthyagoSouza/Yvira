@@ -1,0 +1,245 @@
+================================================================================
+          YVIRA PROGRAMMING LANGUAGE — MAPA COMPLETO DE RECURSOS E PODERES
+                        Versao: 2.1.0 (Windows Native x64)
+                   Autor & Criador: Santhyago Souza Ponciano
+================================================================================
+
+Este arquivo lista TUDO o que a linguagem Yvira possui, faz e entrega nativamente,
+sem depender de bibliotecas externas pesadas ou configuracoes mirabolantes.
+
+--------------------------------------------------------------------------------
+1. PARADIGMAS & FUNDAMENTOS DA SINTAXE
+--------------------------------------------------------------------------------
+- Variaveis e Constantes:
+  * 'let' para variaveis mutaveis (ex: let x = 10;).
+  * 'const' para constantes protegidas pelo compilador (lanca erro se tentar alterar).
+- Tipagem Dinamica Forte:
+  * Numeros (Inteiros e Decimais de 64-bits).
+  * Textos (Strings com escape e UTF-8 nativo).
+  * Booleanos (true e false).
+  * Listas heterogeneas e Mapas (Dicionarios associativos).
+  * Matrizes cientificas 2D nativas.
+- Interpolacao Moderna de Strings:
+  * Sintaxe com '$' (ex: let msg = $"Ola {usuario.nome}, saldo: R$ {saldo}";).
+- Operadores Aritmeticos & Atalhos:
+  * Soma (+), Subtracao (-), Multiplicacao (*), Divisao (/), Resto/Modulo (%), Potencia (**).
+  * Atalhos: ++, --, +=, -=, *=, /=.
+- Operadores de Comparacao:
+  * Igual (==), Diferente (!= ou <>), Maior (>), Menor (<), Maior/Igual (>=), Menor/Igual (<=).
+- Operadores Logicos Flexiveis:
+  * Aceita simbolos: &&, ||, !
+  * Aceita palavras: and, or, not
+- Controle de Fluxo:
+  * if, else if, else
+  * while (loops condicionais)
+  * for (let i = 0; i < n; i++) classico
+  * for (item in lista) e foreach
+  * match (Pattern Matching moderno para substituir cadeias de if/else)
+- Tratamento de Excecoes Completo:
+  * try / catch (captura erros de execucao sem derrubar o programa)
+  * throw (dispara erros customizados)
+  * finally (bloco de garantia que roda SEMPRE no final)
+- Orientacao a Objetos (POO):
+  * class, constructor, this
+  * Metodos de instancia e metodos estaticos
+  * Heranca completa via 'extends'
+  * Instanciacao via 'new Classe(...)'
+
+--------------------------------------------------------------------------------
+2. MOTOR GRAFICO DESKTOP & WEBVIEW2 (GUI DE ALTA PERFORMANCE)
+--------------------------------------------------------------------------------
+- Janelas Nativas com Microsoft Edge WebView2 aceleradas por hardware:
+  * Funcao nativa: create_window (ou window / criar_janela).
+  * Opcoes: title, view (HTML), width, height, min_width, min_height, resizable, background.
+  * Modo de tela: 'normal', 'semi-full' ou 'fullscreen'.
+  * Frameless: Remove a barra feia do Windows para permitir design 100% customizado.
+- Sistema de Titlebar Customizada:
+  * Qualquer elemento HTML com data-arrastavel="true" ou classe .titlebar vira alca para mover a janela com o mouse.
+  * Acoes injetadas nativamente no JavaScript:
+    - window.yvira.minimizar()
+    - window.yvira.maximizar()
+    - window.yvira.fechar()
+- Ponte Bidirecional Yvira <-> JavaScript (ZERO JSON MANUAL):
+  * Yvira -> Tela: app.emit("evento", dados) chama direto window.evento(dados) no JS.
+  * Tela -> Yvira: window.yvira.emit("acao", payload) dispara app.on("acao", fn) no Yvira.
+  * Compartilhamento direto de memoria sem precisar de fetch, axios, websockets locais ou JSON.parse!
+
+--------------------------------------------------------------------------------
+3. TERMINAL USER INTERFACE (TUI) & CONSOLE RICO
+--------------------------------------------------------------------------------
+- Primitivas visuais embutidas para linha de comando:
+  * menu(titulo, opcoes): Cria menu interativo navegavel com as setas ↑ / ↓ e Enter.
+  * input(prompt): Exibe mensagem e bloqueia a execucao esperando a digitacao do usuario + Enter.
+  * box(titulo, texto): Desenha caixas estilizadas com bordas duplas Unicode.
+  * progress_bar(atual, total, texto): Barra de progresso animada ([████░░] 60%).
+  * table(headers, rows): Renderiza tabelas formatadas com ajuste automatico de colunas.
+  * confirm(texto): Pergunta de confirmacao rapida [S/n].
+  * clear_screen() / limpar_tela(): Limpa o terminal.
+  * sleep(ms) / dormir(ms): Pausa a execucao em milissegundos.
+
+--------------------------------------------------------------------------------
+4. FERRAMENTAS DO CLI (LINHA DE COMANDO DO SISTEMA)
+--------------------------------------------------------------------------------
+- yvira (sem argumentos): Abre a Central Interativa do Yvira com menus coloridos.
+- yvira run arquivo.yv: Executa qualquer script ou projeto.
+- yvira repl: Abre o Console Interativo com destaque de sintaxe em tempo real com cores ANSI.
+- yvira init nome_projeto: Cria um projeto novo estruturado com manifesto, .env, main.yv e views/.
+- yvira install [pacote]: Gerenciador de dependencias descentralizado:
+  * Baixa do GitHub (github:usuario/repo).
+  * Baixa de URLs diretas (https://.../modulo.yv).
+  * Salva no manifesto yvira.json e faz cache em ~/.yvira/cache/.
+- yvira test: Executa bateria automatizada de testes do compilador.
+- yvira info: Mostra versao, arquitetura, memoria e ambiente.
+- yvira upgrade: Auto-atualizacao do executavel da linguagem.
+- yvira build main.yv --output App.exe: Empacota o script, dependencias, assets HTML/CSS e o icone oficial (.ico) em um executavel unico standalone e portatil.
+
+--------------------------------------------------------------------------------
+5. BANCO DE DADOS EMBUTIDO & MULTI-CONEXOES
+--------------------------------------------------------------------------------
+- Motor SQLite Nativo sem instalacao de drivers:
+  * @db("sqlite://caminho.db"): Abre conexao persistente com banco de dados.
+  * @db("sqlite://:memory:"): Cria banco ultra-veloz na memoria RAM.
+  * Multi-bancos: @db.analytics("sqlite://outro.db") gerencia multiplas conexoes nomeadas.
+- Execucao Segura:
+  * @exec(sql, parametros): Roda criacao de tabelas, inserts e updates com parametros preparados (?) contra SQL Injection.
+  * @query(sql, parametros): Faz consultas SELECT e devolve automaticamente uma Lista de Mapas!
+  * @transaction { ... }: Bloco atomico de transacao com Commit automatico ou Rollback total em caso de erro/excecao.
+
+--------------------------------------------------------------------------------
+6. SERVIDOR HTTP CORPORATIVO & MICRO-APIS (@http / http.serve)
+--------------------------------------------------------------------------------
+- Servidor REST integrado de alta concorrencia:
+  * http.serve(porta, handler): Sobe servidor web em pouquissimas linhas.
+  * Roteamento por metodo e caminho (GET /produtos, POST /usuarios).
+  * req.body chega automaticamente como Mapa nativo (sem body-parser ou json_decode).
+  * Devolver Maps ou Listas nativas no return envia JSON com cabecalho application/json automatico.
+  * Firewall embutido com Protecao Anti-DoS e Rate-Limiting.
+  * Cabecalhos de seguranca OWASP injetados automaticamente:
+    - X-Content-Type-Options: nosniff
+    - X-Frame-Options: SAMEORIGIN
+    - X-XSS-Protection: 1; mode=block
+
+--------------------------------------------------------------------------------
+7. CACHE EM MEMORIA ULTRA-RAPIDO (HIGH-THROUGHPUT)
+--------------------------------------------------------------------------------
+- Modulo nativo 'cache' para milhoes de operacoes por segundo:
+  * cache.set(chave, valor): Salva qualquer dado na memoria RAM.
+  * cache.get(chave, fallback): Leitura instantanea com valor padrao opcional.
+  * cache.has(chave): Checa se chave existe.
+  * cache.remove(chave): Deleta chave da memoria.
+  * cache.incr(chave, valor) / cache.decr(chave, valor): Operacoes aritmeticas atomicas thread-safe (sem concorrencia de trava manual).
+  * TTL (Time-To-Live): cache.set(chave, valor, segundosDeExpiracao) faz o dado sumir sozinho da memoria.
+  * Namespaces isolados: cache.store("pix") separa dados sem colisao de nomes.
+
+--------------------------------------------------------------------------------
+8. TEMPORIZACAO & AGENDAMENTO SEM CRON (@time)
+--------------------------------------------------------------------------------
+- Agendamento Nativo sem bloquear a thread principal:
+  * @time.minhaFuncao(segundos): Executa periodicamente a funcao a cada X segundos em background.
+  * @stop.minhaFuncao(): Cancela e interrompe o agendamento imediatamente.
+  * Perfeito para ETL continuo, bots traders, monitoramento de APIs e dashboards reativos.
+
+--------------------------------------------------------------------------------
+9. CONCORRENCIA, THREADS & WORKERS (@spawn & @worker)
+--------------------------------------------------------------------------------
+- @spawn.funcao(args): Dispara uma funcao assincrona em thread separada retornando uma Promessa.
+  * promessa.resolvido(): Verifica se terminou sem travar.
+  * promessa.esperar(): Aguarda a conclusao e devolve o valor de retorno.
+- @worker.pool(numThreads): Cria um conjunto de trabalhadores paralelos.
+  * pool.map(lista, funcao): Distribui listas gigantes entre os nucleos da CPU para processamento paralelo.
+  * pool.fechar(): Desliga os workers e libera recursos de memoria.
+
+--------------------------------------------------------------------------------
+10. REALTIME MULTIPLAYER & WEBSOCKETS CRIPTOGRAFADOS (@realtime)
+--------------------------------------------------------------------------------
+- Servidor Realtime:
+  * @realtime.server({ port, secret, rotacao, limitePacotes }): Motor WebSocket nativo sem necessidade de permissao de administrador.
+  * server.on(evento, fn): Escuta eventos de rede.
+  * server.emit(evento, dados): Envia evento para todos os clientes conectados.
+  * server.to(sala).emit(evento, dados): Isolamento de salas virtuais (canais estilo Discord / salas de duelos em jogos).
+  * Limite Anti-Flood integrado para barrar ataques de pacotes.
+- Cliente Realtime:
+  * @realtime.client({ url, secret }): Conexao WebSocket ultra-veloz.
+  * client.connect(), client.on(), client.emit(), client.disconnect().
+- Auto-Discovery por Beacon UDP:
+  * @realtime.descobrir(tempoSegundos): Localiza automaticamente o IP do servidor na rede local via broadcast UDP sem precisar digitar IP manualmente.
+- Criptografia E2E Militar:
+  * Trafego de pacotes encriptado de ponta a ponta com AES-256-CBC e rotacao dinamica de chaves temporais.
+
+--------------------------------------------------------------------------------
+11. SUPER MOTOR MATRICIAL & ALGEBRA LINEAR
+--------------------------------------------------------------------------------
+- Matrizes 2D como cidadaos de primeira classe:
+  * Arrays numericos 2D ([[1, 2], [3, 4]]) sao promovidos automaticamente para Matrizes Cientificas.
+  * Multiplicacao Matricial direta: C = A * B (Dot Product otimizado).
+  * A.transpose(): Transposicao de matriz.
+  * A.inverse() ou A.inv(): Inversao matricial por eliminacao de Gauss-Jordan.
+  * A.det() ou A.determinant(): Calculo de determinante.
+  * A.trace(), A.sum(), A.mean(), A.max(), A.min().
+  * A.solve(B): Resolve sistemas de equacoes lineares (A * X = B).
+
+--------------------------------------------------------------------------------
+12. INTELIGENCIA ARTIFICIAL POR REFORCO (Q-LEARNING NATIVO)
+--------------------------------------------------------------------------------
+- Motor de IA integrado (@ia.qlearning):
+  * Parametros: states, actions, alpha (taxa de aprendizado), gamma (fator de desconto), epsilon (exploracao).
+  * agente.escolher_acao(estado): Escolhe a melhor jogada/acao baseada na matriz Q.
+  * agente.aprender(estado, acao, recompensa, proximoEstado): Treina a rede de decisao por reforco.
+  * agente.tabela_q(): Exporta a matriz de conhecimento gerada.
+
+--------------------------------------------------------------------------------
+13. DOCUMENTOS: GERACAO DE PDF & PLANILHAS EXCEL (doc)
+--------------------------------------------------------------------------------
+- Exportacao de PDF:
+  * doc.fromView("template.html", "saida.pdf", dados): Converte template HTML/CSS diretamente em documento PDF de alta fidelidade com dados injetados.
+  * doc.writePdf(caminho, config): Cria PDFs programaticamente com titulos, cores e tabelas.
+- Exportacao e Leitura de Planilhas Excel (.xlsx):
+  * doc.writeExcel(caminho, { title, headers, rows }): Gera planilhas Excel nativas com celulas estilizadas.
+  * doc.readExcel(caminho): Le planilhas existentes e converte as tabelas em Listas/Mapas para o Yvira.
+
+--------------------------------------------------------------------------------
+14. SEGURANCA DEFENSIVA & CRIPTOGRAFIA (crypto)
+--------------------------------------------------------------------------------
+- Modulo nativo 'crypto':
+  * crypto.sha256(texto) e crypto.sha512(texto): Gera hashes criptograficos hexadecimais.
+  * crypto.hmac(segredo, mensagem): Assinaturas de autenticidade HMAC-SHA256.
+  * crypto.randomBytes(tamanho): Gera sequencias aleatorias criptograficamente seguras.
+  * crypto.uuid(): Gera identificadores unicos UUID v4.
+  * crypto.hashPassword(senha): Hash de senha blindado com Salt aleatorio e PBKDF2 (100.000 iteracoes).
+  * crypto.verifyPassword(senha, hashSalvo): Verificacao de senha com comparacao em tempo constante (anti-timing attacks).
+  * crypto.encrypt(texto, chave) e crypto.decrypt(cifrado, chave): Envelope simetrico AES-256 com derivacao PBKDF2 e IV aleatorio.
+
+--------------------------------------------------------------------------------
+15. SANDBOX CORPORATIVO & BLINDAGEM ANTI-TAINT
+--------------------------------------------------------------------------------
+- @security.sandbox(politica):
+  * allowWriteDisk: Bloqueia qualquer escrita de arquivos.
+  * allowSubprocess: Impede execucao de programas ou comandos do sistema operacional.
+  * allowedHosts: Lista branca de enderecos IPs/dominios autorizados na rede.
+  * maxMemoryMb / maxExecutionTimeMs: Limita consumo de RAM e mata loops infinitos maliciosos.
+- Taint Tracking Nativo:
+  * Rastreia a origem de variaveis que vieram de fontes externas nao confiaveis (inputs de usuarios, query strings de HTTP).
+  * Bloqueia em tempo de execucao qualquer tentativa de concatenar essas variaveis cruas em queries SQL sem parametros preparados.
+
+--------------------------------------------------------------------------------
+16. SISTEMA DE ARQUIVOS (fs) & REDE (http)
+--------------------------------------------------------------------------------
+- Modulo 'fs':
+  * fs.read(caminho), fs.readLines(caminho): Leitura completa ou linha por linha.
+  * fs.write(caminho, conteudo), fs.append(caminho, conteudo): Criacao e adicao.
+  * fs.exists(caminho), fs.remove(caminho), fs.list(diretorio).
+  * fs.writeCsv(caminho, matriz), fs.readCsv(caminho): Serializacao direta de matrizes matematicas em arquivos CSV.
+- Modulo 'http':
+  * http.get(url, cabecalhos): Dispara requisicao GET e devolve resposta com .status, .ok e metodo .json() automatico.
+  * http.post(url, corpo, cabecalhos): Dispara requisicao POST enviando dados como JSON automaticamente.
+
+--------------------------------------------------------------------------------
+17. IMPORTACAO NATIVA (.env, .json e modulos .yv)
+--------------------------------------------------------------------------------
+- import ".env" as env: Carrega credenciais do arquivo .env diretamente para variaveis.
+- import "dados.json" as config: Transforma arquivos JSON em Mapas nativos em memoria.
+- import "outro_script.yv" as modulo: Divide codigos grandes em multiplos arquivos com escopo limpo.
+
+================================================================================
+FIM DO MAPA DE RECURSOS — YVIRA LANGUAGE PLATFORM (2026)
+================================================================================

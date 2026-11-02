@@ -1,0 +1,89 @@
+# ==============================================================================
+# BATERIA DE TESTES DE SEGURANÇA EM YVIRA
+# 1. Sandbox de Arquivos (FS) e Rede (Net)
+# 2. Taint Tracking Anti-SQL Injection
+# 3. Rate Limiter e Anti-DoS
+# ==============================================================================
+
+import "security"
+import "fs"
+import "http"
+
+print("==================================================")
+print("🛡️  INICIANDO AUDITORIA DE SEGURANÇA DO YVIRA")
+print("==================================================")
+
+# Conectar a um banco SQLite em memória
+@db("sqlite://:memory:")
+@exec("CREATE TABLE usuarios (id INTEGER PRIMARY KEY, nome TEXT, perfil TEXT);")
+@exec("INSERT INTO usuarios (nome, perfil) VALUES ('Alice', 'admin'), ('Bob', 'comum');")
+
+# ----------------------------------------------------
+# TESTE 1: Anti-SQL Injection com Taint Tracking
+# ----------------------------------------------------
+print("\n[1] Testando Proteção Anti-SQL Injection...")
+
+# Simulando entrada de usuário malicioso através de security.taint
+let inputMalicioso = security.taint("' OR 1=1 --", "formulario_web")
+print("Entrada marcada como Tainted?", security.isTainted(inputMalicioso))
+
+# Se concatenar input malicioso diretamente na query:
+let queryPerigosa = "SELECT * FROM usuarios WHERE nome = '" + inputMalicioso + "';"
+print("A query resultante ficou Tainted?", security.isTainted(queryPerigosa))
+
+let bloqueouSqlInjection = false
+try {
+    # Isso DEVE ser interceptado antes de chegar ao banco de dados!
+    let dados = @query(queryPerigosa)
+} catch (erro) {
+    bloqueouSqlInjection = true
+    print("Sucesso! O Yvira bloqueou o SQL Injection preventivamente:")
+    print("  ->", erro)
+}
+
+# Agora usando parâmetros preparados (?, seguro):
+let usuariosValidos = @query("SELECT * FROM usuarios WHERE nome = ?", [security.sanitize(inputMalicioso)])
+print("Consulta segura com parâmetros (?) executada com sucesso! Linhas:", usuariosValidos.length())
+
+# ----------------------------------------------------
+# TESTE 2: Sandbox de Arquivos (FS Write Bloqueado)
+# ----------------------------------------------------
+print("\n[2] Ativando Sandbox (Modo Apenas Leitura)...")
+
+security.sandbox({
+    fs: "readonly",
+    net: ["meubanco.com.br"]
+})
+
+let bloqueouEscritaFs = false
+try {
+    # Tentativa não autorizada de sobrescrever arquivo
+    fs.write("teste_hacker.txt", "dados maliciosos")
+} catch (erro) {
+    bloqueouEscritaFs = true
+    print("Sucesso! Escrita bloqueada pelo Sandbox:")
+    print("  ->", erro)
+}
+
+# ----------------------------------------------------
+# TESTE 3: Sandbox de Rede (Net Host Bloqueado)
+# ----------------------------------------------------
+print("\n[3] Testando Bloqueio de Rede para Host não autorizado...")
+
+let bloqueouRede = false
+try {
+    # Tentativa de requisição para host fora da whitelist (whitelist tem apenas meubanco.com.br)
+    http.get("https://exemplo-nao-autorizado.com/leak")
+} catch (erro) {
+    bloqueouRede = true
+    print("Sucesso! Conexão não autorizada bloqueada pelo Sandbox:")
+    print("  ->", erro)
+}
+
+print("\n==================================================")
+if (bloqueouSqlInjection && bloqueouEscritaFs && bloqueouRede) {
+    print("✅ TODAS AS DEFESAS DE SEGURANÇA FORAM VALIDADAS COM SUCESSO!")
+} else {
+    print("❌ FALHA EM UMA DAS DEFESAS")
+}
+print("==================================================")

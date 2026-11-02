@@ -1,0 +1,53 @@
+# Modelo que representa uma Aba do Navegador Yvira
+
+class Aba {
+    fn constructor(id, titulo, url) {
+        this.id = id
+        this.titulo = titulo
+        this.url = url
+        this.historico = [url]
+        this.indiceAtual = 0
+    }
+
+    fn navegar(novaUrl) {
+        this.url = novaUrl
+        this.historico.push(novaUrl)
+        this.indiceAtual = this.historico.length() - 1
+    }
+
+    fn podeVoltar() {
+        return this.indiceAtual > 0
+    }
+
+    fn podeAvancar() {
+        return this.indiceAtual < (this.historico.length() - 1)
+    }
+
+    fn voltar() {
+        if (this.podeVoltar()) {
+            this.indiceAtual = this.indiceAtual - 1
+            this.url = this.historico[this.indiceAtual]
+            return this.url
+        }
+        return this.url
+    }
+
+    fn avancar() {
+        if (this.podeAvancar()) {
+            this.indiceAtual = this.indiceAtual + 1
+            this.url = this.historico[this.indiceAtual]
+            return this.url
+        }
+        return this.url
+    }
+
+    fn obterDados() {
+        return {
+            id: this.id,
+            titulo: this.titulo,
+            url: this.url,
+            podeVoltar: this.podeVoltar(),
+            podeAvancar: this.podeAvancar()
+        }
+    }
+}

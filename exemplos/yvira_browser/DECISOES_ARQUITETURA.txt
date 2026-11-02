@@ -1,0 +1,104 @@
+================================================================================
+          YVIRA BROWSER - REGISTRO DE ARQUITETURA E DECISÕES TÉCNICAS
+================================================================================
+Data: 2026-11-01
+Autor: Antigravity & Engenharia Yvira
+Status: Implementado e Validado
+
+--------------------------------------------------------------------------------
+1. CONTEXTO E O PROBLEMA ENFRENTADO
+--------------------------------------------------------------------------------
+Nos primeiros protótipos do navegador desktop, as páginas web eram renderizadas 
+dentro de um elemento HTML <iframe> inserido na própria casca da interface 
+(janela-yvira.html).
+
+Essa abordagem inicial quebrou drasticamente em sites de grande porte (Google, 
+GitHub e principalmente YouTube):
+- Cabeçalhos de Segurança Estritos: O YouTube envia cabeçalhos HTTP como 
+  'X-Frame-Options: SAMEORIGIN' e 'Content-Security-Policy: frame-ancestors', 
+  que instruem o Chromium a rejeitar sumariamente a renderização dentro de 
+  qualquer iframe de origem cruzada.
+- Bloqueio de Cookies e Rastreamento: O WebView2/Chromium ativava proteção 
+  contra rastreadores de terceiros em frames, isolando o storage e quebrando o 
+  player de mídia ('Tracking Prevention blocked access to storage').
+- URLs Congeladas e Embeds Recortados: Links ficavam travados em 'youtube.com/', 
+  ou quando convertidos para embed perdiam a página inteira (comentários, lista 
+  de vídeos recomendados, botões de like/inscrição e canal).
+
+--------------------------------------------------------------------------------
+2. A DECISÃO ARQUITETURAL: TOP-LEVEL BROWSING (DUAL-VIEW NATIVO)
+--------------------------------------------------------------------------------
+Navegadores desktop modernos (Google Chrome, Microsoft Edge, Brave, Electron) 
+nunca colocam a internet dentro de um iframe. Eles usam composições de visões 
+nativas do sistema operacional.
+
+Decidimos reestruturar o motor em C# (Yvira.Vm/YviraWindow.cs) para uma 
+arquitetura Dual-Control (duas camadas de visualização nativas):
+
+A) Componente 1: Header UI (_webView)
+   - Renderiza a casca gráfica do navegador (janela-yvira.html).
+   - Contém a faixa de abas dinâmicas, barra de endereço, botões voltar/avançar, 
+     recarregar, favoritos e controles da janela sem bordas DWM.
+   - Ao navegar para websites, o controle é ancorado no topo (Dock = DockStyle.Top, 
+     Altura = 96px) e colocado à frente (BringToFront) na ordem Z do Windows Forms.
+
+B) Componente 2: Content Browser (_contentWebView)
+   - Um controle Microsoft.Web.WebView2 dedicado ocupando o restante da janela 
+     (Dock = DockStyle.Fill).
+   - O website navega diretamente como contexto de nível superior (Top-Level 
+     Browsing Context via CoreWebView2.Navigate(url)).
+   - Consequência: 'X-Frame-Options' e restrições de iframe deixam de existir, 
+     porque a página NÃO está em um frame. O YouTube funciona 100% como no Edge 
+     ou Chrome nativo.
+
+--------------------------------------------------------------------------------
+3. SINCRONIZAÇÃO BIDIRECIONAL (IPC HEADER <-> NAVEGADOR)
+--------------------------------------------------------------------------------
+Para que o usuário tenha a experiência completa de um navegador real, os dois 
+ambientes conversam em tempo real:
+
+1. Da Barra para o Website:
+   - Quando o usuário digita uma URL ou clica em uma aba/favorito, a interface 
+     dispara o evento 'navigate'.
+   - O método 'NavigateContent(url)' em YviraWindow.cs intercepta a rota:
+     * Se for interna ('yvira://newtab', 'yvira://historico'), oculta o navegador 
+       externo e preenche a tela inteira com o layout interno.
+     * Se for externa ('https://...'), fixa o cabeçalho em 96px e navega o 
+       controle de conteúdo diretamente.
+
+2. Do Website para a Barra:
+   - Conforme o usuário clica em links dentro do YouTube (como assistir a um 
+     vídeo recomendado da lateral), os eventos nativos 'SourceChanged' e 
+     'DocumentTitleChanged' do CoreWebView2 são capturados pelo C#.
+   - O C# despacha automaticamente a função JavaScript:
+     window.receberAtualizacaoUrl({ url, titulo })
+   - O input da barra de endereço e a aba ativa são atualizados instantaneamente 
+     para a URL real do vídeo (ex: https://www.youtube.com/watch?v=...).
+
+--------------------------------------------------------------------------------
+4. BORDAS MODERNAS DWM DO WINDOWS (FRAMELESS + RESIZING)
+--------------------------------------------------------------------------------
+- A janela utiliza 'DwmExtendFrameIntoClientArea' e mensagens de 'WM_NCCALCSIZE'.
+- Permite remover a moldura antiga padrão do Windows enquanto preserva a área 
+  invisível de redimensionamento em todas as bordas e cantos (resize handle nativo), 
+  com suporte total a atalhos de janela (Snap Assist, Win+Setas, F11 tela cheia).
+
+--------------------------------------------------------------------------------
+5. POLÍTICA DE AUTOPLAY E PERMISSÕES
+--------------------------------------------------------------------------------
+- Habilitada flag de runtime '--autoplay-policy=no-user-gesture-required' e 
+  '--enable-features=HardwareMediaKeyHandling' para permitir que áudio e vídeo 
+  toquem sem restrições de sandbox.
+- Tratamento automático de 'PermissionRequested' concedendo acesso aos recursos 
+  de mídia e hardware quando solicitados por páginas web.
+
+--------------------------------------------------------------------------------
+6. RESULTADO FINAL
+--------------------------------------------------------------------------------
+- Reprodução completa de vídeos do YouTube na página oficial.
+- Comentários, barra de busca, canal e recomendações totalmente acessíveis.
+- Barra superior do navegador fixa, responsiva e independente de erros de scripts 
+  dos sites visitados.
+- Build compilado e publicado globalmente em:
+  Beta OS\dist\bin\yvira.exe
+================================================================================

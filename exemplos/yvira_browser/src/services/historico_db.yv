@@ -1,0 +1,25 @@
+# Serviço de Persistência de Histórico do Navegador em Banco SQLite
+
+class HistoricoDb {
+    fn constructor() {
+        # Inicializa o banco local do navegador
+        @db("sqlite://yvira_browser_dados.db")
+        @exec("CREATE TABLE IF NOT EXISTS historico (id INTEGER PRIMARY KEY AUTOINCREMENT, url TEXT, titulo TEXT, data_hora TEXT);")
+        @exec("CREATE TABLE IF NOT EXISTS favoritos (id INTEGER PRIMARY KEY AUTOINCREMENT, url TEXT, titulo TEXT);")
+    }
+
+    fn registrarVisita(url, titulo) {
+        if (url == null || url == "" || url.startsWith("about:") || url.startsWith("data:")) {
+            return false
+        }
+
+        let agora = toString(clock())
+        @exec("INSERT INTO historico (url, titulo, data_hora) VALUES (?, ?, ?);", [url, titulo, agora])
+        return true
+    }
+
+    fn obterRecentes(limite) {
+        let rows = @query("SELECT url, titulo, data_hora FROM historico ORDER BY id DESC LIMIT ?;", [limite])
+        return rows
+    }
+}

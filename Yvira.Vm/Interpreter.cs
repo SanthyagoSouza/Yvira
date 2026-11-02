@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Yvira.Ast;
 using Yvira.Lexer;
@@ -20,6 +20,9 @@ public class Interpreter
     private readonly DatabaseManager _dbManager = new();
     public DatabaseManager DatabaseManager => _dbManager;
     public Scheduler Scheduler => _scheduler;
+    private SecurityPolicy _securityPolicy = new();
+    public SecurityPolicy SecurityPolicy => _securityPolicy;
+    public void SetSecurityPolicy(SecurityPolicy policy) => _securityPolicy = policy;
     private readonly List<HttpServerInstance> _httpServers = new();
     public IReadOnlyList<HttpServerInstance> HttpServers => _httpServers;
 
@@ -50,6 +53,7 @@ public class Interpreter
     {
         var workerEnv = new Environment(_environment);
         var worker = new Interpreter(
+            securityPolicy: _securityPolicy.Clone(),
             outputHandler: _outputHandler,
             inputHandler: _inputHandler,
             currentDirectory: _currentDirectory,
@@ -61,7 +65,7 @@ public class Interpreter
         return worker;
     }
 
-    public Interpreter(Action<string>? outputHandler = null, Func<string?>? inputHandler = null, string? currentDirectory = null, HashSet<string>? loadedModules = null, Func<string, ProgramNode>? moduleLoader = null, DatabaseManager? sharedDbManager = null, Environment? initialEnvironment = null, IReadOnlyList<string>? scriptArgs = null)
+    public Interpreter(Action<string>? outputHandler = null, Func<string?>? inputHandler = null, string? currentDirectory = null, HashSet<string>? loadedModules = null, Func<string, ProgramNode>? moduleLoader = null, DatabaseManager? sharedDbManager = null, Environment? initialEnvironment = null, IReadOnlyList<string>? scriptArgs = null, SecurityPolicy? securityPolicy = null)
     {
         _outputHandler = outputHandler ?? Console.WriteLine;
         _inputHandler = inputHandler ?? Console.ReadLine;
@@ -77,11 +81,15 @@ public class Interpreter
         {
             _environment = initialEnvironment;
         }
+        if (securityPolicy != null)
+        {
+            _securityPolicy = securityPolicy;
+        }
 
         // Variável global 'args' disponível para scripts (CLI Arguments)
         if (!_environment.IsDefinedLocally("args"))
         {
-            var yArgs = scriptArgs != null ? new YviraList(scriptArgs.Select(a => (object?)a)) : new YviraList();
+            var yArgs = scriptArgs != null ? new YviraList(scriptArgs.Select(a => (object?)new TaintedString(a, "cli_arg"))) : new YviraList();
             _environment.Define("args", yArgs);
         }
     }
@@ -280,7 +288,11 @@ public class Interpreter
     private object? EvaluateDbExec(DbExecNode node)
     {
         var sqlObj = EvaluateExpression(node.SqlExpression);
-        string sql = sqlObj?.ToString() ?? "";
+        if (_securityPolicy != null && _securityPolicy.EnforceAntiSqlInjection && TaintedString.IsTainted(sqlObj))
+        {
+            throw new SecurityException($"[ANTI-SQL INJECTION] Operação bloqueada pelo Yvira! O SQL a ser executado foi construído a partir de dados não confiáveis (Tainted). Utilize parâmetros preparados (?) em vez de concatenação de strings.");
+        }
+        string sql = TaintedString.GetRawString(sqlObj);
         var parameters = ExtractDbParameters(node.ParametersExpression);
 
         bool requestFull = false;
@@ -333,7 +345,11 @@ public class Interpreter
     private object? EvaluateDbQuery(DbQueryNode node)
     {
         var sqlObj = EvaluateExpression(node.SqlExpression);
-        string sql = sqlObj?.ToString() ?? "";
+        if (_securityPolicy != null && _securityPolicy.EnforceAntiSqlInjection && TaintedString.IsTainted(sqlObj))
+        {
+            throw new SecurityException($"[ANTI-SQL INJECTION] Operação bloqueada pelo Yvira! A consulta SQL foi construída a partir de dados não confiáveis (Tainted). Utilize parâmetros preparados (?) em vez de concatenação de strings.");
+        }
+        string sql = TaintedString.GetRawString(sqlObj);
         var parameters = ExtractDbParameters(node.ParametersExpression);
         var rows = _dbManager.ExecuteQuery(node.Alias, sql, parameters);
         return new YviraList(rows);
@@ -413,8 +429,16 @@ public class Interpreter
         // M�dulos nativos embutidos da biblioteca padr�o Yvira
         if (rawPath.Equals("fs", StringComparison.OrdinalIgnoreCase) || rawPath.Equals("filesystem", StringComparison.OrdinalIgnoreCase))
         {
-            var fsModule = FileSystemModule.CreateModule(_currentDirectory);
-            ApplyModuleSymbols(fsModule, importStmt.Alias);
+            var fsModule = FileSystemModule.CreateModule(_currentDirectory, _securityPolicy);
+            if (string.IsNullOrEmpty(importStmt.Alias))
+            {
+                _environment.Define("fs", fsModule);
+                ApplyModuleSymbols(fsModule, null);
+            }
+            else
+            {
+                ApplyModuleSymbols(fsModule, importStmt.Alias);
+            }
             return;
         }
 
@@ -463,7 +487,22 @@ public class Interpreter
             return;
         }
 
-        if (rawPath.Equals("crypto", StringComparison.OrdinalIgnoreCase) || rawPath.Equals("security", StringComparison.OrdinalIgnoreCase))
+                if (rawPath.Equals("security", StringComparison.OrdinalIgnoreCase))
+        {
+            var secModule = SecurityModule.CreateModule(this);
+            if (string.IsNullOrEmpty(importStmt.Alias))
+            {
+                _environment.Define("security", secModule);
+                ApplyModuleSymbols(secModule, null);
+            }
+            else
+            {
+                ApplyModuleSymbols(secModule, importStmt.Alias);
+            }
+            return;
+        }
+
+        if (rawPath.Equals("crypto", StringComparison.OrdinalIgnoreCase))
         {
             var cryptoModule = CryptoModule.CreateModule();
             if (string.IsNullOrEmpty(importStmt.Alias))
@@ -525,8 +564,16 @@ public class Interpreter
         // M�dulos nativos embutidos (Built-in Standard Library)
         if (rawPath.Equals("fs", StringComparison.OrdinalIgnoreCase) || rawPath.Equals("filesystem", StringComparison.OrdinalIgnoreCase))
         {
-            var fsModule = FileSystemModule.CreateModule(_currentDirectory);
-            ApplyModuleSymbols(fsModule, importStmt.Alias);
+            var fsModule = FileSystemModule.CreateModule(_currentDirectory, _securityPolicy);
+            if (string.IsNullOrEmpty(importStmt.Alias))
+            {
+                _environment.Define("fs", fsModule);
+                ApplyModuleSymbols(fsModule, null);
+            }
+            else
+            {
+                ApplyModuleSymbols(fsModule, importStmt.Alias);
+            }
             return;
         }
 
@@ -1302,9 +1349,9 @@ public class Interpreter
                 "get" when args.Count == 2 => mat.Get(Convert.ToInt32(args[0]), Convert.ToInt32(args[1])),
                 "row" when args.Count == 1 => mat.GetRow(Convert.ToInt32(args[0])),
                 "col" when args.Count == 1 => mat.GetCol(Convert.ToInt32(args[0])),
-                "transpose" => mat.Transpose(),
-                "inverse" or "inv" => mat.Inverse(),
-                "det" or "determinant" => mat.Determinant(),
+                "transpose" or "transposta" => mat.Transpose(),
+                "inverse" or "inv" or "inversa" => mat.Inverse(),
+                "det" or "determinant" or "determinante" => mat.Determinant(),
                 "trace" => mat.Trace(),
                 "sum" => mat.Sum(),
                 "mean" => mat.Mean(),
@@ -1327,6 +1374,7 @@ public class Interpreter
                 "endsWith" or "ends_with" when args.Count >= 1 => str.EndsWith(args[0]?.ToString() ?? ""),
                 "indexOf" or "index_of" when args.Count >= 1 => (double)str.IndexOf(args[0]?.ToString() ?? ""),
                 "replace" when args.Count >= 2 => str.Replace(args[0]?.ToString() ?? "", args[1]?.ToString() ?? ""),
+                "length" or "len" or "tamanho" => (double)str.Length,
                 "split" => new YviraList(str.Split(args.Count >= 1 ? args[0]!.ToString()! : " ").Select(x => (object?)x)),
                 "substring" or "sub" => SubstringHelper(str, args),
                 _ => throw new Exception($"Erro de M�todo: M�todo '{method.MethodName}' n�o suportado para String.")
@@ -1451,6 +1499,10 @@ public class Interpreter
                     if (map.HasKey(method.MethodName))
                     {
                         var memberVal = map.Get(method.MethodName);
+                        if (memberVal is YviraClass mapClass)
+                        {
+                            return mapClass.Instantiate(this, args);
+                        }
                         if (memberVal is YviraFunction fn)
                         {
                             return fn.Call(this, args);
@@ -1699,7 +1751,15 @@ public class Interpreter
                             win.BackgroundColorHex = bg?.ToString() ?? win.BackgroundColorHex;
 
                         if (configDict.TryGetValue("view", out var v) || configDict.TryGetValue("html", out v) || configDict.TryGetValue("arquivo", out v))
-                            win.InitialHtmlPath = v?.ToString();
+                        {
+                            string rawHtmlPath = v?.ToString() ?? "";
+                            if (!string.IsNullOrWhiteSpace(rawHtmlPath))
+                            {
+                                win.InitialHtmlPath = System.IO.Path.IsPathRooted(rawHtmlPath)
+                                    ? rawHtmlPath
+                                    : System.IO.Path.GetFullPath(System.IO.Path.Combine(_currentDirectory, rawHtmlPath));
+                            }
+                        }
 
                         if (configDict.TryGetValue("modo_tela", out var mt) || configDict.TryGetValue("modo", out mt) || configDict.TryGetValue("window_mode", out mt))
                             win.WindowMode = mt?.ToString() ?? win.WindowMode;
@@ -1708,25 +1768,31 @@ public class Interpreter
 
                 var winObj = new YviraMap();
 
-                winObj.Set("exibir", new HostFunction("exibir", (interp, a) =>
+                var startFn = new HostFunction("show", (interp, a) =>
                 {
                     win.Start();
                     return null;
-                }));
+                });
+                winObj.Set("show", startFn);
+                winObj.Set("exibir", startFn);
 
-                winObj.Set("esperar", new HostFunction("esperar", (interp, a) =>
+                var waitFn = new HostFunction("wait", (interp, a) =>
                 {
                     win.WaitUntilClosed();
                     return null;
-                }));
+                });
+                winObj.Set("wait", waitFn);
+                winObj.Set("esperar", waitFn);
 
-                winObj.Set("fechar", new HostFunction("fechar", (interp, a) =>
+                var closeFn = new HostFunction("close", (interp, a) =>
                 {
                     win.Close();
                     return null;
-                }));
+                });
+                winObj.Set("close", closeFn);
+                winObj.Set("fechar", closeFn);
 
-                winObj.Set("ao_evento", new HostFunction("ao_evento", (interp, a) =>
+                var onEventFn = new HostFunction("on", (interp, a) =>
                 {
                     if (a.Count >= 2 && a[0] != null && a[1] != null)
                     {
@@ -1734,30 +1800,23 @@ public class Interpreter
                         win.On(evName, a[1]!);
                     }
                     return null;
-                }));
+                });
+                winObj.Set("on", onEventFn);
+                winObj.Set("ao_evento", onEventFn);
+                winObj.Set("ao", onEventFn);
 
-                winObj.Set("executar_script", new HostFunction("executar_script", (interp, a) =>
+                var execScriptFn = new HostFunction("executeScript", (interp, a) =>
                 {
                     if (a.Count > 0 && a[0] != null)
                     {
                         win.ExecuteScript(a[0]!.ToString()!);
                     }
                     return null;
-                }));
+                });
+                winObj.Set("executeScript", execScriptFn);
+                winObj.Set("executar_script", execScriptFn);
 
-                winObj.Set("enviar_dados", new HostFunction("enviar_dados", (interp, a) =>
-                {
-                    if (a.Count >= 2 && a[0] != null)
-                    {
-                        string fnName = a[0]!.ToString()!;
-                        object? d = a[1];
-                        win.SendData(fnName, d);
-                    }
-                    return null;
-                }));
-
-                // Alias .emitir(evento, dados) que despacha tanto para window[evento](dados) quanto CustomEvent
-                winObj.Set("emitir", new HostFunction("emitir", (interp, a) =>
+                var emitFn = new HostFunction("emit", (interp, a) =>
                 {
                     if (a.Count >= 1 && a[0] != null)
                     {
@@ -1766,7 +1825,11 @@ public class Interpreter
                         win.SendData(fnName, d);
                     }
                     return null;
-                }));
+                });
+                winObj.Set("emit", emitFn);
+                winObj.Set("send", emitFn);
+                winObj.Set("emitir", emitFn);
+                winObj.Set("enviar_dados", emitFn);
 
                 return winObj;
 
@@ -1992,10 +2055,15 @@ public class Interpreter
             return leftMat + right!;
         }
 
-        // Concatenação de string se qualquer um for string
-        if (left is string || right is string)
+        // Concatenação de string se qualquer um for string (preservando Taint)
+        if (left is string || right is string || left is TaintedString || right is TaintedString)
         {
-            return $"{left}{right}";
+            string resStr = $"{left}{right}";
+            if (TaintedString.IsTainted(left) || TaintedString.IsTainted(right))
+            {
+                return new TaintedString(resStr, "concatenacao_taint");
+            }
+            return resStr;
         }
 
         return Convert.ToDouble(left) + Convert.ToDouble(right);
@@ -2107,22 +2175,19 @@ public class Interpreter
             var server = new RealtimeServerInstance(porta, segredo, rotacao, limitePacotes, this);
             var serverMap = new YviraMap();
 
-            serverMap.Set("iniciar", new HostFunction("iniciar", (interp, a) =>
-            {
-                server.Start();
-                return null;
-            }));
+            var startSrv = new HostFunction("start", (interp, a) => { server.Start(); return null; });
+            serverMap.Set("start", startSrv);
+            serverMap.Set("iniciar", startSrv);
 
-            serverMap.Set("ao", new HostFunction("ao", (interp, a) =>
+            var onSrv = new HostFunction("on", (interp, a) =>
             {
-                if (a.Count >= 2 && a[0] != null && a[1] != null)
-                {
-                    server.On(a[0]!.ToString()!, a[1]!);
-                }
+                if (a.Count >= 2 && a[0] != null && a[1] != null) server.On(a[0]!.ToString()!, a[1]!);
                 return null;
-            }));
+            });
+            serverMap.Set("on", onSrv);
+            serverMap.Set("ao", onSrv);
 
-            serverMap.Set("emitir", new HostFunction("emitir", (interp, a) =>
+            var emitSrv = new HostFunction("emit", (interp, a) =>
             {
                 if (a.Count >= 1 && a[0] != null)
                 {
@@ -2131,13 +2196,15 @@ public class Interpreter
                     server.EmitAll(ev, pl);
                 }
                 return null;
-            }));
+            });
+            serverMap.Set("emit", emitSrv);
+            serverMap.Set("emitir", emitSrv);
 
-            serverMap.Set("para", new HostFunction("para", (interp, a) =>
+            var toRoom = new HostFunction("to", (interp, a) =>
             {
                 string room = a.Count > 0 && a[0] != null ? a[0]!.ToString()! : "";
                 var roomScope = new YviraMap();
-                roomScope.Set("emitir", new HostFunction("para.emitir", (i, rArgs) =>
+                var bcast = new HostFunction("to.emit", (i, rArgs) =>
                 {
                     if (rArgs.Count >= 1 && rArgs[0] != null)
                     {
@@ -2146,15 +2213,17 @@ public class Interpreter
                         server.BroadcastToRoom(room, ev, pl);
                     }
                     return null;
-                }));
+                });
+                roomScope.Set("emit", bcast);
+                roomScope.Set("emitir", bcast);
                 return roomScope;
-            }));
+            });
+            serverMap.Set("to", toRoom);
+            serverMap.Set("para", toRoom);
 
-            serverMap.Set("parar", new HostFunction("parar", (interp, a) =>
-            {
-                server.Dispose();
-                return null;
-            }));
+            var stopSrv = new HostFunction("stop", (interp, a) => { server.Dispose(); return null; });
+            serverMap.Set("stop", stopSrv);
+            serverMap.Set("parar", stopSrv);
 
             return serverMap;
         }
@@ -2188,22 +2257,19 @@ public class Interpreter
             var client = new RealtimeClientInstance(url, segredo, rotacao, this);
             var clientMap = new YviraMap();
 
-            clientMap.Set("conectar", new HostFunction("conectar", (interp, a) =>
-            {
-                client.Connect();
-                return null;
-            }));
+            var connCli = new HostFunction("connect", (interp, a) => { client.Connect(); return null; });
+            clientMap.Set("connect", connCli);
+            clientMap.Set("conectar", connCli);
 
-            clientMap.Set("ao", new HostFunction("ao", (interp, a) =>
+            var onCli = new HostFunction("on", (interp, a) =>
             {
-                if (a.Count >= 2 && a[0] != null && a[1] != null)
-                {
-                    client.On(a[0]!.ToString()!, a[1]!);
-                }
+                if (a.Count >= 2 && a[0] != null && a[1] != null) client.On(a[0]!.ToString()!, a[1]!);
                 return null;
-            }));
+            });
+            clientMap.Set("on", onCli);
+            clientMap.Set("ao", onCli);
 
-            clientMap.Set("emitir", new HostFunction("emitir", (interp, a) =>
+            var emitCli = new HostFunction("emit", (interp, a) =>
             {
                 if (a.Count >= 1 && a[0] != null)
                 {
@@ -2212,13 +2278,13 @@ public class Interpreter
                     _ = client.EmitAsync(ev, pl);
                 }
                 return null;
-            }));
+            });
+            clientMap.Set("emit", emitCli);
+            clientMap.Set("emitir", emitCli);
 
-            clientMap.Set("desconectar", new HostFunction("desconectar", (interp, a) =>
-            {
-                client.Dispose();
-                return null;
-            }));
+            var discCli = new HostFunction("disconnect", (interp, a) => { client.Dispose(); return null; });
+            clientMap.Set("disconnect", discCli);
+            clientMap.Set("desconectar", discCli);
 
             return clientMap;
         }
@@ -2341,19 +2407,26 @@ public class Interpreter
         }
     }
 
-    private string EvaluateInterpolatedString(InterpolatedStringNode interp)
+    private object EvaluateInterpolatedString(InterpolatedStringNode interp)
     {
         var sb = new System.Text.StringBuilder();
+        bool hasTainted = false;
         for (int i = 0; i < interp.StringParts.Count; i++)
         {
             sb.Append(interp.StringParts[i]);
             if (i < interp.Expressions.Count)
             {
                 var val = EvaluateExpression(interp.Expressions[i]);
+                if (TaintedString.IsTainted(val)) hasTainted = true;
                 sb.Append((val != null ? val.ToString() : "null"));
             }
         }
-        return sb.ToString();
+        string fullStr = sb.ToString();
+        if (hasTainted)
+        {
+            return new TaintedString(fullStr, "interpolacao_taint");
+        }
+        return fullStr;
     }
 
     private void ExecutePdfDirective(PdfDirectiveStatementNode pdfStmt)

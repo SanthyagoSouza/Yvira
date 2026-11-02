@@ -24,6 +24,7 @@ public static class HttpModule
             if (args.Count == 0 || args[0] == null)
                 throw new Exception("http.get requer a URL como primeiro argumento.");
             string url = args[0]!.ToString()!;
+            interp?.SecurityPolicy?.AssertNet(url);
 
             using var req = new HttpRequestMessage(HttpMethod.Get, url);
             HttpResponseMessage response;
@@ -45,6 +46,7 @@ public static class HttpModule
             if (args.Count < 2)
                 throw new Exception("http.post requer a URL e o corpo da requisição.");
             string url = args[0]?.ToString() ?? "";
+            interp?.SecurityPolicy?.AssertNet(url);
             object? payload = args[1];
 
             HttpContent content;

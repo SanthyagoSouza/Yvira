@@ -10,6 +10,9 @@
       "include": "#comments"
     },
     {
+      "include": "#interpolated-strings"
+    },
+    {
       "include": "#strings"
     },
     {
@@ -19,16 +22,22 @@
       "include": "#keywords"
     },
     {
-      "include": "#operators"
+      "include": "#constants"
     },
     {
       "include": "#builtin-functions"
     },
     {
-      "include": "#function-call"
+      "include": "#matrix-and-methods"
+    },
+    {
+      "include": "#operators"
     },
     {
       "include": "#function-declaration"
+    },
+    {
+      "include": "#function-call"
     }
   ],
   "repository": {
@@ -42,6 +51,35 @@
         {
           "name": "comment.line.number-sign.yvira",
           "match": "#.*$"
+        }
+      ]
+    },
+    "interpolated-strings": {
+      "patterns": [
+        {
+          "name": "string.interpolated.yvira",
+          "begin": "\\$\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.yvira",
+              "match": "\\\\."
+            },
+            {
+              "name": "meta.interpolation.yvira",
+              "begin": "\\{",
+              "end": "\\}",
+              "beginCaptures": {
+                "0": { "name": "punctuation.definition.template-expression.begin.yvira" }
+              },
+              "endCaptures": {
+                "0": { "name": "punctuation.definition.template-expression.end.yvira" }
+              },
+              "patterns": [
+                { "include": "$self" }
+              ]
+            }
+          ]
         }
       ]
     },
@@ -68,19 +106,31 @@
         }
       ]
     },
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.yvira",
+          "match": "\\b(true|false)\\b"
+        },
+        {
+          "name": "constant.language.null.yvira",
+          "match": "\\b(null)\\b"
+        },
+        {
+          "name": "variable.language.this.yvira",
+          "match": "\\b(this|super)\\b"
+        }
+      ]
+    },
     "keywords": {
       "patterns": [
         {
           "name": "keyword.control.yvira",
-          "match": "\\b(if|else|while|for|foreach|in|break|continue|return|import|as|try|catch|finally|throw)\\b"
+          "match": "\\b(if|elif|else|while|for|foreach|in|break|continue|return|import|as|try|catch|finally|throw|match|switch|case|default)\\b"
         },
         {
           "name": "keyword.declaration.yvira",
-          "match": "\\b(let|const|fn|class)\\b"
-        },
-        {
-          "name": "constant.language.boolean.yvira",
-          "match": "\\b(true|false)\\b"
+          "match": "\\b(let|const|fn|function|class|extends|static)\\b"
         },
         {
           "name": "keyword.operator.logical.yvira",
@@ -92,14 +142,34 @@
       "patterns": [
         {
           "name": "support.function.builtin.yvira",
-          "match": "\\b(print|println|input|toNumber|to_number|toString|to_string|range|list|len|length|tamanho|size|count|clock|time|random|zeros|ones|eye|identity|randMat|rand_mat|solve)\\b"
+          "match": "\\b(print|println|input|toNumber|to_number|toInt|to_int|floor|round|toString|to_string|range|list|len|length|count|clock|time|seed|random_seed|random|zeros|ones|eye|identity|randMat|rand_mat|solve|menu|menu_interativo|confirmar|confirm|caixa|box|barra_progresso|progress_bar|tabela|table|limpar_tela|clear|dormir|sleep|criar_janela|janela|window)\\b"
+        }
+      ]
+    },
+    "matrix-and-methods": {
+      "patterns": [
+        {
+          "match": "\\.([a-zA-Z_][a-zA-Z0-9_]*)(?=\\s*\\()",
+          "captures": {
+            "1": {
+              "name": "support.function.method.yvira"
+            }
+          }
+        },
+        {
+          "match": "\\.(rows|cols|linhas|colunas|length|len|count|T|det|trace|sum|mean|max|min|keys|values)\\b",
+          "captures": {
+            "1": {
+              "name": "variable.other.property.yvira"
+            }
+          }
         }
       ]
     },
     "function-declaration": {
       "patterns": [
         {
-          "match": "\\b(fn)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\b",
+          "match": "\\b(fn|function)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\b",
           "captures": {
             "1": {
               "name": "keyword.declaration.yvira"
@@ -127,19 +197,23 @@
       "patterns": [
         {
           "name": "keyword.operator.assignment.yvira",
-          "match": "(=|\\+=|-=|\\*=|/=|\\*\\*=)"
+          "match": "(=|\\+=|-=|\\*=|/=|%=|\\*\\*=)"
+        },
+        {
+          "name": "keyword.operator.arrow.yvira",
+          "match": "(=>|->)"
         },
         {
           "name": "keyword.operator.comparison.yvira",
-          "match": "(==|!=|<=|>=|<|>)"
+          "match": "(==|!=|<>|<=|>=|<|>)"
         },
         {
           "name": "keyword.operator.arithmetic.yvira",
-          "match": "(\\+|\\-|\\*\\*|\\*|/|%)"
+          "match": "(\\+\\+|--|\\+|\\-|\\*\\*|\\*|/|%)"
         },
         {
           "name": "keyword.operator.logical.symbol.yvira",
-          "match": "(&&|\\|\\||!)"
+          "match": "(&&|\\|\\||!|\\?|:)"
         }
       ]
     },
@@ -147,7 +221,7 @@
       "patterns": [
         {
           "name": "keyword.control.directive.yvira",
-          "match": "@(time|stop|db|exec|query)(\\.[a-zA-Z_][a-zA-Z0-9_]*)?"
+          "match": "@(time|stop|db|exec|query|transaction|spawn|worker|realtime|pdf|sleep|die)(\\.[a-zA-Z_][a-zA-Z0-9_]*)?"
         }
       ]
     }

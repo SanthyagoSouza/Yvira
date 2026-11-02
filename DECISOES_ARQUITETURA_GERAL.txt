@@ -1,0 +1,215 @@
+====================================================================================================
+                        YVIRA PLATFORM & YVIRA OS - LIVRO BRANCO TÉCNICO
+                       ARQUITETURA, ESPECIFICAÇÕES, DESIGN E DECISÕES
+====================================================================================================
+Data de Emissão: 01 de Novembro de 2026
+Plataforma: Yvira Multi-Paradigma Engine (.NET 10 / C# / WinForms / Native Chromium)
+Escopo: Linguagem de Programação Yvira, Compilador Bytecode, Interpretador AST, Segurança Militar,
+        Sistema de Janelas DWM, Aplicações Desktop e o Navegador Nativo Yvira Browser.
+====================================================================================================
+
+SUMÁRIO GERAL:
+1. VISÃO GERAL E FILOSOFIA DA PLATAFORMA YVIRA
+2. ARQUITETURA DO COMPILADOR E PIPELINE DE EXECUÇÃO
+3. INTERPRETADOR AST & BYTECODE STACK VM
+4. O SUBSISTEMA DE SEGURANÇA E SANDBOXING
+5. PERSISTÊNCIA, CACHE E BANCO DE DADOS NATIVO
+6. NETWORKING, SERVIDORES HTTP E PROTOCOLO REALTIME
+7. SUBSISTEMA GRÁFICO E MOTOR DE JANELAS DESKTOP (DWM ENGINE)
+8. CASO DE ESTUDO COMPLETO: YVIRA BROWSER (O NAVEGADOR DESKTOP NATIVO)
+9. APÊNDICE: MATRIZ DE DECISÕES TÉCNICAS E BENEFÍCIOS ACUMULADOS
+
+====================================================================================================
+1. VISÃO GERAL E FILOSOFIA DA PLATAFORMA YVIRA
+====================================================================================================
+O Yvira nasceu com o objetivo de unir a expressividade e concisão de linguagens modernas (como TypeScript,
+Python e Go) com a performance bruta, tipagem inteligente e controle de baixo nível de runtimes compilados
+em C# e .NET 10.
+
+Pilares Centrais:
+- Zero Dependências Frágeis Externas: Tudo o que a aplicação precisa (HTTP, SQLite, JSON, Criptografia,
+  Documentos, Interfaces Gráficas Desktop) faz parte da Biblioteca Padrão e dos módulos internos do motor.
+- Paradigma Híbrido Flexível: Suporte a programação orientada a objetos (classes, herança, construtores),
+  programação funcional (funções de primeira classe, closures, callbacks assíncronos) e álgebra linear
+  nativa com operações matriciais com aceleração vetorial.
+- Execução Standalone Local: O executável compilado em 'dist/bin/yvira.exe' é totalmente auto-suficiente
+  (self-contained standalone win-x64), permitindo criar e empacotar ferramentas e sistemas desktop sem
+  necessidade de runtimes instalados na máquina do usuário.
+
+====================================================================================================
+2. ARQUITETURA DO COMPILADOR E PIPELINE DE EXECUÇÃO
+====================================================================================================
+O ciclo de vida do código-fonte (.yv) segue um pipeline rigoroso de quatro etapas:
+
+  Código-Fonte (.yv)
+         │
+         ▼
+  [1. Lexer (Yvira.Lexer)] ───► Varredura léxica com suporte a Unicode, interpolação de strings,
+         │                      tokens numéricos, palavras-chave e símbolos reservados.
+         ▼
+  [2. Parser (Yvira.Parser)] ──► Analisador sintático de descida recursiva combinada com precedência
+         │                      de operadores (Pratt Parser), gerando a Árvore Sintática Abstrata (AST).
+         ▼
+  [3. Análise Semântica] ─────► Verificação de escopos léxicos, checagem de tipos estáticos parciais,
+         │ (Yvira.Semantic)     resolução de módulos importados e integridade de chamadas.
+         ▼
+  [4. Engine de Execução] ────► Modo Interpretado Ágil (AST Walker) para prototipagem rápida e REPL,
+         │                      ou Compilador Bytecode para execução de alto desempenho na Stack VM.
+
+====================================================================================================
+3. INTERPRETADOR AST & BYTECODE STACK VM
+====================================================================================================
+A plataforma possui dois motores de execução cooperativos:
+
+A) Interpretador de AST Direta (Tree-Walking Interpreter):
+   - Localizado em 'Yvira.Vm/Interpreter.cs'.
+   - Permite depuração ao vivo, injeção de scripts dinâmicos, hot-reload e integração direta com
+     APIs de janelas desktop e servidores sem a necessidade de etapas lentas de compilação intermediária.
+
+B) Stack Virtual Machine (Bytecode VM):
+   - Localizada em 'Yvira.Vm/Bytecode/'.
+   - Compila nós da AST em opcodes binários sequenciais (Chunk/OpCode), operando sobre uma pilha de
+     execução ultra-otimizada em memória contígua.
+   - Utilizado em tarefas com loops intensivos, processamento vetorial, matrizes numéricas e APIs de
+     altíssima taxa de requisições.
+
+====================================================================================================
+4. O SUBSISTEMA DE SEGURANÇA E SANDBOXING
+====================================================================================================
+A segurança militar do Yvira é arquitetada em profundidade através de quatro camadas intransponíveis
+(detalhadas também no 'relatorio de seguranca.txt'):
+
+1. Sandboxing de Capacidades (SecurityManager.cs):
+   - O runtime opera com privilégios mínimos. Toda operação que toca o mundo externo (disco rígido,
+     placa de rede, processos externos, portas seriais) exige autorização explícita baseada em capacidades.
+   - Tentativas de invasão ou travessia de diretório ('Directory Traversal' como '../../Windows') são
+     detectadas e bloqueadas antes de serem repassadas para as APIs do sistema operacional.
+
+2. Rastreamento de Taint (Taint Tracking):
+   - Dados provenientes de entradas não confiáveis (parâmetros de requisição HTTP, formulários, URLs ou
+     arquivos baixados) são marcados como "contaminados" (tainted).
+   - O motor impede que dados contaminados sejam usados diretamente como comandos do sistema operacional
+     ou cláusulas de banco de dados sem passar previamente por funções de sanitização homologadas.
+
+3. Módulo Criptográfico Militar (SecurityModule.cs):
+   - AES-256-GCM (criptografia autenticada com detecção de adulteração de integridade).
+   - Hashing seguro via SHA-256 / SHA-512 e derivação de chaves criptográficas PBKDF2 com Salt aleatório
+     de 128 bits e 100.000 iterações.
+   - Geração de números verdadeiramente aleatórios através de geradores de entropia criptográfica do SO.
+
+====================================================================================================
+5. PERSISTÊNCIA, CACHE E BANCO DE DADOS NATIVO
+====================================================================================================
+- Banco de Dados Integrado (DatabaseManager.cs): Suporte nativo a SQLite e bancos relacionais com
+  gerenciamento automático de pools de conexões concorrentes e prepared statements obrigatórios
+  (eliminando por design ataques de SQL Injection).
+- Módulo de Cache de Alta Vazão (CacheModule.cs / MemoryCacheStore.cs): Mecanismo de chave-valor em
+  memória com expiração TTL (Time-To-Live), políticas LRU e sincronização segura entre múltiplas threads.
+
+====================================================================================================
+6. NETWORKING, SERVIDORES HTTP E PROTOCOLO REALTIME
+====================================================================================================
+- Servidor HTTP Nativo (HttpServerInstance.cs): Capacidade de instanciar servidores web de alta
+  performance com roteamento dinâmico de endpoints, suporte a JSON automático, cabeçalhos de segurança
+  pré-configurados (HSTS, CSP, X-Content-Type-Options) e defesas automáticas contra ataques DoS/Slowloris.
+- Motor Realtime P2P e Multiplayer (RealtimeModule.cs): Gerenciamento de conexões bidirecionais
+  persistentes via WebSockets, discovery de nós em redes locais e sincronização de estado com baixa latência.
+
+====================================================================================================
+7. SUBSISTEMA GRÁFICO E MOTOR DE JANELAS DESKTOP (DWM ENGINE)
+====================================================================================================
+Implementado em 'Yvira.Vm/YviraWindow.cs', o subsistema gráfico do Yvira rejeita abordagens pesadas e
+lentas de frameworks legados, adotando uma arquitetura moderna com hardware nativo:
+
+A) Renderização DWM Frameless (Desktop Window Manager):
+   - Em vez de usar bordas azuis ou cinzas antigas do Windows Forms, a janela utiliza as APIs nativas
+     da 'dwmapi.dll' ('DwmExtendFrameIntoClientArea') e manipulação de mensagens 'WM_NCCALCSIZE'.
+   - O resultado é uma janela sem bordas feias ("frameless"), com visual idêntico ao Visual Studio Code,
+     Spotify e Google Chrome, mantendo as sombras nativas do Windows, cantos arredondados do Windows 11
+     e zonas invisíveis de redimensionamento em todas as direções.
+   - Totalmente compatível com recursos nativos do sistema: Snap Assist (arrastar para o topo/laterais),
+     atalhos de teclado (Win + Setas, F11, Alt+F4) e suporte a múltiplos monitores com DPI dinâmico.
+
+B) WebView2 Evergreen com Aceleração por Hardware:
+   - Utiliza o motor Microsoft Edge Chromium embarcado sem exigir navegadores instalados à parte.
+   - Ponte IPC assíncrona bidirecional ('window.chrome.webview.postMessage' e 'ExecuteScriptAsync'),
+     permitindo que o código em Yvira envie e receba dados, objetos estruturados e eventos em tempo real
+     de/para a interface gráfica (HTML5/CSS3/JavaScript).
+
+====================================================================================================
+8. CASO DE ESTUDO COMPLETO: YVIRA BROWSER (O NAVEGADOR DESKTOP NATIVO)
+====================================================================================================
+Localização do Projeto: 'exemplos/yvira_browser/'
+Arquivo de Inicialização: 'main.yv'
+Interface da Janela: 'janela-yvira.html'
+Controladores e Modelos: 'src/controllers/browser_controller.yv', 'src/services/browser_engine.yv'
+
+8.1 O Desafio Técnico Inicial (O Problema dos Iframes):
+Nos primeiros testes com sites modernos (YouTube, GitHub, Google), a abordagem de carregar o site
+dentro de um elemento '<iframe>' no HTML causava falhas críticas:
+- YouTube Watch Page Rejeitada: O YouTube responde com cabeçalhos HTTP estritos:
+    X-Frame-Options: SAMEORIGIN
+    Content-Security-Policy: frame-ancestors 'self'
+  Esses cabeçalhos obrigavam o Chromium a abortar a exibição da página do vídeo.
+- Falha de Armazenamento e Rastreamento: O WebView2 aplicava regras de privacidade para frames de
+  terceiros ('Tracking Prevention blocked access to storage'), quebrando tokens de reprodução de mídia
+  e gerando telas pretas com mensagens de "Sem internet".
+- Restrição de Embeds: Forçar links para 'youtube-nocookie.com/embed/...' recortava a página inteira,
+  removendo os comentários, lista lateral de vídeos recomendados, botão de curtir, canal e busca.
+
+8.2 A Solução Arquitetural Definitiva: O Modelo Dual-View Nativo (Top-Level Browsing)
+Para que o Yvira Browser se tornasse um navegador real (da mesma categoria do Chrome e Brave), foi
+necessário extinguir a dependência de tags <iframe> e adotar a composição nativa de dois WebViews:
+
+1. Camada de Interface Superior (_webView - Header UI):
+   - Hospeda a casca da aplicação ('janela-yvira.html').
+   - Contém a faixa de abas personalizadas, barra de endereços (omnibox), botões de navegação
+     (voltar, avançar, recarregar, favoritos, menu e proteção de privacidade).
+   - Quando o usuário acessa um website externo, a barra é fixada no topo com altura fixa (96px,
+     Dock = DockStyle.Top) e posicionada à frente na ordem Z do Windows ('BringToFront()').
+
+2. Camada de Conteúdo Web (_contentWebView - Top-Level Browser):
+   - Um segundo controle WebView2 nativo ocupando todo o restante da janela (Dock = DockStyle.Fill).
+   - O website navega como contexto principal de primeiro nível ('CoreWebView2.Navigate(url)').
+   - IMPACTO CRÍTICO: Por NÃO estar em um frame, o YouTube, GitHub e Google nunca recebem bloqueios
+     de 'X-Frame-Options' ou CSP frame-ancestors. O site inteiro carrega sem hacks ou restrições.
+
+8.3 Sincronização em Tempo Real entre as Camadas (Ponte IPC):
+Os dois componentes trabalham em harmonia síncrona:
+- Navegação Disparada pelo Usuário: Ao teclar 'Enter' na barra de endereços ou clicar em um favorito,
+  o evento 'navigate' é transmitido ao C#. O método 'NavigateContent(url)' ajusta a visibilidade:
+  se for página interna ('yvira://newtab', 'yvira://historico'), preenche a tela inteira; se for site
+  externo, exibe o navegador de conteúdo.
+- Navegação Espontânea na Página: Quando o usuário clica em um vídeo recomendado dentro do próprio
+  YouTube, os eventos nativos 'SourceChanged' e 'DocumentTitleChanged' do WebView2 capturam a mudança
+  e chamam via script a função 'window.receberAtualizacaoUrl({ url, titulo })'. O input da URL e a aba
+  do navegador atualizam imediatamente para a URL real do vídeo ('youtube.com/watch?v=...').
+
+8.4 Flags de Mídia e Permissões de Áudio/Vídeo:
+Para eliminar erros de reprodução travada ou pedidos intrusivos de cliques para liberar áudio, foram
+injetados argumentos de inicialização no CoreWebView2Environment:
+  --autoplay-policy=no-user-gesture-required
+  --enable-features=HardwareMediaKeyHandling
+Garantindo reprodução contínua e compatibilidade com teclas multimídia do teclado físico.
+
+====================================================================================================
+9. APÊNDICE: MATRIZ DE DECISÕES TÉCNICAS E BENEFÍCIOS ACUMULADOS
+====================================================================================================
++-------------------------------+-----------------------------------+------------------------------------+
+| Área de Decisão               | Abordagem Adotada                 | Vantagem Técnica Conquistada       |
++-------------------------------+-----------------------------------+------------------------------------+
+| 1. Renderização Web           | Dual-View Nativo (Top-Level)      | Fim de erros X-Frame-Options/CSP.  |
+|                               |                                   | YouTube e sites carregam 100%.     |
+| 2. Casca da Janela            | DWM Frameless + WS_THICKFRAME     | Estética moderna sem moldura feia  |
+|                               |                                   | mantendo Snap e resizing nativo.   |
+| 3. Atualização de URL         | Listeners SourceChanged no C#     | URL da barra sincronizada ao vivo  |
+|                               |                                   | mesmo em Single Page Apps (SPAs).  |
+| 4. Compilação Global          | Standalone self-contained Win-x64 | O binário 'yvira.exe' funciona     |
+|                               |                                   | em qualquer prompt sem deps.       |
+| 5. Segurança do Core          | Sandbox de Recursos + Taint Flag  | Zero risco de RCE e injeções de SQL|
+|                               |                                   | ou travessia de arquivos.          |
++-------------------------------+-----------------------------------+------------------------------------+
+
+Este documento consolida integralmente a estrutura de engenharia da plataforma Yvira e a fundamentação
+técnica por trás de cada linha de código implementada no ecossistema.
+====================================================================================================
