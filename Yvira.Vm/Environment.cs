@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Yvira.Vm;
@@ -29,7 +29,13 @@ public class Environment
         }
     }
 
-    // Busca o valor de uma variÃ¡vel (sobe pelos escopos pais se necessÃ¡rio)
+    public bool Exists(string name)
+    {
+        if (_values.ContainsKey(name)) return true;
+        if (_parent != null) return _parent.Exists(name);
+        return false;
+    }
+
     public object? Get(string name)
     {
         if (_values.TryGetValue(name, out var val))

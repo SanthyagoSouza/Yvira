@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Yvira.Ast;
 
 namespace Yvira.Vm;
@@ -35,6 +35,9 @@ public class YviraFunction
 
     public object? Call(Interpreter interpreter, System.Collections.Generic.IReadOnlyList<object?> arguments)
     {
+        string funcName = Declaration.Name.Name;
+        interpreter.PushCallFrame(funcName);
+
         var functionEnv = new Environment(Closure);
 
         for (int i = 0; i < Declaration.Parameters.Count; i++)
@@ -51,6 +54,10 @@ public class YviraFunction
         catch (ReturnException ret)
         {
             return ret.Value;
+        }
+        finally
+        {
+            interpreter.PopCallFrame();
         }
 
         return null;

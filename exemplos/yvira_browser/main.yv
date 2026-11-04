@@ -17,7 +17,7 @@ let janela = criar_janela({
     barra_customizada: true,
     redimensionavel: true,
     cor_fundo: "#07080d",
-    view: "janela-yvira.html"
+    view: "public/janela-yvira.html"
 })
 
 # 2. Inicializa o Controlador do Navegador

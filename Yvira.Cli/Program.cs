@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using Yvira.Cli;
 using Yvira.Parser;
@@ -7,6 +7,20 @@ using Yvira.Vm;
 class Program
 {
     static int Main(string[] args)
+    {
+        // Aloca 64MB de pilha dedicada para suportar parsers e rotinas recursivas profundas em Yvira
+        int exitCode = 0;
+        var thread = new System.Threading.Thread(() =>
+        {
+            exitCode = RealMain(args);
+        }, 64 * 1024 * 1024);
+
+        thread.Start();
+        thread.Join();
+        return exitCode;
+    }
+
+    static int RealMain(string[] args)
     {
         // 0. Verifica se este executavel e uma aplicacao selada (Single-File Bundle)
         string? sealedEntry = AppBundler.CheckAndExtractSealedBundle();

@@ -1,0 +1,29 @@
+# Ponto de Entrada do Quad Cortex Virtual DSP Yvira
+import "src/pedalboard_controller.yv";
+
+print("===============================================================");
+print("       NEURAL DSP // QUAD CORTEX EMULATOR (YVIRA CORE)        ");
+print("===============================================================\n");
+
+# Janela no formato característico do chassi Quad Cortex (920x560)
+let app = criar_janela({
+    "titulo": "Neural DSP // Quad Cortex (Yvira DSP)",
+    "view": "views/index.html",
+    "largura": 1200,
+    "altura": 560,
+    "min_largura": 820,
+    "min_altura": 500,
+    "barra_customizada": true,
+    "redimensionavel": true,
+    "cor_fundo": "#0d0f12"
+});
+
+let controller = PedalboardController();
+controller.iniciar(app);
+
+print("[Quad Cortex]: Inicializando Grid Routing e Convolver...");
+
+app.exibir();
+app.esperar();
+
+print("\n[Quad Cortex]: Sessao de audio finalizada.");

@@ -1,0 +1,32 @@
+import "switch" as Switch
+
+print("========================================")
+print("     YVIRA LOCAL NETWORK DISCOVERY      ")
+print("========================================")
+
+# 1. Obtendo adaptadores locais
+let adaptadores = Switch.obter_adaptadores()
+for (let i = 0; i < adaptadores.tamanho(); i = i + 1) {
+    let a = adaptadores[i]
+    if a.status == "Up" and a.ip != "" and a.tipo != "Loopback" {
+        print("Interface ativa: " + a.nome + " | IP: " + a.ip + " | MAC: " + a.mac)
+    }
+}
+
+print("\n--- MAPEANDO DISPOSITIVOS NA REDE (FAIXA 192.168.0.1-50) ---")
+# Escaneando os primeiros 50 IPs da rede local
+let dispositivos = Switch.scan_rede("192.168.0.1-50", 100, false)
+
+print("Dispositivos ativos encontrados: " + dispositivos.tamanho())
+for (let i = 0; i < dispositivos.tamanho(); i = i + 1) {
+    let d = dispositivos[i]
+    print("-> IP: " + d.ip + " | MAC: " + d.mac + " | Latência: " + d.tempo_ms + "ms | Status: " + d.status)
+}
+
+print("\n--- MAPEAMENTO VIA TABELA ARP DO SISTEMA ---")
+let tabelaArp = Switch.obter_arp_tabela()
+print("Total de entradas ARP na máquina: " + tabelaArp.tamanho())
+for (let i = 0; i < tabelaArp.tamanho(); i = i + 1) {
+    let entry = tabelaArp[i]
+    print("IP: " + entry.ip + " => MAC: " + entry.mac + " (" + entry.tipo + ")")
+}

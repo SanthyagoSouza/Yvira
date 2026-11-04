@@ -23,9 +23,10 @@ public static class PrecedenceHelper
             // Comparações de Igualdade
             TokenType.EqualsEquals or TokenType.NotEquals => 4,
 
-            // Comparações Relacionais
+            // Comparações Relacionais e Type Check (is)
             TokenType.LessThan or TokenType.GreaterThan or
-            TokenType.LessOrEqual or TokenType.GreaterOrEqual => 5,
+            TokenType.LessOrEqual or TokenType.GreaterOrEqual or
+            TokenType.Is => 5,
 
             // Adição e Subtração
             TokenType.Plus or TokenType.Minus => 6,

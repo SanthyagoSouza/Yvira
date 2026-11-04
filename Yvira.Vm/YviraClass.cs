@@ -33,6 +33,13 @@ public class YviraClass
         return null;
     }
 
+    public bool IsSubclassOf(YviraClass targetClass)
+    {
+        if (this == targetClass || Name.Equals(targetClass.Name, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return SuperClass != null && SuperClass.IsSubclassOf(targetClass);
+    }
+
     public YviraInstance Instantiate(Interpreter interpreter, IReadOnlyList<object?> arguments)
     {
         var instance = new YviraInstance(this);
@@ -62,6 +69,16 @@ public class YviraInstance
 
     public object? Get(string name)
     {
+        if (name.Equals("super", StringComparison.OrdinalIgnoreCase) && Class.SuperClass != null)
+        {
+            return new YviraSuperInstance(this, Class.SuperClass);
+        }
+
+        if (name.Equals("__class__", StringComparison.OrdinalIgnoreCase) || name.Equals("class", StringComparison.OrdinalIgnoreCase))
+        {
+            return Class;
+        }
+
         if (Fields.TryGetValue(name, out var val))
         {
             return val;
@@ -86,4 +103,29 @@ public class YviraInstance
         var fieldsDesc = string.Join(", ", Fields.Select(kv => $"{kv.Key}: {kv.Value}"));
         return $"<{Class.Name} {{ {fieldsDesc} }}>";
     }
+}
+
+public class YviraSuperInstance
+{
+    public YviraInstance Instance { get; }
+    public YviraClass SuperClass { get; }
+
+    public YviraSuperInstance(YviraInstance instance, YviraClass superClass)
+    {
+        Instance = instance;
+        SuperClass = superClass;
+    }
+
+    public object? Get(string name)
+    {
+        var method = SuperClass.FindMethod(name);
+        if (method != null)
+        {
+            return method.Bind(Instance);
+        }
+
+        return Instance.Get(name);
+    }
+
+    public override string ToString() => $"<super {SuperClass.Name} de {Instance.Class.Name}>";
 }

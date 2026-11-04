@@ -1,0 +1,87 @@
+====================================================================================================
+               ROADMAP DE AUTO-HOSPEDAGEM (SELF-HOSTING) & BOOTSTRAP - YVIRA
+     TASKS ESSENCIAIS PARA ESCREVER O COMPILADOR E FERRAMENTAS DO YVIRA EM PURO YVIRA (.yv)
+====================================================================================================
+Status: EM PLANEJAMENTO
+Objetivo: Capacitar a linguagem Yvira com todas as primitivas necessárias para que seu Lexer, 
+          Parser, AST e Compilador de Bytecode sejam refatorados e executados dentro dela mesma.
+
+----------------------------------------------------------------------------------------------------
+[FASE 1] PRIMITIVAS DE STRINGS, CARACTERES E ENTRADA/SAÍDA (CORE RUNTIME EM C#) [CONCLUÍDA]
+----------------------------------------------------------------------------------------------------
+[x] TASK 1.1 - Acesso e Inspeção de Caracteres por Código Numérico
+    * Implementado 'ord(ch)' e 'char_code(str, index)' retornando código Unicode.
+    * Implementado 'chr(code)' convertendo valor numérico para caractere/string.
+    * Garantida indexação de strings texto[i] com índices positivos e negativos.
+
+[x] TASK 1.2 - Fatiamento (Slicing) e Manipulação Otimizada de Strings
+    * Implementado método '.slice(start, len)' e '.substring(start, len)' em strings.
+    * Implementados 'is_digit()', 'is_alpha()', 'is_alnum()', 'is_whitespace()' na linguagem e como métodos de string.
+    * Métodos de busca 'starts_with', 'ends_with', 'index_of', 'char_code', 'char_at' ativos.
+
+[x] TASK 1.3 - Buffer Binário e Manipulação de Bytes (Para Emissão de Bytecode)
+    * Criada a classe 'YviraByteArray' (tipo nativo 'bytes()'):
+        - write_u8, write_u16, write_u32, write_i32, write_f64, write_string, write_bytes
+        - read_u8, read_u16, read_u32, read_f64, read_string, slice, clear
+        - indexação direta: b[i] e atribuição b[i] = valor
+    * Módulo 'fs' integrado com 'fs.write_bytes(path, b)' e 'fs.read_bytes(path)'.
+
+----------------------------------------------------------------------------------------------------
+[FASE 2] SISTEMA DE TIPOS, ENUMS E ESTRUTURAS DE DADOS PARA COMPILADORES [CONCLUÍDA]
+----------------------------------------------------------------------------------------------------
+[x] TASK 2.1 - Suporte a Enums Nativos
+    * Implementada palavra-chave 'enum Nome { MEMBRO, MEMBRO2 = 10 }'.
+    * Membros geram valores inteiros sequenciais automáticos ou literais numéricos/strings definidos.
+    * Acesso estático direto: TokenType.EOF, TokenType.PLUS, além de métodos .keys e .values.
+
+[x] TASK 2.2 - Robustez de Orientação a Objetos e Polimorfismo da AST
+    * Suporte a herança com 'class Filha : Pai' e 'class Filha extends Pai'.
+    * Invocação de métodos e construtores base via 'this.super.init(...)' e 'this.super.metodo()'.
+    * Operador infixo de checagem de tipo 'objeto is Classe' e 'objeto is primitiva' (number, string, list, bytes, etc.).
+    * Built-in 'is_instance(objeto, Classe)' e 'type(objeto)'.
+
+[x] TASK 2.3 - Estruturas Auxiliares na Stdlib / Coleções
+    * Suporte consolidado a push, pop, insert, index_of, len, slice em listas e buffers binários.
+
+----------------------------------------------------------------------------------------------------
+[FASE 3] ROBUSTEZ DA MÁQUINA VIRTUAL, CALL FRAMES E DIAGNÓSTICO [CONCLUÍDA]
+----------------------------------------------------------------------------------------------------
+[x] TASK 3.1 - Expansão de Limite de Call Frames e Recursão Profunda
+    * Configurada pilha nativa de 64MB em thread dedicada no Yvira.Cli (suporta milhares de chamadas sem StackOverflow).
+    * Implementado controle de Call Stack na VM (Interpreter._callStack e _callDepth com limite de segurança de 10.000).
+    * Testado com sucesso em recursão com profundidade 1.500+.
+
+[x] TASK 3.2 - Módulos e Escopo de Importação Limpo
+    * 'import "modulo.yv"' executa com escopo isolado, exportando símbolos para o cache de módulos de forma determinística.
+
+----------------------------------------------------------------------------------------------------
+[FASE 4] IMPLEMENTAÇÃO DOS SUBSISTEMAS DO COMPILADOR EM PURO YVIRA (.yv)
+----------------------------------------------------------------------------------------------------
+[ ] TASK 4.1 - O Lexer em Yvira (lexer.yv)
+    * Modelar classe Token (tipo, lexema, literal, linha, coluna).
+    * Implementar o scanner/lexer completo consumindo código-fonte caractere a caractere.
+    * Testar gerando tokens de arquivos reais do repositório e validar 100% contra a saída do Lexer em C#.
+
+[ ] TASK 4.2 - A AST em Yvira (ast.yv)
+    * Declarar todas as classes da Árvore Sintática Abstrata (Statements, Expressions, Literais, Blocos, etc.).
+
+[ ] TASK 4.3 - O Parser em Yvira (parser.yv)
+    * Implementar o analisador sintático de descida recursiva com precedência de operadores (Pratt Parser).
+    * Implementar relatórios amigáveis de erro sintático com localização exata no código.
+    * Validar gerando a AST de scripts de teste e comparando com o Parser C#.
+
+[ ] TASK 4.4 - O Compilador de Bytecode em Yvira (compiler.yv)
+    * Implementar o emissor de OpCodes sequenciais na classe Chunk.
+    * Implementar resolução de constantes e tabela de símbolos em Yvira.
+    * Gerar binários de bytecode compatíveis com a VM atual.
+
+[ ] TASK 4.5 - CLI e Ponto de Entrada em Yvira (main.yv)
+    * Implementar o ponto de entrada de linha de comando com parsing de argumentos (yv run, yv compile, yv repl).
+
+----------------------------------------------------------------------------------------------------
+[FASE 5] O TESTE DO OVO E DA GALINHA (BOOTSTRAPPING & VERIFICAÇÃO)
+----------------------------------------------------------------------------------------------------
+[ ] TASK 5.1 - Rodar o Compilador Yvira dentro do Yvira (Host C# executa Compilador .yv).
+[ ] TASK 5.2 - Compilar o próprio código do compilador (.yv) usando o compilador em (.yv).
+[ ] TASK 5.3 - Validar equivalência bit a bit (determinismo) do bytecode gerado.
+====================================================================================================

@@ -516,6 +516,31 @@ public class MatchStatementNode : StatementNode
     }
 }
 
+// Declaração de Enum: enum TokenType { EOF, NUMBER = 10, ... }
+public class EnumMemberNode : AstNode
+{
+    public string Name { get; }
+    public ExpressionNode? Value { get; }
+
+    public EnumMemberNode(string name, ExpressionNode? value = null)
+    {
+        Name = name;
+        Value = value;
+    }
+}
+
+public class EnumDeclarationNode : StatementNode
+{
+    public IdentifierNode Name { get; }
+    public IReadOnlyList<EnumMemberNode> Members { get; }
+
+    public EnumDeclarationNode(IdentifierNode name, IReadOnlyList<EnumMemberNode> members)
+    {
+        Name = name;
+        Members = members;
+    }
+}
+
 // Diretiva @die(...) ou @die;
 public class DieStatementNode : StatementNode
 {

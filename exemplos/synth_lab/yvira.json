@@ -1,0 +1,7 @@
+{
+    "name": "yvira-synth-lab",
+    "version": "1.0.0",
+    "entry": "main.yv",
+    "author": "Yvira Audio DSP Team",
+    "description": "Sintetizador Polifonico com EQ Multi-bandas e Filtro Resonante ao Vivo em Yvira"
+}

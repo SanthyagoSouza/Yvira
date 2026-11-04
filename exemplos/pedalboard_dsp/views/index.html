@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YVIRA // QUAD CORTEX DYNAMIC DSP RACK & RECORDER</title>
+    <link rel="stylesheet" href="assets/pedalboard.css">
+    <style>
+        /* Estilos do Gravador Tape Recorder */
+        .btn-rec {
+            background: #241416;
+            color: #f87171;
+            border: 1px solid #7f1d1d;
+            padding: 7px 12px;
+            border-radius: 6px;
+            font-weight: 800;
+            font-size: 11px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            transition: 0.2s;
+        }
+
+        .btn-rec:hover { background: #3b181b; }
+
+        .btn-rec.recording {
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+            color: #fff;
+            border-color: #fca5a5;
+            box-shadow: 0 0 16px rgba(239, 68, 68, 0.6);
+            animation: pulse-rec 1.2s infinite;
+        }
+
+        @keyframes pulse-rec {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+            100% { transform: scale(1); }
+        }
+
+        .rec-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+
+        .btn-rec.recording .rec-dot {
+            background: #fff;
+            box-shadow: 0 0 8px #fff;
+        }
+
+        .rec-timer {
+            font-family: monospace;
+            font-size: 11px;
+            color: #ef4444;
+            font-weight: 800;
+            display: none;
+        }
+
+        .rec-timer.active { display: inline-block; }
+    </style>
+</head>
+<body>
+    <!-- Titlebar Customizada Arrastável -->
+    <header class="qc-titlebar" data-arrastavel="true">
+        <div class="qc-logo">
+            <span style="color:var(--qc-cyan); font-size:15px;">⚡</span>
+            <span>QUAD CORTEX</span>
+            <span class="badge-cortex">YVIRA CORE</span>
+            <span class="badge-lab">STUDIO RECORDER</span>
+        </div>
+        <div class="qc-win-controls">
+            <button class="qc-btn-win" onclick="window.yvira.minimizar()" title="Minimizar">─</button>
+            <button class="qc-btn-win" onclick="window.yvira.maximizar()" title="Maximizar">□</button>
+            <button class="qc-btn-win close" onclick="window.yvira.fechar()" title="Fechar">✕</button>
+        </div>
+    </header>
+
+    <div class="qc-main">
+        <!-- Top Toolbar: Master I/O, BPM, Live Switch, RECORDER, QuadLab Studio -->
+        <div class="qc-top-bar">
+            <div class="qc-controls-left">
+                <div class="qc-meter-box">
+                    <span class="qc-meter-label">IN GAIN</span>
+                    <input type="range" class="qc-slider" id="in_gain" min="0" max="2" step="0.05" value="1.0" oninput="ajustarMasterGain('in', this.value)">
+                    <span class="qc-meter-val" id="val_in_gain">1.00x</span>
+                </div>
+                <div class="qc-meter-box">
+                    <span class="qc-meter-label">OUT VOL</span>
+                    <input type="range" class="qc-slider" id="out_vol" min="0" max="2" step="0.05" value="1.0" oninput="ajustarMasterGain('out', this.value)">
+                    <span class="qc-meter-val" id="val_out_vol">1.00x</span>
+                </div>
+                <div class="qc-bpm-box">
+                    <span style="font-size:10px; font-weight:800; color:var(--qc-text-dim);">TEMPO</span>
+                    <input type="number" class="qc-bpm-input" id="master_bpm" min="40" max="260" value="120" onchange="atualizarBpm(this.value)">
+                    <span style="font-size:9px; color:var(--qc-cyan); font-weight:800;">BPM</span>
+                </div>
+
+                <!-- GLOBAL MASTER EQ -->
+                <div class="qc-global-eq-panel" title="Global EQ Master: Corta graves indesejados da guitarra antes dos amplificadores">
+                    <div class="qc-meter-box">
+                        <span class="qc-meter-label" style="color:#ff5252;">LOW CUT</span>
+                        <input type="range" class="qc-slider" id="global_low_cut" min="20" max="250" step="5" value="95" oninput="ajustarGlobalEq('lowCut', this.value)">
+                        <span class="qc-meter-val" id="val_global_low_cut" style="color:#ff5252;">95 Hz</span>
+                    </div>
+                    <div class="qc-meter-box">
+                        <span class="qc-meter-label" style="color:var(--qc-gold);">BASS TRIM</span>
+                        <input type="range" class="qc-slider" id="global_bass_gain" min="-18" max="12" step="1" value="-4" oninput="ajustarGlobalEq('bassGain', this.value)">
+                        <span class="qc-meter-val" id="val_global_bass_gain" style="color:var(--qc-gold);">-4 dB</span>
+                    </div>
+                    <div class="qc-meter-box">
+                        <span class="qc-meter-label" style="color:var(--qc-cyan);">HIGH CUT</span>
+                        <input type="range" class="qc-slider" id="global_high_cut" min="4000" max="18000" step="250" value="12000" oninput="ajustarGlobalEq('highCut', this.value)">
+                        <span class="qc-meter-val" id="val_global_high_cut" style="color:var(--qc-cyan);">12.0k</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="qc-actions-right">
+                <!-- GRAVADOR MASTER DE ÁUDIO -->
+                <button class="btn-rec" id="btn_rec" onclick="alternarGravacao()">
+                    <span class="rec-dot"></span>
+                    <span id="txt_rec">● GRAVAR ÁUDIO</span>
+                </button>
+                <span class="rec-timer" id="rec_timer">00:00</span>
+
+                <!-- ENTRADA AO VIVO -->
+                <button class="btn-live" id="btn_live" onclick="alternarLiveInput()">
+                    <span class="live-dot"></span>
+                    <span id="txt_live">🎸 ENTRADA AO VIVO</span>
+                </button>
+
+                <button class="btn-qc" onclick="tocarDemoRiff()">
+                    ▶ Riff Demo
+                </button>
+
+                <!-- BOTÃO DO QUADLAB STUDIO -->
+                <button class="btn-qc" style="background:#201705; border-color:#ffd60066; color:var(--qc-gold);" onclick="abrirQuadLabNovo()">
+                    ⚡ QUADLAB STUDIO
+                </button>
+
+                <!-- Menu Adicionar Efeito (Kanban) -->
+                <div class="add-block-dropdown">
+                    <button class="btn-qc" style="background:#13271d; border-color:#00e67666; color:#00e676;" onclick="toggleAddMenu()">
+                        ＋ ADICIONAR EFEITO
+                    </button>
+                    <div class="dropdown-menu" id="add_effect_menu">
+                        <div class="dropdown-item" onclick="adicionarBloco('overdrive')">🔥 Overdrive / Distortion</div>
+                        <div class="dropdown-item" onclick="adicionarBloco('amp')">🎛️ Amp Tone Stack</div>
+                        <div class="dropdown-item" onclick="adicionarBloco('cab')">🔈 Cabinet IR (.wav)</div>
+                        <div class="dropdown-item" onclick="adicionarBloco('delay')">⏳ Musical Echo Delay</div>
+                        <div class="dropdown-item" onclick="adicionarBloco('reverb')">🌊 Studio Reverb</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SIGNAL ROUTING VISUALIZER -->
+        <div class="qc-routing-visualizer">
+            <div class="routing-header">
+                <span>SIGNAL CHAIN ROUTING (ARRASTE OS CARDS OU CLIQUE NO ✏️ DE QUALQUER BLOCO PARA EDITAR NO QUADLAB)</span>
+                <span id="qc_dsp_latency" style="color:var(--qc-cyan);">LATÊNCIA: ~3.8 ms | QUADLAB PRO REALTIME</span>
+            </div>
+            <div class="routing-lane" id="routing_lane"></div>
+        </div>
+
+        <!-- DYNAMIC BLOCKS KANBAN RACK (Drag & Drop Reorder) -->
+        <div class="qc-blocks-rack" id="blocks_rack"></div>
+
+        <!-- Footer / Status Telemetry -->
+        <footer class="qc-footer">
+            <div class="qc-indicator">
+                <span class="qc-led-online"></span>
+                <span id="qc_status_text">Neural Quad Cortex Core: Online & Operacional</span>
+            </div>
+            <div id="qc_ir_info">Cadeia de Efeitos: 5 Blocos Ativos | Gravador pronto</div>
+        </footer>
+    </div>
+
+    <!-- ========================================================
+         MODAL: QUADLAB STUDIO IDE (CIRCUIT & ALGORITHM LAB)
+         ======================================================== -->
+    <div class="modal-overlay" id="quadlab_modal">
+        <div class="quadlab-window">
+            <div class="quadlab-header">
+                <div class="quadlab-title">
+                    <span>⚡</span>
+                    <span id="ql_header_title">QUADLAB DSP STUDIO // CIRCUIT LAB</span>
+                    <span style="font-size:9px; background:#ffd60033; color:var(--qc-gold); padding:2px 6px; border-radius:3px;" id="ql_mode_badge">NEW BLOCK</span>
+                </div>
+                <button class="qc-btn-win close" onclick="fecharQuadLab()">✕</button>
+            </div>
+
+            <div class="quadlab-body">
+                <div class="quadlab-sidebar">
+                    <div class="quadlab-group">
+                        <span class="quadlab-label">Nome do Bloco</span>
+                        <input type="text" class="quadlab-input" id="ql_block_name" value="Custom QuadLab Circuit">
+                    </div>
+
+                    <div class="quadlab-group">
+                        <span class="quadlab-label">Categoria de Circuito</span>
+                        <select class="qc-select-model" id="ql_category" onchange="mudarCategoriaQuadLab(this.value)">
+                            <option value="overdrive">Overdrive / Distortion / Fuzz (Saturação)</option>
+                            <option value="delay">Echo Delay (Fita, Analógico, Ping-Pong, Digital)</option>
+                            <option value="reverb">Space Reverb (Plate, Shimmer, Hall, Room, Spring)</option>
+                            <option value="amp">Amp Tone Stack Preamp (Modelagem Biquad)</option>
+                        </select>
+                    </div>
+
+                    <div id="controls_delay_group" style="display:none; flex-direction:column; gap:8px;">
+                        <div class="quadlab-group">
+                            <span class="quadlab-label">Tipo de Circuito Delay</span>
+                            <select class="qc-select-model" id="ql_delay_type" onchange="carregarTemplateDelay(this.value)">
+                                <option value="tape_echo">Vintage Tape Echo (Fita com Saturação & Modulação)</option>
+                                <option value="analog_bbd">Analog Bucket Brigade (BBD com Filtro Escuro 1.8kHz)</option>
+                                <option value="digital_clean">Pristine Digital Crystal (24-bit Studio Repeats)</option>
+                                <option value="space_echo">Space Echo / Multi-Tap Ambience</option>
+                            </select>
+                        </div>
+                        <div class="quadlab-group">
+                            <span class="quadlab-label">Filtro de Feedback High-Cut (Hz)</span>
+                            <input type="range" class="qc-slider" style="width:100%" id="ql_delay_damp" min="800" max="8000" step="100" value="2400" oninput="document.getElementById('lbl_ql_delay_damp').innerText = this.value + ' Hz'">
+                            <span style="font-size:10px; font-family:monospace; color:var(--qc-cyan);" id="lbl_ql_delay_damp">2400 Hz</span>
+                        </div>
+                        <div class="quadlab-group">
+                            <span class="quadlab-label">Tape Flutter / Modulação de Pitch</span>
+                            <input type="range" class="qc-slider" style="width:100%" id="ql_delay_flutter" min="0.0" max="0.005" step="0.0005" value="0.0015" oninput="document.getElementById('lbl_ql_flutter').innerText = (this.value * 1000).toFixed(1) + ' ms'">
+                            <span style="font-size:10px; font-family:monospace; color:var(--qc-cyan);" id="lbl_ql_flutter">1.5 ms</span>
+                        </div>
+                    </div>
+
+                    <div id="controls_reverb_group" style="display:none; flex-direction:column; gap:8px;">
+                        <div class="quadlab-group">
+                            <span class="quadlab-label">Ambiente Acústico Reverb</span>
+                            <select class="qc-select-model" id="ql_reverb_type" onchange="carregarTemplateReverb(this.value)">
+                                <option value="shimmer">Ambient Shimmer (Harmônicos de Oitava Superior)</option>
+                                <option value="plate">Vintage Studio Plate 140 (Brilhante e Denso)</option>
+                                <option value="cathedral">Cathedral / Vast Hall (Decaimento Longo e Épico)</option>
+                                <option value="spring">Surf Rock Spring (Molas com Ressonância)</option>
+                                <option value="room">Studio Room (Ambiente Íntimo e Natural)</option>
+                            </select>
+                        </div>
+                        <div class="quadlab-group">
+                            <span class="quadlab-label">Damping Acústico (Absorção de Agudos)</span>
+                            <input type="range" class="qc-slider" style="width:100%" id="ql_reverb_damp" min="1.0" max="6.0" step="0.2" value="3.5" oninput="document.getElementById('lbl_ql_rev_damp').innerText = this.value">
+                            <span style="font-size:10px; font-family:monospace; color:var(--qc-cyan);" id="lbl_ql_rev_damp">3.5</span>
+                        </div>
+                    </div>
+
+                    <div id="controls_od_group" style="display:flex; flex-direction:column; gap:8px;">
+                        <div class="quadlab-group">
+                            <span class="quadlab-label">Frequência Central de Médios (Hz)</span>
+                            <input type="range" class="qc-slider" style="width:100%" id="ql_mid_freq" min="300" max="3000" step="50" value="750" oninput="document.getElementById('lbl_ql_mid').innerText = this.value + ' Hz'">
+                            <span style="font-size:10px; font-family:monospace; color:var(--qc-cyan);" id="lbl_ql_mid">750 Hz</span>
+                        </div>
+                        <div class="quadlab-group">
+                            <span class="quadlab-label">Ressonância Q Factor</span>
+                            <input type="range" class="qc-slider" style="width:100%" id="ql_q_factor" min="0.5" max="4.0" step="0.1" value="1.5" oninput="document.getElementById('lbl_ql_q').innerText = this.value">
+                            <span style="font-size:10px; font-family:monospace; color:var(--qc-cyan);" id="lbl_ql_q">1.5</span>
+                        </div>
+                        <div class="quadlab-group">
+                            <span class="quadlab-label">Ganho de Saturação Máximo</span>
+                            <input type="range" class="qc-slider" style="width:100%" id="ql_max_gain" min="1.0" max="15.0" step="0.5" value="6.0" oninput="document.getElementById('lbl_ql_gain').innerText = this.value + 'x'">
+                            <span style="font-size:10px; font-family:monospace; color:var(--qc-cyan);" id="lbl_ql_gain">6.0x</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="code-editor-panel">
+                    <div class="code-editor-header">
+                        <span id="ql_editor_sublabel">ALGORITMO DE ONDA / CURVA DSP: f(x)</span>
+                        <span style="color:var(--qc-text-dim); font-size:9px;">QUADLAB DSP ENGINE 44.1kHz</span>
+                    </div>
+                    <textarea class="code-textarea" id="ql_code_editor" spellcheck="false"></textarea>
+                </div>
+            </div>
+
+            <div class="quadlab-footer">
+                <span style="font-size:10px; color:var(--qc-text-dim);">Dica: Modifique parâmetros ou o algoritmo e clique em Injetar no Rack.</span>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn-qc" onclick="fecharQuadLab()">Cancelar</button>
+                    <button class="btn-qc" style="background:#ffd600; color:#000; font-weight:900; border-color:#fff176;" onclick="compilarEInjetarQuadLab()">
+                        ⚡ COMPILAR & INJETAR NO RACK
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Web Audio Graph, Recorder & QuadLab Engine -->
+    <script>
+        const AMP_MODELS = {
+            "marshall_jcm": { name: "British Lead (JCM800)", bassFreq: 110, midFreq: 750, midQ: 1.5, trebleFreq: 3400, presenceFreq: 5200 },
+            "fender_twin": { name: "American Clean (Twin '65)", bassFreq: 75, midFreq: 1300, midQ: 0.8, trebleFreq: 4800, presenceFreq: 6500 },
+            "mesa_recto": { name: "Rectifier High-Gain (Mesa)", bassFreq: 95, midFreq: 580, midQ: 1.8, trebleFreq: 3800, presenceFreq: 4800 },
+            "vox_ac30": { name: "Class A Chime (AC30)", bassFreq: 140, midFreq: 1600, midQ: 1.0, trebleFreq: 4400, presenceFreq: 6000 },
+            "soldano_slo": { name: "Hot-Rod High Gain (SLO-100)", bassFreq: 105, midFreq: 900, midQ: 1.6, trebleFreq: 3600, presenceFreq: 5400 }
+        };
+
+        const OD_MODELS = {
+            "ts808": { name: "Tube Screamer TS808", driveGain: 28, midHump: 720, midBoost: 6.0, type: "soft" },
+            "klon_centaur": { name: "Centaur Gold Overdrive", driveGain: 18, midHump: 1000, midBoost: 4.5, type: "warm" },
+            "proco_rat": { name: "Rodent Hard Distortion", driveGain: 65, midHump: 900, midBoost: 3.0, type: "hard" },
+            "blues_breaker": { name: "British Blues Breaker", driveGain: 20, midHump: 850, midBoost: 2.0, type: "transparent" },
+            "fuzz_face": { name: "Silicon Fuzz Germanium", driveGain: 85, midHump: 450, midBoost: 8.0, type: "fuzz" }
+        };
+
+        const NOTE_DIVISIONS = {
+            "1/1": { name: "Semibreve (1/1)", mult: 4.0 },
+            "1/2": { name: "Mínima (1/2)", mult: 2.0 },
+            "1/4": { name: "Semínima (1/4)", mult: 1.0 },
+            "1/4D": { name: "Semínima Pontuada (1/4.)", mult: 1.5 },
+            "1/8": { name: "Colcheia (1/8)", mult: 0.5 },
+            "1/8D": { name: "Colcheia Pontuada (1/8.)", mult: 0.75 },
+            "1/8T": { name: "Tercina de Colcheia (1/8T)", mult: 0.3333 },
+            "1/16": { name: "Semicolcheia (1/16)", mult: 0.25 }
+        };
+
+        let masterBpm = 120;
+        let masterInGain = 1.0;
+        let masterOutVol = 1.0;
+        let editingBlockIndex = null;
+
+        let chainBlocks = [
+            { id: "od_1", type: "overdrive", name: "Overdrive", model: "ts808", enabled: true, gain: 3.5, tone: 0.65, level: 0.85 },
+            { id: "amp_1", type: "amp", name: "Amp Stack", model: "marshall_jcm", enabled: true, bass: 1.3, mid: 0.85, treble: 1.4, presence: 1.2 },
+            { id: "cab_1", type: "cab", name: "Cab IR", enabled: true, path: "irs/4x12_celestion_v30.wav", mix: 1.0 },
+            { id: "delay_1", type: "delay", name: "Echo Delay", circuitType: "tape_echo", dampFreq: 2400, flutter: 0.0015, enabled: true, noteDivision: "1/8D", feedback: 0.45, mix: 0.35 },
+            { id: "reverb_1", type: "reverb", name: "Studio Reverb", reverbType: "plate", damp: 3.5, enabled: true, decay: 2.2, mix: 0.28 }
+        ];
+
+        let audioCtx = null;
+        let micStream = null;
+        let sourceNode = null;
+        let inputGainNode = null;
+        let outputGainNode = null;
+        let isLiveActive = false;
+        let currentIrBuffer = null;
+
+        // Global EQ Filters (Tight Low-Cut, Bass Shelf, High-Cut)
+        let globalLowCutFilter = null;
+        let globalBassShelfFilter = null;
+        let globalHighCutFilter = null;
+
+        let globalEqSettings = {
+            lowCut: 95,      // Hz (elimina sub-graves e rumble de captadores)
+            bassGain: -4.0,  // dB (atenua graves embolados)
+            highCut: 12000   // Hz (corta ruído ultra-alto de digitalização)
+        };
+
+        // Gravador de Áudio Master
+        let recorderNode = null;
+        let isRecording = false;
+        let recordedSamples = [];
+        let recInterval = null;
+        let recSeconds = 0;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                // LatencyHint 0 para solicitar a menor latência possível do hardware de áudio (ASIO / Exclusive WASAPI)
+                audioCtx = new AudioContextClass({ latencyHint: 0 });
+                inputGainNode = audioCtx.createGain();
+                outputGainNode = audioCtx.createGain();
+                inputGainNode.gain.value = masterInGain;
+                outputGainNode.gain.value = masterOutVol;
+
+                // Cria nós do Global Master EQ
+                globalLowCutFilter = audioCtx.createBiquadFilter();
+                globalLowCutFilter.type = "highpass";
+                globalLowCutFilter.frequency.value = globalEqSettings.lowCut;
+
+                globalBassShelfFilter = audioCtx.createBiquadFilter();
+                globalBassShelfFilter.type = "lowshelf";
+                globalBassShelfFilter.frequency.value = 130;
+                globalBassShelfFilter.gain.value = globalEqSettings.bassGain;
+
+                globalHighCutFilter = audioCtx.createBiquadFilter();
+                globalHighCutFilter.type = "lowpass";
+                globalHighCutFilter.frequency.value = globalEqSettings.highCut;
+
+                // Conecta o estágio final de saída direto aos falantes/fone
+                outputGainNode.connect(audioCtx.destination);
+            }
+            return audioCtx;
+        }
+
+        // ==========================================
+        // GRAVAÇÃO DE ÁUDIO MASTER (ON-DEMAND)
+        // ==========================================
+        function alternarGravacao() {
+            const ctx = getAudioContext();
+            if (ctx.state === 'suspended') ctx.resume();
+
+            const btn = document.getElementById("btn_rec");
+            const timer = document.getElementById("rec_timer");
+
+            if (!isRecording) {
+                // Inicia Gravação conectando o gravador sob demanda (ZERO latência quando desligado)
+                recordedSamples = [];
+                isRecording = true;
+                recSeconds = 0;
+
+                // Conecta gravador apenas durante o ato da gravação
+                recorderNode = ctx.createScriptProcessor(2048, 1, 1);
+                recorderNode.onaudioprocess = function(e) {
+                    if (!isRecording) return;
+                    const inputData = e.inputBuffer.getChannelData(0);
+                    for (let i = 0; i < inputData.length; i++) {
+                        recordedSamples.push(inputData[i]);
+                    }
+                };
+                outputGainNode.connect(recorderNode);
+                recorderNode.connect(ctx.destination);
+
+                btn.classList.add("recording");
+                document.getElementById("txt_rec").innerText = "■ PARAR GRAVAÇÃO";
+                timer.classList.add("active");
+                timer.innerText = "00:00";
+
+                recInterval = setInterval(() => {
+                    recSeconds++;
+                    const m = String(Math.floor(recSeconds / 60)).padStart(2, '0');
+                    const s = String(recSeconds % 60).padStart(2, '0');
+                    timer.innerText = `${m}:${s}`;
+                }, 1000);
+
+                document.getElementById("qc_status_text").innerText = "Gravando áudio master em tempo real...";
+            } else {
+                // Para Gravação e desconecta imediatamente do grafo
+                isRecording = false;
+                clearInterval(recInterval);
+                btn.classList.remove("recording");
+                document.getElementById("txt_rec").innerText = "● GRAVAR ÁUDIO";
+                timer.classList.remove("active");
+
+                if (recorderNode) {
+                    recorderNode.disconnect();
+                    outputGainNode.disconnect(recorderNode);
+                    recorderNode = null;
+                }
+
+                if (recordedSamples.length === 0) {
+                    alert("Nenhum áudio foi capturado durante a gravação.");
+                    return;
+                }
+
+                // Gera arquivo WAV e envia para o backend em Yvira salvar no disco
+                const nomeArquivo = `take_${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.wav`;
+                document.getElementById("qc_status_text").innerText = `Salvando ${recordedSamples.length} amostras em WAV...`;
+
+                // 1. Envia para o Yvira Core salvar na pasta 'gravacoes/'
+                window.yvira.emit("salvar_gravacao", {
+                    nome: nomeArquivo,
+                    sample_rate: ctx.sampleRate,
+                    samples: recordedSamples
+                });
+
+                // 2. Cria link de download imediato na interface
+                baixarWavNoBrowser(recordedSamples, ctx.sampleRate, nomeArquivo);
+            }
+        }
+
+        function baixarWavNoBrowser(samples, sampleRate, filename) {
+            const buffer = new ArrayBuffer(44 + samples.length * 2);
+            const view = new DataView(buffer);
+
+            // RIFF chunk descriptor
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + samples.length * 2, true);
+            writeString(view, 8, 'WAVE');
+            // FMT sub-chunk
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true); // PCM
+            view.setUint16(22, 1, true); // Mono
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            // DATA sub-chunk
+            writeString(view, 36, 'data');
+            view.setUint32(40, samples.length * 2, true);
+
+            // Escreve amostras PCM 16-bit
+            let offset = 44;
+            for (let i = 0; i < samples.length; i++) {
+                let s = Math.max(-1, Math.min(1, samples[i]));
+                view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+                offset += 2;
+            }
+
+            const blob = new Blob([view], { type: 'audio/wav' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.style.display = "none";
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        window.confirmacaoGravacao = function(res) {
+            console.log("[QuadCortex Gravador Confirmado]:", res);
+            document.getElementById("qc_status_text").innerText = `Gravação salva em: ${res.caminho}`;
+        };
+
+        // ==========================================
+        // CONSTRUTOR DINÂMICO DO GRAFO DE ÁUDIO
+        // ==========================================
+        function reconstruirGrafoAudio() {
+            const ctx = getAudioContext();
+            inputGainNode.disconnect();
+            globalLowCutFilter.disconnect();
+            globalBassShelfFilter.disconnect();
+            globalHighCutFilter.disconnect();
+
+            // Encadeamento do Global Input EQ:
+            // inputGainNode -> LowCut (Highpass) -> BassTrim (Lowshelf) -> HighCut (Lowpass) -> Primeiro Pedal
+            inputGainNode.connect(globalLowCutFilter);
+            globalLowCutFilter.connect(globalBassShelfFilter);
+            globalBassShelfFilter.connect(globalHighCutFilter);
+
+            let previousNode = globalHighCutFilter;
+
+            chainBlocks.forEach(block => {
+                const subGraph = criarSubGrafoEfeito(ctx, block);
+                previousNode.connect(subGraph.input);
+                previousNode = subGraph.output;
+            });
+
+            previousNode.connect(outputGainNode);
+            atualizarRoutingVisualizer();
+            document.getElementById("qc_ir_info").innerText = `Cadeia de Efeitos: ${chainBlocks.length} Blocos | Gravador Pronto | Global EQ Ativo`;
+        }
+
+        function criarSubGrafoEfeito(ctx, block) {
+            const inputGain = ctx.createGain();
+            const outputGain = ctx.createGain();
+
+            if (!block.enabled) {
+                inputGain.connect(outputGain);
+                return { input: inputGain, output: outputGain };
+            }
+
+            if (block.type === 'overdrive') {
+                const spec = OD_MODELS[block.model] || OD_MODELS["ts808"];
+                const shaper = ctx.createWaveShaper();
+                shaper.curve = gerarCurvaOverdrive(spec.driveGain * block.gain, spec.type);
+                shaper.oversample = 'none'; // Latência zero: elimina buffers de FIR de re-amostragem 4x
+
+                const midFilter = ctx.createBiquadFilter();
+                midFilter.type = "peaking";
+                midFilter.frequency.value = spec.midHump;
+                midFilter.Q.value = 1.6;
+                midFilter.gain.value = spec.midBoost;
+
+                const toneFilter = ctx.createBiquadFilter();
+                toneFilter.type = "highshelf";
+                toneFilter.frequency.value = 2800;
+                toneFilter.gain.value = (block.tone - 0.5) * 18.0;
+
+                const levelGain = ctx.createGain();
+                levelGain.gain.value = block.level;
+
+                inputGain.connect(midFilter);
+                midFilter.connect(shaper);
+                shaper.connect(toneFilter);
+                toneFilter.connect(levelGain);
+                levelGain.connect(outputGain);
+            }
+            else if (block.type === 'amp') {
+                const spec = AMP_MODELS[block.model] || AMP_MODELS["marshall_jcm"];
+
+                const subCut = ctx.createBiquadFilter();
+                subCut.type = "highpass";
+                subCut.frequency.value = 45;
+
+                const bFilter = ctx.createBiquadFilter();
+                bFilter.type = "lowshelf";
+                bFilter.frequency.value = spec.bassFreq;
+                bFilter.gain.value = (block.bass - 1.0) * 18.0;
+
+                const mFilter = ctx.createBiquadFilter();
+                mFilter.type = "peaking";
+                mFilter.frequency.value = spec.midFreq;
+                mFilter.Q.value = spec.midQ;
+                mFilter.gain.value = (block.mid - 1.0) * 20.0;
+
+                const tFilter = ctx.createBiquadFilter();
+                tFilter.type = "highshelf";
+                tFilter.frequency.value = spec.trebleFreq;
+                tFilter.gain.value = (block.treble - 1.0) * 18.0;
+
+                const pFilter = ctx.createBiquadFilter();
+                pFilter.type = "peaking";
+                pFilter.frequency.value = spec.presenceFreq;
+                pFilter.Q.value = 1.1;
+                pFilter.gain.value = ((block.presence || 1.0) - 1.0) * 12.0;
+
+                inputGain.connect(subCut);
+                subCut.connect(bFilter);
+                bFilter.connect(mFilter);
+                mFilter.connect(tFilter);
+                tFilter.connect(pFilter);
+                pFilter.connect(outputGain);
+            }
+            else if (block.type === 'custom_pedal') {
+                const shaper = ctx.createWaveShaper();
+                shaper.curve = block.transferCurve;
+                shaper.oversample = 'none';
+
+                const midFilter = ctx.createBiquadFilter();
+                midFilter.type = "peaking";
+                midFilter.frequency.value = block.midFreq;
+                midFilter.Q.value = block.qFactor;
+                midFilter.gain.value = (block.tone - 0.5) * 16.0;
+
+                const levelGain = ctx.createGain();
+                levelGain.gain.value = block.level;
+
+                inputGain.connect(shaper);
+                shaper.connect(midFilter);
+                midFilter.connect(levelGain);
+                levelGain.connect(outputGain);
+            }
+            else if (block.type === 'cab') {
+                const conv = ctx.createConvolver();
+                conv.normalize = true;
+                if (currentIrBuffer) conv.buffer = currentIrBuffer;
+
+                const wet = ctx.createGain();
+                const dry = ctx.createGain();
+                wet.gain.value = block.mix;
+                dry.gain.value = 1.0 - block.mix;
+
+                inputGain.connect(conv);
+                conv.connect(wet);
+                wet.connect(outputGain);
+
+                inputGain.connect(dry);
+                dry.connect(outputGain);
+            }
+            else if (block.type === 'delay') {
+                const divSpec = NOTE_DIVISIONS[block.noteDivision] || NOTE_DIVISIONS["1/4"];
+                const quarterNoteSeconds = 60.0 / masterBpm;
+                const delayTimeSeconds = Math.max(0.01, quarterNoteSeconds * divSpec.mult);
+
+                const delayNode = ctx.createDelay(4.0);
+                delayNode.delayTime.value = delayTimeSeconds;
+
+                if (block.flutter && block.flutter > 0) {
+                    const lfo = ctx.createOscillator();
+                    const lfoGain = ctx.createGain();
+                    lfo.frequency.value = 1.2;
+                    lfoGain.gain.value = block.flutter;
+                    lfo.connect(lfoGain);
+                    lfoGain.connect(delayNode.delayTime);
+                    lfo.start();
+                }
+
+                const dampFilter = ctx.createBiquadFilter();
+                dampFilter.type = "lowpass";
+                dampFilter.frequency.value = block.dampFreq || 2400;
+
+                const feedback = ctx.createGain();
+                feedback.gain.value = block.feedback;
+
+                const wet = ctx.createGain();
+                const dry = ctx.createGain();
+                wet.gain.value = block.mix;
+                dry.gain.value = 1.0;
+
+                inputGain.connect(delayNode);
+                delayNode.connect(dampFilter);
+                dampFilter.connect(feedback);
+                feedback.connect(delayNode);
+
+                delayNode.connect(wet);
+                wet.connect(outputGain);
+
+                inputGain.connect(dry);
+                dry.connect(outputGain);
+            }
+            else if (block.type === 'reverb') {
+                const revConvolver = ctx.createConvolver();
+                revConvolver.buffer = gerarImpulsoReverb(ctx, block.decay, block.reverbType, block.damp || 3.5);
+
+                const wet = ctx.createGain();
+                const dry = ctx.createGain();
+                wet.gain.value = block.mix;
+                dry.gain.value = 1.0 - (block.mix * 0.4);
+
+                inputGain.connect(revConvolver);
+                revConvolver.connect(wet);
+                wet.connect(outputGain);
+
+                inputGain.connect(dry);
+                dry.connect(outputGain);
+            }
+
+            return { input: inputGain, output: outputGain };
+        }
+
+        function gerarCurvaOverdrive(amount, type) {
+            const n = 44100;
+            const curve = new Float32Array(n);
+            for (let i = 0; i < n; i++) {
+                const x = (i * 2) / n - 1;
+                if (type === "hard") {
+                    const hardVal = x * amount * 0.12;
+                    curve[i] = Math.max(-0.85, Math.min(0.85, hardVal));
+                } else if (type === "fuzz") {
+                    curve[i] = Math.sign(x) * (1 - Math.exp(-Math.abs(x * amount * 0.18)));
+                } else {
+                    curve[i] = Math.tanh(x * amount * 0.09);
+                }
+            }
+            return curve;
+        }
+
+        function gerarImpulsoReverb(ctx, decayTime, type, dampFactor) {
+            const rate = ctx.sampleRate;
+            const length = Math.floor(rate * decayTime);
+            const impulse = ctx.createBuffer(2, length, rate);
+            const left = impulse.getChannelData(0);
+            const right = impulse.getChannelData(1);
+
+            for (let i = 0; i < length; i++) {
+                const n = i / length;
+                let decay = Math.exp(-n * dampFactor);
+
+                if (type === "shimmer") {
+                    const shimmerOctave = Math.sin(2.0 * Math.PI * 2200.0 * (i / rate)) * 0.25;
+                    decay = decay * (1.0 + shimmerOctave);
+                } else if (type === "spring") {
+                    const springBoing = Math.sin(2.0 * Math.PI * 85.0 * (i / rate)) * 0.35;
+                    decay = decay * (1.0 + springBoing);
+                }
+
+                left[i] = (Math.random() * 2 - 1) * decay;
+                right[i] = (Math.random() * 2 - 1) * decay;
+            }
+            return impulse;
+        }
+
+        // ==========================================
+        // RENDERIZAÇÃO DA UI KANBAN DINÂMICA
+        // ==========================================
+        function renderizarRack() {
+            const container = document.getElementById("blocks_rack");
+            container.innerHTML = "";
+
+            chainBlocks.forEach((block, index) => {
+                const card = document.createElement("div");
+                card.className = `qc-card ${block.type} ${block.enabled ? 'active' : ''}`;
+                card.draggable = true;
+                card.dataset.index = index;
+
+                card.addEventListener("dragstart", handleDragStart);
+                card.addEventListener("dragover", handleDragOver);
+                card.addEventListener("drop", handleDrop);
+                card.addEventListener("dragend", handleDragEnd);
+
+                card.innerHTML = gerarHtmlBloco(block, index);
+                container.appendChild(card);
+            });
+
+            atualizarRoutingVisualizer();
+        }
+
+        function gerarHtmlBloco(block, index) {
+            let bodyHtml = "";
+
+            if (block.type === 'overdrive') {
+                bodyHtml = `
+                    <div class="qc-param">
+                        <div class="qc-param-lbl"><span>CIRCUITO / MODELO</span></div>
+                        <select class="qc-select-model" onchange="alterarModeloBloco(${index}, this.value)">
+                            ${Object.keys(OD_MODELS).map(k => `<option value="${k}" ${block.model === k ? 'selected' : ''}>${OD_MODELS[k].name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="qc-param">
+                        <div class="qc-param-lbl"><span>DRIVE GAIN</span><span class="val">${block.gain.toFixed(1)}x</span></div>
+                        <input type="range" class="qc-slider" style="width:100%" min="1.0" max="10.0" step="0.2" value="${block.gain}" oninput="alterarParam(${index}, 'gain', this.value)">
+                    </div>
+                    <div class="qc-param">
+                        <div class="qc-param-lbl"><span>TONE</span><span class="val">${block.tone.toFixed(2)}</span></div>
+                        <input type="range" class="qc-slider" style="width:100%" min="0.0" max="1.0" step="0.05" value="${block.tone}" oninput="alterarParam(${index}, 'tone', this.value)">
+                    </div>
+                    <div class="qc-param">
+                        <div class="qc-param-lbl"><span>LEVEL</span><span class="val">${block.level.toFixed(2)}</span></div>
+                        <input type="range" class="qc-slider" style="width:100%" min="0.1" max="1.5" step="0.05" value="${block.level}" oninput="alterarParam(${index}, 'level', this.value)">
+                    </div>
+                `;
+            }
+            else if (block.type === 'amp') {
+                bodyHtml = `
+                    <div class="qc-param">
+                        <div class="qc-param-lbl"><span>PREAMP TONE STACK</span></div>
+                        <select class="qc-select-model" onchange="alterarModeloBloco(${index}, this.value)">
+                            ${Object.keys(AMP_MODELS).map(k => `<option value="${k}" ${block.model === k ? 'selected' : ''}>${AMP_MODELS[k].name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="qc-param">
+                        <div class="qc-param-lbl"><span>BASS</span><span class="val">${block.bass.toFixed(1)}x</span></div>
+                        <input type="range" class="qc-slider" style="width:100%" min="0.2" max="2.5" step="0.1" value="${block.bass}" oninput="alterarParam(${index}, 'bass', this.value)">
+                    </div>
+                    <div class="qc-param">
+                        <div class="qc-param-lbl"><span>MID</span><span class="val">${block.mid.toFixed(1)}x</span></div>
+                        <input type="range" class="qc-slider" style="width:100%" min="0.2" max="2.5" step="0.1" value="${block.mid}" oninput="alterarParam(${index}, 'mid', this.value)">
+                    </div>
+                    <div class="qc-param">
+                        <div class="qc-param-lbl"><span>TREBLE</span><span class="val">${block.treble.toFixed(1)}x</span></div>
+                        <input type="range" class="qc-slider" style="width:100%" min="0.2" max="2.5" step="0.1" value="${block.treble}" oninput="alterarParam(${index}, 'treble', this.value)">
+                    </div>
+                    <div class="qc-param">
+                        <div class="qc-param-lbl"><span>PRESENCE</span><span class="val">${(block.presence || 1.0).toFixed(1)}x</span></div>
+                        <input type="range" class="qc-slider" style="width:100%" min="0.2" max="2.0" step="0.1" value="${block.presence || 1.0}" oninput="alterarParam(${index}, 'presence', this.value)">
+                    </div>
+                `;
+            }
+            else if (block.type === 'custom_pedal') {
+                bodyHtml = `
+                    <div class="qc-param">
+                        <div class="qc-param-lbl"><span>QUADLAB CIRCUIT</span></div>
+                        <span style="font-size:9px; color:var(--qc-gold); font-family:monospace;">MID: ${block.midFreq}Hz | Q: ${block.qFactor}</span>
+                    </div>
+                    <div class="qc-param">
+                        <div class="qc-param-lbl"><span>GAIN</span><span class="val">${block.gain.toFixed(1)}x</span></div>
+                        <input type="range" class="qc-slider" style="width:100%" min="1.0" max="15.0" step="0.5" value="${block.gain}" oninput="alterarParam(${index}, 'gain', this.value)">
+                    </div>
+                    <div class="qc-param">
+                        <div class="qc-param-lbl"><span>TONE</span><span class="val">${block.tone.toFixed(2)}</span></div>
+                        <input type="range" class="qc-slider" style="width:100%" min="0.0" max="1.0" step="0.05" value="${block.tone}" oninput="alterarParam(${index}, 'tone', this.value)">
+                    </div>
+                    <div class="qc-param">
+                        <div class="qc-param-lbl"><span>LEVEL</span><span class="val">${block.level.toFixed(2)}</span></div>
+                        <input type="range" class="qc-slider" style="width:100%" min="0.1" max="1.5" step="0.05" value="${block.level}" oninput="alterarParam(${index}, 'level', this.value)">
+                    </div>
+                `;
+            }
+            else if (block.type === 'cab') {
+                bodyHtml = `
+                    <div class="qc-param">
+                        <div class="qc-param-lbl"><span>GABINETE IR (.WAV)</span></div>
+                        <select class="qc-select-model" onchange="alterarIrBloco(${index}, this.value)">
+                            <option value="irs/4x12_celestion_v30.wav" ${block.path.includes('v30') ? 'selected' : ''}>4x12 Celestion V30</option>
+                            <option value="irs/2x12_greenback_68.wav" ${block.path.includes('greenback') ? 'selected' : ''}>2x12 Greenback '68</option>
+                            <option value="irs/1x12_american_deluxe.wav" ${block.path.includes('deluxe') ? 'selected' : ''}>1x12 American Deluxe</option>
+                            <option value="irs/4x12_mesa_recto.wav" ${block.path.includes('mesa') ? 'selected' : ''}>4x12 Mesa Rectifier</option>
+                        </select>
+                    </div>
+                    <div class="qc-param">
+                        <div class="qc-param-lbl"><span>IR MIX</span><span class="val">${Math.round(block.mix * 100)}%</span></div>
+                        <input type="range" class="qc-slider" style="width:100%" min="0.0" max="1.0" step="0.05" value="${block.mix}" oninput="alterarParam(${index}, 'mix', this.value)">
+                    </div>
+                    <input type="file" id="ir_picker_${index}" accept=".wav,.WAV" style="display:none;" onchange="importarArquivoIr(this, ${index})">
+                    <button class="btn-qc" style="font-size:9px; justify-content:center; color:#00e676; border-color:#00e67644;" onclick="document.getElementById('ir_picker_${index}').click()">
+                        📁 IMPORTAR .WAV EXTERNO
+                    </button>
+                `;
+            }
+            else if (block.type === 'delay') {
+                bodyHtml = `
+                    <div class="qc-param">
+                        <div class="qc-param-lbl"><span>SUBDIVISÃO TEMPO</span></div>
+                        <select class="qc-select-model" onchange="alterarParam(${index}, 'noteDivision', this.value)">
+                            ${Object.keys(NOTE_DIVISIONS).map(k => `<option value="${k}" ${block.noteDivision === k ? 'selected' : ''}>${NOTE_DIVISIONS[k].name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="qc-param">
+                        <div class="qc-param-lbl"><span>FEEDBACK</span><span class="val">${Math.round(block.feedback * 100)}%</span></div>
+                        <input type="range" class="qc-slider" style="width:100%" min="0.0" max="0.85" step="0.05" value="${block.feedback}" oninput="alterarParam(${index}, 'feedback', this.value)">
+                    </div>
+                    <div class="qc-param">
+                        <div class="qc-param-lbl"><span>DELAY MIX</span><span class="val">${Math.round(block.mix * 100)}%</span></div>
+                        <input type="range" class="qc-slider" style="width:100%" min="0.0" max="1.0" step="0.05" value="${block.mix}" oninput="alterarParam(${index}, 'mix', this.value)">
+                    </div>
+                    <div class="qc-param">
+                        <span style="font-size:8px; color:var(--qc-purple);">CIRCUITO: ${(block.circuitType || 'tape_echo').toUpperCase()}</span>
+                    </div>
+                `;
+            }
+            else if (block.type === 'reverb') {
+                bodyHtml = `
+                    <div class="qc-param">
+                        <div class="qc-param-lbl"><span>DECAY TIME</span><span class="val">${block.decay.toFixed(1)} s</span></div>
+                        <input type="range" class="qc-slider" style="width:100%" min="0.5" max="6.0" step="0.1" value="${block.decay}" oninput="alterarParam(${index}, 'decay', this.value)">
+                    </div>
+                    <div class="qc-param">
+                        <div class="qc-param-lbl"><span>REVERB MIX</span><span class="val">${Math.round(block.mix * 100)}%</span></div>
+                        <input type="range" class="qc-slider" style="width:100%" min="0.0" max="1.0" step="0.05" value="${block.mix}" oninput="alterarParam(${index}, 'mix', this.value)">
+                    </div>
+                    <div class="qc-param">
+                        <span style="font-size:8px; color:var(--qc-blue);">AMBIENTE: ${(block.reverbType || 'plate').toUpperCase()}</span>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="qc-card-top">
+                    <div class="qc-card-header-left">
+                        <span class="qc-card-title">${block.name}</span>
+                        <span class="qc-card-type">${block.type.toUpperCase()} BLOCK</span>
+                    </div>
+                    <div class="qc-card-actions">
+                        <button class="qc-footswitch" onclick="alternarBlocoAtivo(${index})" title="Ligar/Desligar">
+                            <span class="qc-footswitch-led"></span>
+                        </button>
+                        <button class="btn-card-action" onclick="abrirQuadLabParaEditar(${index})" title="Editar no QuadLab">✏️</button>
+                        <button class="btn-card-action del" onclick="removerBloco(${index})" title="Remover Bloco">✕</button>
+                    </div>
+                </div>
+                <div class="qc-card-body">
+                    ${bodyHtml}
+                </div>
+            `;
+        }
+
+        function atualizarRoutingVisualizer() {
+            const lane = document.getElementById("routing_lane");
+            lane.innerHTML = `<div class="route-pin io">IN 1</div><div class="route-wire active"></div><div class="route-pin active" style="border-color:var(--qc-cyan); color:var(--qc-cyan);" title="Global EQ Master">GLOBAL EQ</div><div class="route-wire active"></div>`;
+
+            chainBlocks.forEach((b, i) => {
+                const pin = document.createElement("div");
+                pin.className = `route-pin ${b.enabled ? 'active' : ''}`;
+                pin.innerText = b.name.toUpperCase();
+                lane.appendChild(pin);
+
+                const wire = document.createElement("div");
+                wire.className = `route-wire ${b.enabled ? 'active' : ''}`;
+                lane.appendChild(wire);
+            });
+
+            const outPin = document.createElement("div");
+            outPin.className = "route-pin io";
+            outPin.innerText = "OUT 1/2";
+            lane.appendChild(outPin);
+        }
+
+        // Drag and Drop Handlers
+        let dragSourceIndex = null;
+
+        function handleDragStart(e) {
+            dragSourceIndex = parseInt(this.dataset.index);
+            this.classList.add("dragging");
+            e.dataTransfer.effectAllowed = "move";
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) e.preventDefault();
+            this.classList.add("drag-over");
+            e.dataTransfer.dropEffect = "move";
+            return false;
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) e.stopPropagation();
+            const targetIndex = parseInt(this.dataset.index);
+            if (dragSourceIndex !== null && dragSourceIndex !== targetIndex) {
+                const movedBlock = chainBlocks.splice(dragSourceIndex, 1)[0];
+                chainBlocks.splice(targetIndex, 0, movedBlock);
+                renderizarRack();
+                reconstruirGrafoAudio();
+            }
+            return false;
+        }
+
+        function handleDragEnd() {
+            document.querySelectorAll(".qc-card").forEach(c => {
+                c.classList.remove("dragging");
+                c.classList.remove("drag-over");
+            });
+        }
+
+        function alternarBlocoAtivo(index) {
+            chainBlocks[index].enabled = !chainBlocks[index].enabled;
+            renderizarRack();
+            reconstruirGrafoAudio();
+        }
+
+        function removerBloco(index) {
+            if (confirm(`Remover bloco ${chainBlocks[index].name}?`)) {
+                chainBlocks.splice(index, 1);
+                renderizarRack();
+                reconstruirGrafoAudio();
+            }
+        }
+
+        function toggleAddMenu() {
+            document.getElementById("add_effect_menu").classList.toggle("show");
+        }
+
+        function adicionarBloco(tipo) {
+            document.getElementById("add_effect_menu").classList.remove("show");
+
+            if (tipo === 'overdrive') {
+                chainBlocks.push({ id: "od_" + Date.now(), type: "overdrive", name: "Overdrive", model: "ts808", enabled: true, gain: 3.5, tone: 0.65, level: 0.85 });
+            } else if (tipo === 'amp') {
+                chainBlocks.push({ id: "amp_" + Date.now(), type: "amp", name: "Amp Stack", model: "marshall_jcm", enabled: true, bass: 1.3, mid: 0.85, treble: 1.4, presence: 1.2 });
+            } else if (tipo === 'cab') {
+                chainBlocks.push({ id: "cab_" + Date.now(), type: "cab", name: "Cab IR", enabled: true, path: "irs/4x12_celestion_v30.wav", mix: 1.0 });
+            } else if (tipo === 'delay') {
+                chainBlocks.push({ id: "delay_" + Date.now(), type: "delay", name: "Echo Delay", circuitType: "tape_echo", dampFreq: 2400, flutter: 0.0015, enabled: true, noteDivision: "1/4", feedback: 0.4, mix: 0.35 });
+            } else if (tipo === 'reverb') {
+                chainBlocks.push({ id: "reverb_" + Date.now(), type: "reverb", name: "Studio Reverb", reverbType: "plate", damp: 3.5, enabled: true, decay: 2.2, mix: 0.28 });
+            }
+
+            renderizarRack();
+            reconstruirGrafoAudio();
+        }
+
+        function alterarModeloBloco(index, novoModelo) {
+            chainBlocks[index].model = novoModelo;
+            renderizarRack();
+            reconstruirGrafoAudio();
+        }
+
+        function alterarParam(index, param, val) {
+            val = isNaN(parseFloat(val)) ? val : parseFloat(val);
+            chainBlocks[index][param] = val;
+            renderizarRack();
+            reconstruirGrafoAudio();
+        }
+
+        function alterarIrBloco(index, path) {
+            chainBlocks[index].path = path;
+            window.yvira.emit("solicitar_ir", { caminho: path });
+        }
+
+        function importarArquivoIr(input, index) {
+            if (!input.files || input.files.length === 0) return;
+            const file = input.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const ctx = getAudioContext();
+                ctx.decodeAudioData(e.target.result, function(buffer) {
+                    currentIrBuffer = buffer;
+                    chainBlocks[index].name = `Cab IR (${file.name})`;
+                    renderizarRack();
+                    reconstruirGrafoAudio();
+                    document.getElementById("qc_status_text").innerText = `IR externo carregado: ${file.name}`;
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function atualizarBpm(novoBpm) {
+            masterBpm = Math.max(40, Math.min(260, parseInt(novoBpm) || 120));
+            document.getElementById("master_bpm").value = masterBpm;
+            reconstruirGrafoAudio();
+        }
+
+        function ajustarMasterGain(tipo, val) {
+            val = parseFloat(val);
+            if (tipo === 'in') {
+                masterInGain = val;
+                if (inputGainNode) inputGainNode.gain.value = val;
+                document.getElementById("val_in_gain").innerText = val.toFixed(2) + "x";
+            } else {
+                masterOutVol = val;
+                if (outputGainNode) outputGainNode.gain.value = val;
+                document.getElementById("val_out_vol").innerText = val.toFixed(2) + "x";
+            }
+        }
+
+        // ==========================================
+        // CONTROLE DO GLOBAL MASTER EQ
+        // ==========================================
+        function ajustarGlobalEq(param, val) {
+            val = parseFloat(val);
+            globalEqSettings[param] = val;
+            const ctx = getAudioContext();
+
+            if (param === 'lowCut') {
+                document.getElementById("val_global_low_cut").innerText = Math.round(val) + " Hz";
+                if (globalLowCutFilter) {
+                    globalLowCutFilter.frequency.setTargetAtTime(val, ctx.currentTime, 0.015);
+                }
+            } else if (param === 'bassGain') {
+                const s = val > 0 ? `+${val.toFixed(0)} dB` : `${val.toFixed(0)} dB`;
+                document.getElementById("val_global_bass_gain").innerText = s;
+                if (globalBassShelfFilter) {
+                    globalBassShelfFilter.gain.setTargetAtTime(val, ctx.currentTime, 0.015);
+                }
+            } else if (param === 'highCut') {
+                const kHz = (val / 1000).toFixed(1) + "k";
+                document.getElementById("val_global_high_cut").innerText = kHz;
+                if (globalHighCutFilter) {
+                    globalHighCutFilter.frequency.setTargetAtTime(val, ctx.currentTime, 0.015);
+                }
+            }
+        }
+
+        // ========================================================
+        // QUADLAB STUDIO: FERRAMENTA DE DEV & CUSTOMIZAÇÃO
+        // ========================================================
+        function abrirQuadLabNovo() {
+            editingBlockIndex = null;
+            document.getElementById("ql_header_title").innerText = "QUADLAB DSP STUDIO // CRIAR NOVO BLOCO";
+            document.getElementById("ql_mode_badge").innerText = "NEW BLOCK";
+            document.getElementById("ql_block_name").value = "Custom QuadLab Circuit";
+            mudarCategoriaQuadLab("overdrive");
+            document.getElementById("quadlab_modal").classList.add("active");
+        }
+
+        function abrirQuadLabParaEditar(index) {
+            editingBlockIndex = index;
+            const b = chainBlocks[index];
+            document.getElementById("ql_header_title").innerText = `QUADLAB DSP STUDIO // EDITAR [${b.name.toUpperCase()}]`;
+            document.getElementById("ql_mode_badge").innerText = "EDITING MODE";
+            document.getElementById("ql_block_name").value = b.name;
+
+            let cat = b.type;
+            if (cat === 'custom_pedal') cat = 'overdrive';
+            document.getElementById("ql_category").value = cat;
+            mudarCategoriaQuadLab(cat);
+
+            if (b.type === 'delay') {
+                if (b.circuitType) document.getElementById("ql_delay_type").value = b.circuitType;
+                if (b.dampFreq) document.getElementById("ql_delay_damp").value = b.dampFreq;
+                if (b.flutter) document.getElementById("ql_delay_flutter").value = b.flutter;
+            } else if (b.type === 'reverb') {
+                if (b.reverbType) document.getElementById("ql_reverb_type").value = b.reverbType;
+                if (b.damp) document.getElementById("ql_reverb_damp").value = b.damp;
+            }
+
+            document.getElementById("quadlab_modal").classList.add("active");
+        }
+
+        function fecharQuadLab() {
+            document.getElementById("quadlab_modal").classList.remove("active");
+        }
+
+        function mudarCategoriaQuadLab(cat) {
+            document.getElementById("controls_od_group").style.display = (cat === 'overdrive' || cat === 'amp') ? 'flex' : 'none';
+            document.getElementById("controls_delay_group").style.display = (cat === 'delay') ? 'flex' : 'none';
+            document.getElementById("controls_reverb_group").style.display = (cat === 'reverb') ? 'flex' : 'none';
+
+            const editor = document.getElementById("ql_code_editor");
+            if (cat === 'overdrive') {
+                document.getElementById("ql_editor_sublabel").innerText = "FUNÇÃO DE TRANSFERÊNCIA DE ONDA / CURVA DSP: f(x)";
+                editor.value = `// Saturação não-linear estilo válvula 12AX7 assimétrica:\nfunction processSample(x, gain) {\n    let drive = x * gain;\n    return Math.tanh(drive) + (0.15 * Math.pow(Math.tanh(drive), 2));\n}`;
+            } else if (cat === 'delay') {
+                document.getElementById("ql_editor_sublabel").innerText = "FILTRO & REALIMENTAÇÃO DE DELAY (LOOP)";
+                editor.value = `// Algoritmo de filtragem e saturação analógica no loop de repetições:\nfunction processDelayLoop(feedbackSample, damp) {\n    return Math.tanh(feedbackSample * 1.05);\n}`;
+            } else if (cat === 'reverb') {
+                document.getElementById("ql_editor_sublabel").innerText = "RESPOSTA AO IMPULSO & ESPALHAMENTO DE REVERB";
+                editor.value = `// Algoritmo de reflexões iniciais e modulação espacial:\nfunction processReverbTail(timeSec, decay) {\n    return Math.exp(-timeSec * 3.6);\n}`;
+            } else if (cat === 'amp') {
+                document.getElementById("ql_editor_sublabel").innerText = "TONE STACK PREAMP CURVE";
+                editor.value = `// Pré-amplificador de alto ganho com corte de subgrave:\nfunction processPreamp(x, gain) {\n    return Math.tanh(x * gain * 1.2);\n}`;
+            }
+        }
+
+        function carregarTemplateDelay(tipo) {
+            const editor = document.getElementById("ql_code_editor");
+            if (tipo === 'tape_echo') {
+                document.getElementById("ql_delay_damp").value = 2400;
+                document.getElementById("ql_delay_flutter").value = 0.002;
+                editor.value = `// Vintage Tape Echo: Leve saturação magnética e corte de agudos nas repetições\nfunction processDelayLoop(feedbackSample, damp) {\n    return Math.tanh(feedbackSample * 1.1);\n}`;
+            } else if (tipo === 'analog_bbd') {
+                document.getElementById("ql_delay_damp").value = 1600;
+                document.getElementById("ql_delay_flutter").value = 0.0005;
+                editor.value = `// Analog BBD: Filtro escuro analógico de chip bucket brigade\nfunction processDelayLoop(feedbackSample, damp) {\n    return Math.tanh(feedbackSample);\n}`;
+            } else if (tipo === 'digital_clean') {
+                document.getElementById("ql_delay_damp").value = 7500;
+                document.getElementById("ql_delay_flutter").value = 0.0;
+                editor.value = `// Crystal Digital Delay: Repetições 100% transparentes e lineares\nfunction processDelayLoop(feedbackSample, damp) {\n    return feedbackSample;\n}`;
+            }
+        }
+
+        function carregarTemplateReverb(tipo) {
+            const editor = document.getElementById("ql_code_editor");
+            if (tipo === 'shimmer') {
+                document.getElementById("ql_reverb_damp").value = 2.2;
+                editor.value = `// Shimmer Reverb: Geração harmônica de oitava superior\nfunction processReverbTail(timeSec, decay) {\n    let octave = Math.sin(2.0 * Math.PI * 2200.0 * timeSec) * 0.3;\n    return Math.exp(-timeSec * 2.2) * (1.0 + octave);\n}`;
+            } else if (tipo === 'plate') {
+                document.getElementById("ql_reverb_damp").value = 3.5;
+                editor.value = `// Vintage Plate 140: Decaimento denso, uniforme e metálico\nfunction processReverbTail(timeSec, decay) {\n    return Math.exp(-timeSec * 3.5);\n}`;
+            } else if (tipo === 'spring') {
+                document.getElementById("ql_reverb_damp").value = 4.0;
+                editor.value = `// Molas de Guitarra Surf: Ressonância ondulada e transiente rápido\nfunction processReverbTail(timeSec, decay) {\n    let boing = Math.sin(2.0 * Math.PI * 85.0 * timeSec) * 0.4;\n    return Math.exp(-timeSec * 4.0) * (1.0 + boing);\n}`;
+            }
+        }
+
+        function compilarEInjetarQuadLab() {
+            try {
+                const nome = document.getElementById("ql_block_name").value.trim() || "QuadLab Block";
+                const cat = document.getElementById("ql_category").value;
+
+                if (editingBlockIndex !== null) {
+                    const targetBlock = chainBlocks[editingBlockIndex];
+                    targetBlock.name = nome;
+
+                    if (cat === 'delay') {
+                        targetBlock.circuitType = document.getElementById("ql_delay_type").value;
+                        targetBlock.dampFreq = parseFloat(document.getElementById("ql_delay_damp").value);
+                        targetBlock.flutter = parseFloat(document.getElementById("ql_delay_flutter").value);
+                    } else if (cat === 'reverb') {
+                        targetBlock.reverbType = document.getElementById("ql_reverb_type").value;
+                        targetBlock.damp = parseFloat(document.getElementById("ql_reverb_damp").value);
+                    } else if (cat === 'overdrive') {
+                        const midFreq = parseFloat(document.getElementById("ql_mid_freq").value);
+                        const qFactor = parseFloat(document.getElementById("ql_q_factor").value);
+                        const maxGain = parseFloat(document.getElementById("ql_max_gain").value);
+                        const codeStr = document.getElementById("ql_code_editor").value;
+                        const userFunc = new Function("x", "gain", codeStr + "\n return processSample(x, gain);");
+
+                        const n = 44100;
+                        const curve = new Float32Array(n);
+                        for (let i = 0; i < n; i++) {
+                            const x = (i * 2) / n - 1;
+                            const res = userFunc(x, maxGain);
+                            curve[i] = Math.max(-1.0, Math.min(1.0, isNaN(res) ? 0 : res));
+                        }
+                        targetBlock.type = "custom_pedal";
+                        targetBlock.midFreq = midFreq;
+                        targetBlock.qFactor = qFactor;
+                        targetBlock.transferCurve = curve;
+                    }
+                } else {
+                    if (cat === 'delay') {
+                        chainBlocks.push({
+                            id: "delay_" + Date.now(),
+                            type: "delay",
+                            name: nome,
+                            circuitType: document.getElementById("ql_delay_type").value,
+                            dampFreq: parseFloat(document.getElementById("ql_delay_damp").value),
+                            flutter: parseFloat(document.getElementById("ql_delay_flutter").value),
+                            enabled: true,
+                            noteDivision: "1/4",
+                            feedback: 0.45,
+                            mix: 0.35
+                        });
+                    } else if (cat === 'reverb') {
+                        chainBlocks.push({
+                            id: "reverb_" + Date.now(),
+                            type: "reverb",
+                            name: nome,
+                            reverbType: document.getElementById("ql_reverb_type").value,
+                            damp: parseFloat(document.getElementById("ql_reverb_damp").value),
+                            enabled: true,
+                            decay: 2.5,
+                            mix: 0.30
+                        });
+                    } else {
+                        const midFreq = parseFloat(document.getElementById("ql_mid_freq").value);
+                        const qFactor = parseFloat(document.getElementById("ql_q_factor").value);
+                        const maxGain = parseFloat(document.getElementById("ql_max_gain").value);
+                        const codeStr = document.getElementById("ql_code_editor").value;
+                        const userFunc = new Function("x", "gain", codeStr + "\n return processSample(x, gain);");
+
+                        const n = 44100;
+                        const curve = new Float32Array(n);
+                        for (let i = 0; i < n; i++) {
+                            const x = (i * 2) / n - 1;
+                            const res = userFunc(x, maxGain);
+                            curve[i] = Math.max(-1.0, Math.min(1.0, isNaN(res) ? 0 : res));
+                        }
+                        chainBlocks.push({
+                            id: "custom_" + Date.now(),
+                            type: "custom_pedal",
+                            name: nome,
+                            enabled: true,
+                            gain: maxGain * 0.6,
+                            tone: 0.6,
+                            level: 0.85,
+                            midFreq: midFreq,
+                            qFactor: qFactor,
+                            transferCurve: curve
+                        });
+                    }
+                }
+
+                fecharQuadLab();
+                renderizarRack();
+                reconstruirGrafoAudio();
+                document.getElementById("qc_status_text").innerText = `QuadLab: Bloco '${nome}' compilado com sucesso!`;
+            } catch (err) {
+                alert("Erro ao compilar no QuadLab: " + err.message);
+            }
+        }
+
+        async function alternarLiveInput() {
+            const ctx = getAudioContext();
+            if (ctx.state === 'suspended') await ctx.resume();
+
+            const btn = document.getElementById("btn_live");
+            if (!isLiveActive) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            echoCancellation: false,
+                            noiseSuppression: false,
+                            autoGainControl: false,
+                            latency: 0,
+                            sampleRate: ctx.sampleRate,
+                            channelCount: 1
+                        }
+                    });
+                    micStream = stream;
+                    sourceNode = ctx.createMediaStreamSource(stream);
+                    sourceNode.connect(inputGainNode);
+                    isLiveActive = true;
+                    btn.classList.add("active");
+                    document.getElementById("txt_live").innerText = "● LIVE ON AIR";
+
+                    const realLatencyMs = ((ctx.baseLatency || 0.002) + (ctx.outputLatency || 0.002)) * 1000;
+                    document.getElementById("qc_dsp_latency").innerText = `LATÊNCIA DE HARDWARE: ~${realLatencyMs.toFixed(1)} ms | ZERO-LATENCY MODE`;
+                    document.getElementById("qc_status_text").innerText = `Guitarra conectada ao vivo: Buffer de Hardware direto (~${realLatencyMs.toFixed(1)}ms)!`;
+                } catch (err) {
+                    alert("Erro ao acessar entrada de áudio: " + err.message);
+                }
+            } else {
+                if (micStream) micStream.getTracks().forEach(t => t.stop());
+                if (sourceNode) sourceNode.disconnect();
+                isLiveActive = false;
+                btn.classList.remove("active");
+                document.getElementById("txt_live").innerText = "🎸 ENTRADA AO VIVO";
+                document.getElementById("qc_status_text").innerText = "Entrada pausada.";
+            }
+        }
+
+        function tocarDemoRiff() {
+            const ctx = getAudioContext();
+            if (ctx.state === 'suspended') ctx.resume();
+
+            const osc1 = ctx.createOscillator();
+            const osc2 = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc1.type = "sawtooth";
+            osc2.type = "sawtooth";
+            osc1.frequency.setValueAtTime(146.83, ctx.currentTime);
+            osc2.frequency.setValueAtTime(220.00, ctx.currentTime);
+
+            gain.gain.setValueAtTime(0.7, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.8);
+
+            osc1.connect(gain);
+            osc2.connect(gain);
+            gain.connect(inputGainNode);
+
+            osc1.start();
+            osc2.start();
+            osc1.stop(ctx.currentTime + 1.8);
+            osc2.stop(ctx.currentTime + 1.8);
+        }
+
+        window.aplicarIrEmTempoReal = function(irData) {
+            const ctx = getAudioContext();
+            const buffer = ctx.createBuffer(1, irData.samples.length, irData.sample_rate || 44100);
+            const channel = buffer.getChannelData(0);
+            for (let i = 0; i < irData.samples.length; i++) {
+                channel[i] = irData.samples[i];
+            }
+            currentIrBuffer = buffer;
+            reconstruirGrafoAudio();
+        };
+
+        window.addEventListener("click", function(e) {
+            if (!e.target.closest(".add-block-dropdown")) {
+                document.getElementById("add_effect_menu").classList.remove("show");
+            }
+        });
+
+        window.addEventListener("DOMContentLoaded", () => {
+            renderizarRack();
+            reconstruirGrafoAudio();
+            setTimeout(() => {
+                if (window.yvira && window.yvira.emit) {
+                    window.yvira.emit("solicitar_ir", { caminho: "irs/4x12_celestion_v30.wav" });
+                }
+            }, 300);
+        });
+    </script>
+</body>
+</html>

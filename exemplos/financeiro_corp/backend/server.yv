@@ -1,0 +1,311 @@
+# ==============================================================================
+# Servidor Corporativo de Gestão Financeira Multi-Usuário (Yvira Backend)
+# Arquitetura: RESTful Microservice, SQLite Database & Multi-tenant Segregation
+# Porta Padrão: 8085
+# ==============================================================================
+
+import "http";
+import "fs";
+
+print("==================================================================");
+print("     YVIRA FINANCE SERVER // BACKEND CORPORATIVO MULTI-USUÁRIO     ");
+print("==================================================================\n");
+
+# 1. Configuração do Banco de Dados SQLite Local
+@db("sqlite://financeiro.db");
+
+# 2. Inicialização DDL (Tabelas Relacionais)
+@exec("CREATE TABLE IF NOT EXISTS usuarios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    nome TEXT NOT NULL,
+    senha TEXT NOT NULL,
+    criado_em TEXT NOT NULL
+);");
+
+@exec("CREATE TABLE IF NOT EXISTS categorias (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    nome TEXT NOT NULL,
+    tipo TEXT NOT NULL,
+    cor TEXT,
+    icone TEXT
+);");
+
+@exec("CREATE TABLE IF NOT EXISTS contas_bancarias (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    banco TEXT NOT NULL,
+    tipo TEXT NOT NULL,
+    saldo_inicial REAL DEFAULT 0.0,
+    saldo_atual REAL DEFAULT 0.0,
+    cor TEXT
+);");
+
+@exec("CREATE TABLE IF NOT EXISTS cartoes_credito (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    nome TEXT NOT NULL,
+    limite REAL NOT NULL,
+    dia_fechamento INTEGER NOT NULL,
+    dia_vencimento INTEGER NOT NULL,
+    cor TEXT
+);");
+
+@exec("CREATE TABLE IF NOT EXISTS lancamentos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    descricao TEXT NOT NULL,
+    valor REAL NOT NULL,
+    tipo TEXT NOT NULL,
+    data_competencia TEXT NOT NULL,
+    status TEXT NOT NULL,
+    categoria_id INTEGER,
+    conta_id INTEGER,
+    cartao_id INTEGER,
+    parcela_atual INTEGER DEFAULT 1,
+    total_parcelas INTEGER DEFAULT 1,
+    observacao TEXT
+);");
+
+# 3. Seed Inicial de Usuários e Categorias Padrão
+let existe_admin = @query("SELECT id FROM usuarios WHERE username = 'admin';");
+if (existe_admin.length() == 0) {
+    let admin_id = @exec("INSERT INTO usuarios (username, nome, senha, criado_em) VALUES ('admin', 'Administrador Yvira', '123456', '2026-11-02');");
+    let user_id = @exec("INSERT INTO usuarios (username, nome, senha, criado_em) VALUES ('santhyago', 'Santhyago Ponciano', '123456', '2026-11-02');");
+
+    # Categorias do Santhyago
+    @exec("INSERT INTO categorias (user_id, nome, tipo, cor, icone) VALUES (2, 'Salário & Proventos', 'RECEITA', '#10b981', 'briefcase');");
+    @exec("INSERT INTO categorias (user_id, nome, tipo, cor, icone) VALUES (2, 'Rendimentos e Dividendos', 'RECEITA', '#06b6d4', 'trending-up');");
+    @exec("INSERT INTO categorias (user_id, nome, tipo, cor, icone) VALUES (2, 'Alimentação & Mercado', 'DESPESA', '#f59e0b', 'shopping-cart');");
+    @exec("INSERT INTO categorias (user_id, nome, tipo, cor, icone) VALUES (2, 'Moradia & Aluguel', 'DESPESA', '#ef4444', 'home');");
+    @exec("INSERT INTO categorias (user_id, nome, tipo, cor, icone) VALUES (2, 'Transporte & Combustível', 'DESPESA', '#8b5cf6', 'truck');");
+    @exec("INSERT INTO categorias (user_id, nome, tipo, cor, icone) VALUES (2, 'Cartão de Crédito', 'DESPESA', '#ec4899', 'credit-card');");
+
+    # Contas Bancárias
+    @exec("INSERT INTO contas_bancarias (user_id, banco, tipo, saldo_inicial, saldo_atual, cor) VALUES (2, 'Nubank Principal', 'CORRENTE', 2450.00, 2450.00, '#820ad1');");
+    @exec("INSERT INTO contas_bancarias (user_id, banco, tipo, saldo_inicial, saldo_atual, cor) VALUES (2, 'Itaú Personalité', 'CORRENTE', 8120.50, 8120.50, '#ec7000');");
+    @exec("INSERT INTO contas_bancarias (user_id, banco, tipo, saldo_inicial, saldo_atual, cor) VALUES (2, 'BTG Pactual Reserva', 'INVESTIMENTO', 15400.00, 15400.00, '#001e62');");
+
+    # Cartões de Crédito
+    @exec("INSERT INTO cartoes_credito (user_id, nome, limite, dia_fechamento, dia_vencimento, cor) VALUES (2, 'Nubank Ultravioleta Mastercard', 12000.00, 5, 12, '#820ad1');");
+    @exec("INSERT INTO cartoes_credito (user_id, nome, limite, dia_fechamento, dia_vencimento, cor) VALUES (2, 'Itaú Visa Infinite', 25000.00, 20, 27, '#ec7000');");
+
+    # Lançamentos Iniciais
+    @exec("INSERT INTO lancamentos (user_id, descricao, valor, tipo, data_competencia, status, categoria_id, conta_id) VALUES (2, 'Salário Tech Lead', 9500.00, 'RECEITA', '2026-11-01', 'CONFIRMADO', 1, 1);");
+    @exec("INSERT INTO lancamentos (user_id, descricao, valor, tipo, data_competencia, status, categoria_id, conta_id) VALUES (2, 'Supermercado Mensal', 1240.60, 'DESPESA', '2026-11-02', 'CONFIRMADO', 3, 1);");
+    @exec("INSERT INTO lancamentos (user_id, descricao, valor, tipo, data_competencia, status, categoria_id, conta_id, cartao_id, parcela_atual, total_parcelas) VALUES (2, 'Monitor Ultrawide 4K Dell', 2890.00, 'DESPESA', '2026-11-02', 'PENDENTE', 6, null, 1, 1, 10);");
+    @exec("INSERT INTO lancamentos (user_id, descricao, valor, tipo, data_competencia, status, categoria_id, conta_id, observacao) VALUES (2, 'Financiamento Imobiliário', 3200.00, 'DIVIDA', '2026-11-10', 'PENDENTE', 4, 2, 'Parcela 48 de 360');");
+
+    print("[Backend DB]: Seed corporativo criado com sucesso para o usuário santhyago!");
+}
+
+# 4. Helper de Extração de User ID do Header Authorization / Query
+fn extrair_user_id(req) {
+    if (req.has("headers")) {
+        let headers = req["headers"];
+        if (headers.has("X-User-Id")) {
+            return to_int(headers["X-User-Id"]);
+        }
+        if (headers.has("x-user-id")) {
+            return to_int(headers["x-user-id"]);
+        }
+    }
+    if (req.has("query")) {
+        let q = req["query"];
+        if (q.has("user_id")) {
+            return to_int(q["user_id"]);
+        }
+    }
+    return 2; # Default para o Santhyago
+}
+
+# 5. Roteamento de Requisições HTTP REST
+fn api_router(req) {
+    let path = req["path"];
+    let method = req["method"];
+    let body = req["body"];
+    let user_id = extrair_user_id(req);
+
+    # Endpoint de Health Check
+    if (path == "/api/health") {
+        return {
+            "status": 200,
+            "body": { "ok": true, "engine": "Yvira Native HTTP/SQLite Core", "timestamp": "2026-11-02" }
+        };
+    }
+
+    # Endpoint de Autenticação (Login)
+    if (path == "/api/auth/login" && method == "POST") {
+        let user = body["username"];
+        let pass = body["senha"];
+        let rows = @query("SELECT id, username, nome FROM usuarios WHERE username = ? AND senha = ?;", [user, pass]);
+        if (rows.length() > 0) {
+            let u = rows[0];
+            return {
+                "status": 200,
+                "body": {
+                    "sucesso": true,
+                    "usuario": u,
+                    "token": "yv_token_" + u["id"] + "_" + user
+                }
+            };
+        } else {
+            return {
+                "status": 401,
+                "body": { "sucesso": false, "mensagem": "Usuário ou senha inválidos." }
+            };
+        }
+    }
+
+    # Endpoint de Dashboard Resumo Consolidado
+    if (path == "/api/dashboard" && method == "GET") {
+        let receitas_res = @query("SELECT SUM(valor) as total FROM lancamentos WHERE user_id = ? AND tipo = 'RECEITA' AND status = 'CONFIRMADO';", [user_id]);
+        let despesas_res = @query("SELECT SUM(valor) as total FROM lancamentos WHERE user_id = ? AND tipo = 'DESPESA' AND status = 'CONFIRMADO';", [user_id]);
+        let dividas_res = @query("SELECT SUM(valor) as total FROM lancamentos WHERE user_id = ? AND tipo = 'DIVIDA';", [user_id]);
+        let contas_res = @query("SELECT SUM(saldo_atual) as total FROM contas_bancarias WHERE user_id = ?;", [user_id]);
+        let cartoes_res = @query("SELECT SUM(limite) as total_limite FROM cartoes_credito WHERE user_id = ?;", [user_id]);
+
+        let total_receitas = receitas_res.length() > 0 && receitas_res[0]["total"] != null ? receitas_res[0]["total"] : 0.0;
+        let total_despesas = despesas_res.length() > 0 && despesas_res[0]["total"] != null ? despesas_res[0]["total"] : 0.0;
+        let total_dividas = dividas_res.length() > 0 && dividas_res[0]["total"] != null ? dividas_res[0]["total"] : 0.0;
+        let saldo_contas = contas_res.length() > 0 && contas_res[0]["total"] != null ? contas_res[0]["total"] : 0.0;
+        let limite_cartoes = cartoes_res.length() > 0 && cartoes_res[0]["total_limite"] != null ? cartoes_res[0]["total_limite"] : 0.0;
+
+        let ultimos = @query("SELECT l.*, c.nome as categoria_nome, c.cor as categoria_cor, b.banco as conta_nome 
+                              FROM lancamentos l 
+                              LEFT JOIN categorias c ON l.categoria_id = c.id 
+                              LEFT JOIN contas_bancarias b ON l.conta_id = b.id 
+                              WHERE l.user_id = ? 
+                              ORDER BY l.id DESC LIMIT 6;", [user_id]);
+
+        return {
+            "status": 200,
+            "body": {
+                "total_receitas": total_receitas,
+                "total_despesas": total_despesas,
+                "total_dividas": total_dividas,
+                "saldo_em_bancos": saldo_contas,
+                "limite_cartoes": limite_cartoes,
+                "saldo_liquido": saldo_contas - total_dividas,
+                "ultimos_lancamentos": ultimos
+            }
+        };
+    }
+
+    # Endpoint de Categorias (GET e POST)
+    if (path == "/api/categorias") {
+        if (method == "GET") {
+            let cats = @query("SELECT * FROM categorias WHERE user_id = ? ORDER BY nome ASC;", [user_id]);
+            return { "status": 200, "body": cats };
+        }
+        if (method == "POST") {
+            let nome = body["nome"];
+            let tipo = body["tipo"];
+            let cor = body.contains("cor") ? body["cor"] : "#3b82f6";
+            let icone = body.contains("icone") ? body["icone"] : "tag";
+            let id = @exec("INSERT INTO categorias (user_id, nome, tipo, cor, icone) VALUES (?, ?, ?, ?, ?);", [user_id, nome, tipo, cor, icone]);
+            return { "status": 201, "body": { "id": id, "nome": nome, "tipo": tipo } };
+        }
+    }
+
+    # Endpoint de Contas Bancárias (GET e POST)
+    if (path == "/api/contas") {
+        if (method == "GET") {
+            let contas = @query("SELECT * FROM contas_bancarias WHERE user_id = ? ORDER BY id ASC;", [user_id]);
+            return { "status": 200, "body": contas };
+        }
+        if (method == "POST") {
+            let banco = body["banco"];
+            let tipo = body["tipo"];
+            let saldo = body["saldo_inicial"];
+            let cor = body.contains("cor") ? body["cor"] : "#10b981";
+            let id = @exec("INSERT INTO contas_bancarias (user_id, banco, tipo, saldo_inicial, saldo_atual, cor) VALUES (?, ?, ?, ?, ?, ?);", [user_id, banco, tipo, saldo, saldo, cor]);
+            return { "status": 201, "body": { "id": id, "banco": banco, "saldo_atual": saldo } };
+        }
+    }
+
+    # Endpoint de Cartões de Crédito (GET e POST)
+    if (path == "/api/cartoes") {
+        if (method == "GET") {
+            let cartoes = @query("SELECT * FROM cartoes_credito WHERE user_id = ? ORDER BY id ASC;", [user_id]);
+            return { "status": 200, "body": cartoes };
+        }
+        if (method == "POST") {
+            let nome = body["nome"];
+            let limite = body["limite"];
+            let fecha = body["dia_fechamento"];
+            let vence = body["dia_vencimento"];
+            let cor = body.contains("cor") ? body["cor"] : "#ec4899";
+            let id = @exec("INSERT INTO cartoes_credito (user_id, nome, limite, dia_fechamento, dia_vencimento, cor) VALUES (?, ?, ?, ?, ?, ?);", [user_id, nome, limite, fecha, vence, cor]);
+            return { "status": 201, "body": { "id": id, "nome": nome, "limite": limite } };
+        }
+    }
+
+    # Endpoint de Lançamentos (GET, POST e DELETE)
+    if (path == "/api/lancamentos") {
+        if (method == "GET") {
+            let lancamentos = @query("SELECT l.*, c.nome as categoria_nome, c.cor as categoria_cor, b.banco as conta_nome, cc.nome as cartao_nome 
+                                      FROM lancamentos l 
+                                      LEFT JOIN categorias c ON l.categoria_id = c.id 
+                                      LEFT JOIN contas_bancarias b ON l.conta_id = b.id 
+                                      LEFT JOIN cartoes_credito cc ON l.cartao_id = cc.id 
+                                      WHERE l.user_id = ? 
+                                      ORDER BY l.data_competencia DESC, l.id DESC;", [user_id]);
+            return { "status": 200, "body": lancamentos };
+        }
+        if (method == "POST") {
+            let desc = body["descricao"];
+            let val = body["valor"];
+            let tipo = body["tipo"];
+            let dt = body["data_competencia"];
+            let status = body.contains("status") ? body["status"] : "CONFIRMADO";
+            let cat_id = body.contains("categoria_id") ? body["categoria_id"] : null;
+            let conta_id = body.contains("conta_id") ? body["conta_id"] : null;
+            let cartao_id = body.contains("cartao_id") ? body["cartao_id"] : null;
+            let parc_atual = body.contains("parcela_atual") ? body["parcela_atual"] : 1;
+            let tot_parc = body.contains("total_parcelas") ? body["total_parcelas"] : 1;
+            let obs = body.contains("observacao") ? body["observacao"] : "";
+
+            let id = @exec("INSERT INTO lancamentos (user_id, descricao, valor, tipo, data_competencia, status, categoria_id, conta_id, cartao_id, parcela_atual, total_parcelas, observacao) 
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", 
+                           [user_id, desc, val, tipo, dt, status, cat_id, conta_id, cartao_id, parc_atual, tot_parc, obs]);
+
+            # Se for despesa ou receita confirmada em conta bancária, atualiza o saldo_atual da conta
+            if (status == "CONFIRMADO" && conta_id != null) {
+                if (tipo == "RECEITA") {
+                    @exec("UPDATE contas_bancarias SET saldo_atual = saldo_atual + ? WHERE id = ? AND user_id = ?;", [val, conta_id, user_id]);
+                } else if (tipo == "DESPESA") {
+                    @exec("UPDATE contas_bancarias SET saldo_atual = saldo_atual - ? WHERE id = ? AND user_id = ?;", [val, conta_id, user_id]);
+                }
+            }
+
+            return { "status": 201, "body": { "id": id, "sucesso": true } };
+        }
+    }
+
+    # Endpoint de Dívidas e Recebimentos Futuros
+    if (path == "/api/dividas" && method == "GET") {
+        let dividas = @query("SELECT l.*, c.nome as categoria_nome, b.banco as conta_nome 
+                              FROM lancamentos l 
+                              LEFT JOIN categorias c ON l.categoria_id = c.id 
+                              LEFT JOIN contas_bancarias b ON l.conta_id = b.id 
+                              WHERE l.user_id = ? AND (l.tipo = 'DIVIDA' OR l.status = 'PENDENTE') 
+                              ORDER BY l.data_competencia ASC;", [user_id]);
+        return { "status": 200, "body": dividas };
+    }
+
+    return {
+        "status": 404,
+        "body": { "erro": "Rota não encontrada", "path": path }
+    };
+}
+
+# 6. Inicia o Servidor HTTP na porta 8085
+print("[Yvira Backend]: Ligando Servidor RESTful Corporativo na porta 8085...");
+
+fn handle_http_request(req) {
+    return api_router(req);
+}
+
+http.serve(8085, handle_http_request);

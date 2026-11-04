@@ -51,7 +51,10 @@
 
 > *"Muitas linguagens modernas tentam abraçar o mundo inteiro e acabam exigindo ecossistemas pesados, dependências complexas e dezenas de ferramentas externas apenas para fazer o básico de análise de dados ou automação contínua. O Yvira nasceu da necessidade real de ter uma ferramenta ágil, independente e desenhada sob medida para resolver esses desafios com elegância."*
 
-O **Yvira** foi idealizado e desenvolvido por **Santhyago Souza Ponciano**, programador brasileiro apaixonado por computação de baixo nível e obcecado em saber como as coisas funcionam por trás dos panos (dos compiladores e da VM até o hardware).
+O **Yvira** foi idealizado e desenvolvido por **Santhyago Souza Ponciano**. O projeto nasceu originalmente como uma iniciativa de **estudo e experimentação prática**, com o objetivo de entender a fundo **como funciona o desenvolvimento de uma linguagem de programação** — desde lexer, AST, parser e análise semântica até a geração de bytecode e execução em uma Máquina Virtual (VM).
+
+### Por que .NET / C#?
+A escolha da plataforma **.NET (C#)** foi pensada justamente para **não ter que mexer com C ou C++** (que deve ser um inferno mexer!). A ideia foi focar no design da linguagem, na arquitetura de compiladores e na lógica da VM sem o sofrimento de gerenciamento manual de ponteiros, vazamentos de memória e compilações lentas, mas ainda mantendo tipagem forte e altíssima performance.
 
 O projeto nasceu de uma dor prática: no ecossistema atual de desenvolvimento, quem desenvolve aplicações de backend, APIs, rotinas com IA, processamento de dados e automações em tempo real (como monitoramento de APIs financeiras, trading, análise quantitativa e processamento matricial) frequentemente se depara com a mesma encruzilhada:
 

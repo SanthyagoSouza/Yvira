@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Yvira Finance Corp</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: #0b0f19;
+      color: #e2e8f0;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Top Title Bar */
+    .title-bar {
+      height: 38px;
+      background: #0f172a;
+      border-bottom: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      font-size: 13px;
+      color: #94a3b8;
+    }
+    .badge-server {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.1);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    /* Layout Geral */
+    .app-layout {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* Menu Lateral (Sidebar) */
+    .sidebar {
+      width: 250px;
+      background: #0d121f;
+      border-right: 1px solid #1e293b;
+      display: flex;
+      flex-direction: column;
+      padding: 16px 0;
+    }
+    .user-profile {
+      padding: 0 20px 20px;
+      border-bottom: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .user-avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: #fff;
+      font-size: 16px;
+      box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+    }
+    .user-info {
+      display: flex;
+      flex-direction: column;
+    }
+    .user-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+    .user-role {
+      font-size: 11px;
+      color: #64748b;
+    }
+
+    .nav-section-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 16px 20px 8px;
+    }
+    .nav-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      padding: 0 10px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      color: #94a3b8;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .nav-item:hover {
+      background: #172033;
+      color: #f1f5f9;
+    }
+    .nav-item.active {
+      background: #1e293b;
+      color: #38bdf8;
+      border-left: 3px solid #38bdf8;
+    }
+    .nav-item svg {
+      width: 18px;
+      height: 18px;
+      stroke-width: 2;
+    }
+
+    /* Área Principal de Conteúdo */
+    .content-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #080c14;
+      overflow-y: auto;
+      padding: 24px 28px;
+    }
+
+    .view-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .view-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .view-subtitle {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 3px;
+    }
+
+    /* Cards KPI */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+    }
+    .kpi-receita::before { background: #10b981; }
+    .kpi-despesa::before { background: #ef4444; }
+    .kpi-divida::before { background: #f59e0b; }
+    .kpi-saldo::before { background: #38bdf8; }
+
+    .kpi-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .kpi-value {
+      font-size: 22px;
+      font-weight: 800;
+      color: #fff;
+      font-family: 'Consolas', monospace;
+    }
+    .kpi-sub {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 6px;
+    }
+
+    /* Botões Padrão */
+    .btn-primary {
+      background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+      color: #fff;
+      border: none;
+      padding: 9px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+      transition: all 0.15s;
+    }
+    .btn-primary:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+
+    /* Tabelas Corporativas */
+    .table-container {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+    table.data-table th {
+      background: #131c31;
+      color: #64748b;
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 12px 18px;
+      border-bottom: 1px solid #1e293b;
+    }
+    table.data-table td {
+      padding: 14px 18px;
+      border-bottom: 1px solid #162035;
+      color: #cbd5e1;
+    }
+    table.data-table tr:hover td {
+      background: #141d33;
+    }
+
+    /* Badges */
+    .badge-tag {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .badge-rec { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-desp { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .badge-div { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
+
+    /* Modais & Formulários */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-card {
+      width: 480px;
+      background: #111827;
+      border: 1px solid #1f293d;
+      border-radius: 12px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #1f293d;
+      padding-bottom: 12px;
+    }
+    .modal-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+    }
+    .form-input, .form-select {
+      background: #090d16;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      color: #f1f5f9;
+      padding: 9px 12px;
+      font-size: 13px;
+      outline: none;
+      transition: border 0.15s;
+    }
+    .form-input:focus, .form-select:focus {
+      border-color: #38bdf8;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* Estilização dos Cartões de Crédito Visuais */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    .credit-card-view {
+      height: 190px;
+      border-radius: 14px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      position: relative;
+      overflow: hidden;
+      color: #fff;
+    }
+    .card-chip {
+      width: 40px;
+      height: 30px;
+      background: linear-gradient(135deg, #ffd700 0%, #d4af37 100%);
+      border-radius: 5px;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.4);
+    }
+    .card-num {
+      font-family: 'Consolas', monospace;
+      font-size: 17px;
+      letter-spacing: 3px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    /* Modal de Login Separado */
+    .login-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 50% 30%, #172033 0%, #080c14 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+    .login-box {
+      width: 380px;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 32px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Barra de Título Superior -->
+  <div class="title-bar">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <span style="font-weight:800; color:#fff;">YVIRA // FINANCE CORP</span>
+      <span class="badge-server">
+        <span class="pulse-dot"></span>
+        REST Server: Online (Port 8085)
+      </span>
+    </div>
+    <div id="loggedUserDisplay" style="font-size:11px; color:#64748b;">
+      Multi-Tenant Core
+    </div>
+  </div>
+
+  <!-- MODAL DE LOGIN (SEPARADO / MULTI-USUÁRIO) -->
+  <div class="login-container" id="loginScreen" style="display:none;">
+    <div class="login-box">
+      <div style="text-align:center;">
+        <h2 style="font-size:18px; font-weight:800; color:#fff;">Acesso Corporativo</h2>
+        <p style="font-size:12px; color:#64748b; margin-top:4px;">Yvira Personal Finance Management</p>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Usuário</label>
+        <input type="text" id="loginUsername" class="form-input" value="santhyago" placeholder="admin ou santhyago">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Senha</label>
+        <input type="password" id="loginPassword" class="form-input" value="123456">
+      </div>
+
+      <button class="btn-primary" onclick="realizarLogin()" style="justify-content:center; padding:12px; margin-top:8px;">
+        Entrar no Sistema
+      </button>
+
+      <div style="text-align:center; font-size:11px; color:#64748b; margin-top:6px;">
+        Usuários de Teste: <b>santhyago</b> ou <b>admin</b> (Senha: 123456)
+      </div>
+    </div>
+  </div>
+
+  <!-- Layout Principal do Sistema -->
+  <div class="app-layout">
+
+    <!-- MENU LATERAL (SIDEBAR) -->
+    <div class="sidebar">
+      <div class="user-profile">
+        <div class="user-avatar" id="avatarLetter">S</div>
+        <div class="user-info">
+          <span class="user-name" id="userNameLabel">Santhyago Ponciano</span>
+          <span class="user-role" id="userRoleLabel">Tech Lead // Admin</span>
+        </div>
+      </div>
+
+      <div class="nav-section-title">Menu Principal</div>
+      <div class="nav-menu">
+        <div class="nav-item active" onclick="switchView('dashboard')">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          Dashboard Geral
+        </div>
+        <div class="nav-item" onclick="switchView('lancamentos')">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+          Lançamentos (Extrato)
+        </div>
+        <div class="nav-item" onclick="switchView('contas')">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/></svg>
+          Contas Bancárias
+        </div>
+        <div class="nav-item" onclick="switchView('cartoes')">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+          Cartões de Crédito
+        </div>
+        <div class="nav-item" onclick="switchView('categorias')">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+          Categorias de Gastos
+        </div>
+        <div class="nav-item" onclick="switchView('dividas')">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Dívidas & Recebíveis
+        </div>
+      </div>
+
+      <div style="margin-top:auto; padding:0 14px;">
+        <button onclick="logout()" style="width:100%; background:#1e293b; border:1px solid #334155; color:#94a3b8; padding:8px; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer;">
+          Trocar Usuário (Logout)
+        </button>
+      </div>
+    </div>
+
+    <!-- ÁREA DE CONTEÚDO PRINCIPAL -->
+    <div class="content-area">
+
+      <!-- VIEW 1: DASHBOARD -->
+      <div id="view-dashboard">
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">Dashboard Financeiro</h1>
+            <p class="view-subtitle">Visão consolidada em tempo real sincronizada com o backend Yvira.</p>
+          </div>
+          <button class="btn-primary" onclick="abrirModalLancamento()">
+            + Novo Lançamento
+          </button>
+        </div>
+
+        <!-- KPIs Superiores -->
+        <div class="kpi-grid">
+          <div class="kpi-card kpi-saldo">
+            <span class="kpi-label">Saldo em Bancos</span>
+            <span class="kpi-value" id="kpiSaldoBancos">R$ 0,00</span>
+            <span class="kpi-sub">Total líquido disponível</span>
+          </div>
+          <div class="kpi-card kpi-receita">
+            <span class="kpi-label">Receitas Recebidas</span>
+            <span class="kpi-value" id="kpiReceitas" style="color:#10b981;">R$ 0,00</span>
+            <span class="kpi-sub">Competência atual</span>
+          </div>
+          <div class="kpi-card kpi-despesa">
+            <span class="kpi-label">Despesas Efetivadas</span>
+            <span class="kpi-value" id="kpiDespesas" style="color:#ef4444;">R$ 0,00</span>
+            <span class="kpi-sub">Gastos debitados</span>
+          </div>
+          <div class="kpi-card kpi-divida">
+            <span class="kpi-label">Dívidas & Pendências</span>
+            <span class="kpi-value" id="kpiDividas" style="color:#f59e0b;">R$ 0,00</span>
+            <span class="kpi-sub">Compromissos futuros</span>
+          </div>
+        </div>
+
+        <!-- Últimos Lançamentos -->
+        <h3 style="font-size:14px; font-weight:700; color:#fff; margin-bottom:12px;">Últimas Movimentações</h3>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Descrição</th>
+                <th>Categoria</th>
+                <th>Conta / Cartão</th>
+                <th>Tipo</th>
+                <th>Valor</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="dashboardTableBody">
+              <!-- Populado via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- VIEW 2: LANÇAMENTOS (EXTRATO COMPLETO) -->
+      <div id="view-lancamentos" style="display:none;">
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">Lançamentos Financeiros</h1>
+            <p class="view-subtitle">Histórico completo de despesas, receitas e cartões parcelados.</p>
+          </div>
+          <button class="btn-primary" onclick="abrirModalLancamento()">
+            + Novo Lançamento
+          </button>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Descrição</th>
+                <th>Categoria</th>
+                <th>Conta / Cartão</th>
+                <th>Parcelas</th>
+                <th>Tipo</th>
+                <th>Valor</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="lancamentosTableBody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- VIEW 3: CONTAS BANCÁRIAS -->
+      <div id="view-contas" style="display:none;">
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">Contas Bancárias & Investimentos</h1>
+            <p class="view-subtitle">Gerenciamento de saldos correntes e reservas financeiras.</p>
+          </div>
+          <button class="btn-primary" onclick="abrirModalConta()">
+            + Nova Conta Bancária
+          </button>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:16px;" id="contasGrid">
+          <!-- Populado via JS -->
+        </div>
+      </div>
+
+      <!-- VIEW 4: CARTÕES DE CRÉDITO -->
+      <div id="view-cartoes" style="display:none;">
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">Cartões de Crédito</h1>
+            <p class="view-subtitle">Controle de limites, faturas e compras parceladas.</p>
+          </div>
+          <button class="btn-primary" onclick="abrirModalCartao()">
+            + Novo Cartão
+          </button>
+        </div>
+
+        <div class="cards-grid" id="cartoesGrid">
+          <!-- Cards virtuais visualmente estilizados -->
+        </div>
+      </div>
+
+      <!-- VIEW 5: CATEGORIAS -->
+      <div id="view-categorias" style="display:none;">
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">Categorias de Gastos e Receitas</h1>
+            <p class="view-subtitle">Classificação para inteligência financeira e controle de centro de custos.</p>
+          </div>
+          <button class="btn-primary" onclick="abrirModalCategoria()">
+            + Nova Categoria
+          </button>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:14px;" id="categoriasGrid">
+        </div>
+      </div>
+
+      <!-- VIEW 6: DÍVIDAS & RECEBÍVEIS -->
+      <div id="view-dividas" style="display:none;">
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">Controle de Dívidas e Recebimentos Futuros</h1>
+            <p class="view-subtitle">Contratos de longo prazo, parcelamentos e financiamentos.</p>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Vencimento</th>
+                <th>Descrição</th>
+                <th>Categoria</th>
+                <th>Origem/Conta</th>
+                <th>Valor Devido</th>
+                <th>Status</th>
+                <th>Observação</th>
+              </tr>
+            </thead>
+            <tbody id="dividasTableBody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL: NOVO LANÇAMENTO (COM SUPORTE A CARTÃO E PARCELAMENTO) -->
+  <div class="modal-overlay" id="modalLancamento">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Novo Lançamento Financeiro</h3>
+        <span onclick="fecharModais()" style="cursor:pointer; color:#64748b; font-size:18px;">&times;</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Descrição</label>
+        <input type="text" id="lancDesc" class="form-input" placeholder="Ex: Supermercado, Aluguel, Venda Freelance">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Valor (R$)</label>
+          <input type="number" step="0.01" id="lancValor" class="form-input" placeholder="0.00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tipo de Movimentação</label>
+          <select id="lancTipo" class="form-select" onchange="ajustarCamposLancamento()">
+            <option value="DESPESA">Despesa</option>
+            <option value="RECEITA">Receita</option>
+            <option value="DIVIDA">Dívida / Financiamento</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Data de Competência</label>
+          <input type="date" id="lancData" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select id="lancStatus" class="form-select">
+            <option value="CONFIRMADO">Confirmado (Liquidado)</option>
+            <option value="PENDENTE">Pendente (A liquidar)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Categoria</label>
+          <select id="lancCategoria" class="form-select">
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Meio de Pagamento</label>
+          <select id="lancMeio" class="form-select" onchange="ajustarMeioPagamento()">
+            <option value="CONTA">Conta Bancária</option>
+            <option value="CARTAO">Cartão de Crédito</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Seleção de Conta ou Cartão -->
+      <div class="form-group" id="groupConta">
+        <label class="form-label">Conta Bancária</label>
+        <select id="lancContaId" class="form-select"></select>
+      </div>
+
+      <div class="form-row" id="groupCartao" style="display:none;">
+        <div class="form-group">
+          <label class="form-label">Cartão de Crédito</label>
+          <select id="lancCartaoId" class="form-select"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Total de Parcelas</label>
+          <input type="number" id="lancTotalParcelas" class="form-input" value="1" min="1" max="72">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Observação (Opcional)</label>
+        <input type="text" id="lancObs" class="form-input" placeholder="Detalhes adicionais ou notas de auditoria">
+      </div>
+
+      <button class="btn-primary" onclick="salvarLancamento()" style="justify-content:center; padding:12px;">
+        Registrar no Servidor
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: NOVA CATEGORIA -->
+  <div class="modal-overlay" id="modalCategoria">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Nova Categoria</h3>
+        <span onclick="fecharModais()" style="cursor:pointer; color:#64748b; font-size:18px;">&times;</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nome da Categoria</label>
+        <input type="text" id="catNome" class="form-input" placeholder="Ex: Combustível, Lazer, Educação">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Tipo</label>
+          <select id="catTipo" class="form-select">
+            <option value="DESPESA">Despesa</option>
+            <option value="RECEITA">Receita</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cor de Identificação</label>
+          <input type="color" id="catCor" class="form-input" value="#3b82f6" style="height:38px; padding:2px;">
+        </div>
+      </div>
+      <button class="btn-primary" onclick="salvarCategoria()" style="justify-content:center; padding:12px;">
+        Salvar Categoria
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: NOVA CONTA BANCÁRIA -->
+  <div class="modal-overlay" id="modalConta">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Nova Conta Bancária</h3>
+        <span onclick="fecharModais()" style="cursor:pointer; color:#64748b; font-size:18px;">&times;</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nome da Instituição / Banco</label>
+        <input type="text" id="contaBanco" class="form-input" placeholder="Ex: Santander Select, Inter, BTG">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Tipo de Conta</label>
+          <select id="contaTipo" class="form-select">
+            <option value="CORRENTE">Conta Corrente</option>
+            <option value="INVESTIMENTO">Conta Investimento</option>
+            <option value="POUPANCA">Poupança</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Saldo Inicial (R$)</label>
+          <input type="number" step="0.01" id="contaSaldo" class="form-input" placeholder="0.00">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cor Representativa</label>
+        <input type="color" id="contaCor" class="form-input" value="#10b981" style="height:38px; padding:2px;">
+      </div>
+      <button class="btn-primary" onclick="salvarConta()" style="justify-content:center; padding:12px;">
+        Cadastrar Conta
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: NOVO CARTÃO DE CRÉDITO -->
+  <div class="modal-overlay" id="modalCartao">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Novo Cartão de Crédito</h3>
+        <span onclick="fecharModais()" style="cursor:pointer; color:#64748b; font-size:18px;">&times;</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Identificação do Cartão</label>
+        <input type="text" id="cartaoNome" class="form-input" placeholder="Ex: C6 Carbon Mastercard Black">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Limite Total (R$)</label>
+          <input type="number" step="0.01" id="cartaoLimite" class="form-input" placeholder="5000.00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cor do Cartão</label>
+          <input type="color" id="cartaoCor" class="form-input" value="#820ad1" style="height:38px; padding:2px;">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Dia de Fechamento</label>
+          <input type="number" id="cartaoFecha" class="form-input" value="5" min="1" max="31">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Dia de Vencimento</label>
+          <input type="number" id="cartaoVence" class="form-input" value="12" min="1" max="31">
+        </div>
+      </div>
+      <button class="btn-primary" onclick="salvarCartao()" style="justify-content:center; padding:12px;">
+        Cadastrar Cartão
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // CLIENTE FRONTEND JAVASCRIPT CONECTADO AO REST SERVER YVIRA (PORT 8085)
+    // =========================================================================
+    const API_BASE = "http://localhost:8085/api";
+
+    let currentUser = {
+      id: 2,
+      username: "santhyago",
+      nome: "Santhyago Ponciano"
+    };
+
+    let cachedCategorias = [];
+    let cachedContas = [];
+    let cachedCartoes = [];
+
+    // Formata Moeda BRL
+    function formatBRL(val) {
+      if (val === undefined || val === null) val = 0;
+      return "R$ " + parseFloat(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // Navegação de Telas
+    function switchView(viewName) {
+      const views = ['dashboard', 'lancamentos', 'contas', 'cartoes', 'categorias', 'dividas'];
+      views.forEach(v => {
+        const el = document.getElementById('view-' + v);
+        if (el) el.style.display = (v === viewName) ? 'block' : 'none';
+      });
+
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.getAttribute('onclick').includes(viewName)) {
+          item.classList.add('active');
+        }
+      });
+
+      if (viewName === 'dashboard') carregarDashboard();
+      if (viewName === 'lancamentos') carregarLancamentos();
+      if (viewName === 'contas') carregarContas();
+      if (viewName === 'cartoes') carregarCartoes();
+      if (viewName === 'categorias') carregarCategorias();
+      if (viewName === 'dividas') carregarDividas();
+    }
+
+    // Headers de Tenant HTTP
+    function getApiHeaders() {
+      return {
+        "Content-Type": "application/json",
+        "X-User-Id": currentUser.id.toString()
+      };
+    }
+
+    // 1. CARREGAR DASHBOARD
+    async function carregarDashboard() {
+      try {
+        const res = await fetch(`${API_BASE}/dashboard`, { headers: getApiHeaders() });
+        const data = await res.json();
+
+        document.getElementById('kpiSaldoBancos').innerText = formatBRL(data.saldo_em_bancos);
+        document.getElementById('kpiReceitas').innerText = formatBRL(data.total_receitas);
+        document.getElementById('kpiDespesas').innerText = formatBRL(data.total_despesas);
+        document.getElementById('kpiDividas').innerText = formatBRL(data.total_dividas);
+
+        const tbody = document.getElementById('dashboardTableBody');
+        tbody.innerHTML = '';
+
+        (data.ultimos_lancamentos || []).forEach(l => {
+          const tr = document.createElement('tr');
+          let badgeClass = 'badge-desp';
+          if (l.tipo === 'RECEITA') badgeClass = 'badge-rec';
+          if (l.tipo === 'DIVIDA') badgeClass = 'badge-div';
+
+          const origem = l.cartao_id ? '💳 Cartão de Crédito' : (l.conta_nome || 'Conta');
+
+          tr.innerHTML = `
+            <td style="font-family:monospace; color:#94a3b8;">${l.data_competencia}</td>
+            <td style="font-weight:600; color:#fff;">${l.descricao}</td>
+            <td>
+              <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${l.categoria_cor || '#3b82f6'}; margin-right:6px;"></span>
+              ${l.categoria_nome || 'Geral'}
+            </td>
+            <td>${origem}</td>
+            <td><span class="badge-tag ${badgeClass}">${l.tipo}</span></td>
+            <td style="font-weight:700; font-family:monospace; color:${l.tipo === 'RECEITA' ? '#10b981' : '#f87171'}">
+              ${l.tipo === 'RECEITA' ? '+' : '-'} ${formatBRL(l.valor)}
+            </td>
+            <td><span style="font-size:11px; color:#94a3b8;">${l.status}</span></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error("Erro ao carregar dashboard:", err);
+      }
+    }
+
+    // 2. CARREGAR LANÇAMENTOS
+    async function carregarLancamentos() {
+      try {
+        const res = await fetch(`${API_BASE}/lancamentos`, { headers: getApiHeaders() });
+        const list = await res.json();
+        const tbody = document.getElementById('lancamentosTableBody');
+        tbody.innerHTML = '';
+
+        list.forEach(l => {
+          const tr = document.createElement('tr');
+          let badgeClass = 'badge-desp';
+          if (l.tipo === 'RECEITA') badgeClass = 'badge-rec';
+          if (l.tipo === 'DIVIDA') badgeClass = 'badge-div';
+
+          const origem = l.cartao_nome ? `💳 ${l.cartao_nome}` : (l.conta_nome || 'Conta Corrente');
+          const parcelas = l.total_parcelas > 1 ? `${l.parcela_atual}/${l.total_parcelas}` : 'À vista';
+
+          tr.innerHTML = `
+            <td style="font-family:monospace; color:#94a3b8;">${l.data_competencia}</td>
+            <td style="font-weight:600; color:#fff;">${l.descricao}</td>
+            <td>
+              <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${l.categoria_cor || '#3b82f6'}; margin-right:6px;"></span>
+              ${l.categoria_nome || 'Geral'}
+            </td>
+            <td>${origem}</td>
+            <td style="font-size:11px; color:#94a3b8;">${parcelas}</td>
+            <td><span class="badge-tag ${badgeClass}">${l.tipo}</span></td>
+            <td style="font-weight:700; font-family:monospace; color:${l.tipo === 'RECEITA' ? '#10b981' : '#f87171'}">
+              ${l.tipo === 'RECEITA' ? '+' : '-'} ${formatBRL(l.valor)}
+            </td>
+            <td><span style="font-size:11px; color:#94a3b8;">${l.status}</span></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error("Erro ao carregar lançamentos:", err);
+      }
+    }
+
+    // 3. CARREGAR CONTAS BANCÁRIAS
+    async function carregarContas() {
+      try {
+        const res = await fetch(`${API_BASE}/contas`, { headers: getApiHeaders() });
+        cachedContas = await res.json();
+        const grid = document.getElementById('contasGrid');
+        grid.innerHTML = '';
+
+        cachedContas.forEach(c => {
+          const card = document.createElement('div');
+          card.style.background = '#0f172a';
+          card.style.border = `1px solid #1e293b`;
+          card.style.borderLeft = `5px solid ${c.cor || '#10b981'}`;
+          card.style.borderRadius = '10px';
+          card.style.padding = '18px';
+          card.style.display = 'flex';
+          card.style.flexDirection = 'column';
+          card.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
+
+          card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-size:14px; font-weight:700; color:#fff;">${c.banco}</span>
+              <span style="font-size:10px; font-weight:700; color:#64748b; background:#1e293b; padding:2px 6px; border-radius:4px;">${c.tipo}</span>
+            </div>
+            <span style="font-size:11px; color:#94a3b8;">Saldo Atual em Conta</span>
+            <span style="font-size:20px; font-weight:800; color:#fff; font-family:monospace; margin-top:4px;">
+              ${formatBRL(c.saldo_atual)}
+            </span>
+          `;
+          grid.appendChild(card);
+        });
+      } catch (err) {
+        console.error("Erro ao carregar contas:", err);
+      }
+    }
+
+    // 4. CARREGAR CARTÕES DE CRÉDITO
+    async function carregarCartoes() {
+      try {
+        const res = await fetch(`${API_BASE}/cartoes`, { headers: getApiHeaders() });
+        cachedCartoes = await res.json();
+        const grid = document.getElementById('cartoesGrid');
+        grid.innerHTML = '';
+
+        cachedCartoes.forEach(cc => {
+          const card = document.createElement('div');
+          card.className = 'credit-card-view';
+          card.style.background = `linear-gradient(135deg, ${cc.cor || '#1e293b'} 0%, #0f172a 100%)`;
+          card.style.border = `1px solid rgba(255,255,255,0.1)`;
+
+          card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <div>
+                <div style="font-size:14px; font-weight:800; color:#fff;">${cc.nome}</div>
+                <div style="font-size:10px; color:rgba(255,255,255,0.7);">Cartão Corporativo</div>
+              </div>
+              <div class="card-chip"></div>
+            </div>
+
+            <div class="card-num">•••• •••• •••• 8842</div>
+
+            <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+              <div>
+                <div style="font-size:9px; color:rgba(255,255,255,0.7); text-transform:uppercase;">Limite Disponível</div>
+                <div style="font-size:16px; font-weight:800; font-family:monospace;">${formatBRL(cc.limite)}</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:9px; color:rgba(255,255,255,0.7); text-transform:uppercase;">Fecha / Vence</div>
+                <div style="font-size:12px; font-weight:700;">Dia ${cc.dia_fechamento} / Dia ${cc.dia_vencimento}</div>
+              </div>
+            </div>
+          `;
+          grid.appendChild(card);
+        });
+      } catch (err) {
+        console.error("Erro ao carregar cartões:", err);
+      }
+    }
+
+    // 5. CARREGAR CATEGORIAS
+    async function carregarCategorias() {
+      try {
+        const res = await fetch(`${API_BASE}/categorias`, { headers: getApiHeaders() });
+        cachedCategorias = await res.json();
+        const grid = document.getElementById('categoriasGrid');
+        grid.innerHTML = '';
+
+        cachedCategorias.forEach(cat => {
+          const el = document.createElement('div');
+          el.style.background = '#0f172a';
+          el.style.border = '1px solid #1e293b';
+          el.style.borderRadius = '8px';
+          el.style.padding = '14px 16px';
+          el.style.display = 'flex';
+          el.style.alignItems = 'center';
+          el.style.justifyContent = 'space-between';
+
+          el.innerHTML = `
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="width:12px; height:12px; border-radius:4px; background:${cat.cor || '#3b82f6'};"></span>
+              <span style="font-size:13px; font-weight:700; color:#f8fafc;">${cat.nome}</span>
+            </div>
+            <span class="badge-tag ${cat.tipo === 'RECEITA' ? 'badge-rec' : 'badge-desp'}">${cat.tipo}</span>
+          `;
+          grid.appendChild(el);
+        });
+      } catch (err) {
+        console.error("Erro ao carregar categorias:", err);
+      }
+    }
+
+    // 6. CARREGAR DÍVIDAS E FINANCIAMENTOS
+    async function carregarDividas() {
+      try {
+        const res = await fetch(`${API_BASE}/dividas`, { headers: getApiHeaders() });
+        const list = await res.json();
+        const tbody = document.getElementById('dividasTableBody');
+        tbody.innerHTML = '';
+
+        list.forEach(d => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="font-family:monospace; color:#f59e0b;">${d.data_competencia}</td>
+            <td style="font-weight:700; color:#fff;">${d.descricao}</td>
+            <td>${d.categoria_nome || 'Geral'}</td>
+            <td>${d.conta_nome || 'Boleto / Avulso'}</td>
+            <td style="font-weight:800; font-family:monospace; color:#ef4444;">${formatBRL(d.valor)}</td>
+            <td><span class="badge-tag badge-div">${d.status}</span></td>
+            <td style="font-size:12px; color:#94a3b8;">${d.observacao || '-'}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error("Erro ao carregar dívidas:", err);
+      }
+    }
+
+    // ==========================================
+    // CONTROLES DE MODAIS E FORMULÁRIOS
+    // ==========================================
+    function fecharModais() {
+      document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+    }
+
+    async function abrirModalLancamento() {
+      // Popula Selects de Categorias, Contas e Cartões
+      await carregarCategorias();
+      await carregarContas();
+      await carregarCartoes();
+
+      const catSelect = document.getElementById('lancCategoria');
+      catSelect.innerHTML = cachedCategorias.map(c => `<option value="${c.id}">${c.nome} (${c.tipo})</option>`).join('');
+
+      const contaSelect = document.getElementById('lancContaId');
+      contaSelect.innerHTML = cachedContas.map(c => `<option value="${c.id}">${c.banco} (${formatBRL(c.saldo_atual)})</option>`).join('');
+
+      const cartaoSelect = document.getElementById('lancCartaoId');
+      cartaoSelect.innerHTML = cachedCartoes.map(cc => `<option value="${cc.id}">${cc.nome} (Limite: ${formatBRL(cc.limite)})</option>`).join('');
+
+      // Seta data de hoje por padrão
+      document.getElementById('lancData').value = new Date().toISOString().split('T')[0];
+
+      document.getElementById('modalLancamento').classList.add('active');
+    }
+
+    function ajustarMeioPagamento() {
+      const meio = document.getElementById('lancMeio').value;
+      if (meio === 'CARTAO') {
+        document.getElementById('groupConta').style.display = 'none';
+        document.getElementById('groupCartao').style.display = 'grid';
+      } else {
+        document.getElementById('groupConta').style.display = 'flex';
+        document.getElementById('groupCartao').style.display = 'none';
+      }
+    }
+
+    function ajustarCamposLancamento() {
+      const tipo = document.getElementById('lancTipo').value;
+      if (tipo === 'DIVIDA') {
+        document.getElementById('lancStatus').value = 'PENDENTE';
+      }
+    }
+
+    async function salvarLancamento() {
+      const desc = document.getElementById('lancDesc').value;
+      const valor = parseFloat(document.getElementById('lancValor').value);
+      const tipo = document.getElementById('lancTipo').value;
+      const dataComp = document.getElementById('lancData').value;
+      const status = document.getElementById('lancStatus').value;
+      const catId = parseInt(document.getElementById('lancCategoria').value);
+      const meio = document.getElementById('lancMeio').value;
+      const obs = document.getElementById('lancObs').value;
+
+      if (!desc || isNaN(valor) || valor <= 0) {
+        alert("Preencha a descrição e um valor válido!");
+        return;
+      }
+
+      const payload = {
+        descricao: desc,
+        valor: valor,
+        tipo: tipo,
+        data_competencia: dataComp,
+        status: status,
+        categoria_id: catId,
+        observacao: obs
+      };
+
+      if (meio === 'CARTAO') {
+        payload.cartao_id = parseInt(document.getElementById('lancCartaoId').value);
+        payload.total_parcelas = parseInt(document.getElementById('lancTotalParcelas').value) || 1;
+        payload.parcela_atual = 1;
+      } else {
+        payload.conta_id = parseInt(document.getElementById('lancContaId').value);
+      }
+
+      try {
+        await fetch(`${API_BASE}/lancamentos`, {
+          method: 'POST',
+          headers: getApiHeaders(),
+          body: JSON.stringify(payload)
+        });
+
+        fecharModais();
+        carregarDashboard();
+        carregarLancamentos();
+      } catch (err) {
+        alert("Erro ao registrar lançamento no servidor!");
+      }
+    }
+
+    // Modal Nova Categoria
+    function abrirModalCategoria() {
+      document.getElementById('catNome').value = '';
+      document.getElementById('modalCategoria').classList.add('active');
+    }
+
+    async function salvarCategoria() {
+      const nome = document.getElementById('catNome').value;
+      const tipo = document.getElementById('catTipo').value;
+      const cor = document.getElementById('catCor').value;
+
+      if (!nome) return;
+
+      await fetch(`${API_BASE}/categorias`, {
+        method: 'POST',
+        headers: getApiHeaders(),
+        body: JSON.stringify({ nome, tipo, cor })
+      });
+
+      fecharModais();
+      carregarCategorias();
+    }
+
+    // Modal Nova Conta
+    function abrirModalConta() {
+      document.getElementById('contaBanco').value = '';
+      document.getElementById('contaSaldo').value = '';
+      document.getElementById('modalConta').classList.add('active');
+    }
+
+    async function salvarConta() {
+      const banco = document.getElementById('contaBanco').value;
+      const tipo = document.getElementById('contaTipo').value;
+      const saldo = parseFloat(document.getElementById('contaSaldo').value) || 0.0;
+      const cor = document.getElementById('contaCor').value;
+
+      if (!banco) return;
+
+      await fetch(`${API_BASE}/contas`, {
+        method: 'POST',
+        headers: getApiHeaders(),
+        body: JSON.stringify({ banco, tipo, saldo_inicial: saldo, cor })
+      });
+
+      fecharModais();
+      carregarContas();
+      carregarDashboard();
+    }
+
+    // Modal Novo Cartão
+    function abrirModalCartao() {
+      document.getElementById('cartaoNome').value = '';
+      document.getElementById('cartaoLimite').value = '';
+      document.getElementById('modalCartao').classList.add('active');
+    }
+
+    async function salvarCartao() {
+      const nome = document.getElementById('cartaoNome').value;
+      const limite = parseFloat(document.getElementById('cartaoLimite').value) || 0.0;
+      const fecha = parseInt(document.getElementById('cartaoFecha').value) || 5;
+      const vence = parseInt(document.getElementById('cartaoVence').value) || 12;
+      const cor = document.getElementById('cartaoCor').value;
+
+      if (!nome) return;
+
+      await fetch(`${API_BASE}/cartoes`, {
+        method: 'POST',
+        headers: getApiHeaders(),
+        body: JSON.stringify({ nome, limite, dia_fechamento: fecha, dia_vencimento: vence, cor })
+      });
+
+      fecharModais();
+      carregarCartoes();
+    }
+
+    // ==========================================
+    // MULTI-USUÁRIO & LOGIN
+    // ==========================================
+    function logout() {
+      document.getElementById('loginScreen').style.display = 'flex';
+    }
+
+    async function realizarLogin() {
+      const u = document.getElementById('loginUsername').value;
+      const p = document.getElementById('loginPassword').value;
+
+      try {
+        const res = await fetch(`${API_BASE}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: u, senha: p })
+        });
+        const data = await res.json();
+
+        if (data.sucesso) {
+          currentUser = data.usuario;
+          document.getElementById('userNameLabel').innerText = currentUser.nome;
+          document.getElementById('userRoleLabel').innerText = `@${currentUser.username} // Usuário Ativo`;
+          document.getElementById('avatarLetter').innerText = currentUser.nome.charAt(0).toUpperCase();
+          document.getElementById('loggedUserDisplay').innerText = `Autenticado: @${currentUser.username}`;
+
+          document.getElementById('loginScreen').style.display = 'none';
+          carregarDashboard();
+        } else {
+          alert("Login falhou: " + (data.mensagem || "Credenciais incorretas"));
+        }
+      } catch (err) {
+        alert("Erro ao conectar com o Servidor Yvira na porta 8085.");
+      }
+    }
+
+    // Inicialização ao carregar
+    window.addEventListener('load', () => {
+      carregarDashboard();
+    });
+  </script>
+</body>
+</html>

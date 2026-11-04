@@ -25,10 +25,21 @@ namespace Yvira.Vm
         private WebView2? _webView;
         private Panel? _contentPanel;          // Header/UI WebView (dock Top ou Fill para páginas internas)
         private readonly Dictionary<int, WebView2> _tabWebViews = new(); // Abas Web individuais (preserva sessão e abas independentes)
+        private readonly HashSet<int> _privateTabs = new(); // Abas InPrivate efêmeras
         private int _activeTabId = 1;
         private int _headerHeight = 132;
         private bool _overlayOpen = false;
         private readonly Dictionary<string, Dictionary<string, string>> _sitePermissions = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<int, double[]> _eqGains = new(); // Ganhos de EQ (16 bandas) por aba
+        private readonly int[] _eqFrequencies = new int[] { 32, 64, 125, 250, 500, 1000, 1500, 2000, 3000, 4000, 6000, 8000, 10000, 12000, 14000, 16000 };
+        private readonly HashSet<string> _trackerDomains = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "doubleclick.net", "google-analytics.com", "googletagmanager.com", "analytics.google.com",
+            "facebook.net", "connect.facebook.net", "pixel.facebook.com", "clarity.ms",
+            "scorecardresearch.com", "hotjar.com", "criteo.com", "adnxs.com",
+            "quantserve.com", "taboola.com", "outbrain.com", "pubmatic.com",
+            "casalemedia.com", "rubiconproject.com", "moatads.com", "amazon-adsystem.com"
+        };
         private CoreWebView2Environment? _sharedEnv;
         private readonly Thread _uiThread;
         private readonly ManualResetEventSlim _readyEvent = new(false);
@@ -136,12 +147,13 @@ namespace Yvira.Vm
                     Directory.CreateDirectory(userDataFolder);
                     var options = new CoreWebView2EnvironmentOptions
                     {
-                        AdditionalBrowserArguments = "--autoplay-policy=no-user-gesture-required --enable-features=HardwareMediaKeyHandling"
+                        AdditionalBrowserArguments = "--autoplay-policy=no-user-gesture-required --disable-web-security --allow-running-insecure-content --enable-features=HardwareMediaKeyHandling"
                     };
                     _sharedEnv = await CoreWebView2Environment.CreateAsync(null, userDataFolder, options);
 
                     // Inicializa _webView (Header/Interface)
                     await _webView.EnsureCoreWebView2Async(_sharedEnv);
+                    _webView.DefaultBackgroundColor = Color.Transparent;
 
                     _webView.CoreWebView2.FrameNavigationStarting += (sArgs, args) =>
                     {
@@ -184,7 +196,7 @@ namespace Yvira.Vm
 
                         document.addEventListener('mousedown', function(e) {
                             if (e.target.closest('[data-arrastavel=""true""]') || e.target.closest('.titlebar') || e.target.closest('.yvira-titlebar')) {
-                                if (!e.target.closest('button') && !e.target.closest('input') && !e.target.closest('a') && !e.target.closest('.btn-reorder-col') && !e.target.closest('.x') && !e.target.closest('.tab') && !e.target.closest('.new-tab')) {
+                                if (!e.target.closest('button') && !e.target.closest('input') && !e.target.closest('a') && !e.target.closest('.btn-reorder-col') && !e.target.closest('.x') && !e.target.closest('.tab') && !e.target.closest('#tabs') && !e.target.closest('.tabs') && !e.target.closest('.new-tab')) {
                                     window.yvira.arrastar();
                                 }
                             }
@@ -351,9 +363,11 @@ namespace Yvira.Vm
                                         if (string.Equals(eventName, "navigate", StringComparison.OrdinalIgnoreCase))
                                         {
                                             string? targetUrl = pMap.Get("url")?.ToString();
+                                            var privObj = pMap.Get("private");
+                                            bool isPrivate = privObj != null && (privObj is bool bPriv ? bPriv : privObj.ToString()?.ToLower() == "true");
                                             if (!string.IsNullOrEmpty(targetUrl))
                                             {
-                                                NavigateTab(tabId, targetUrl);
+                                                NavigateTab(tabId, targetUrl, isPrivate);
                                             }
                                         }
                                         else if (string.Equals(eventName, "tab_switched", StringComparison.OrdinalIgnoreCase))
@@ -379,7 +393,35 @@ namespace Yvira.Vm
                                             var oObj = pMap.Get("open");
                                             bool isOpen = oObj != null && (oObj is bool bVal ? bVal : oObj.ToString()?.ToLower() == "true");
                                             _overlayOpen = isOpen;
-                                            _form?.BeginInvoke((MethodInvoker)(() => UpdateViewsLayout()));
+                                            _form?.BeginInvoke((MethodInvoker)(() =>
+                                            {
+                                                UpdateViewsLayout();
+                                            }));
+                                        }
+                                        else if (string.Equals(eventName, "set_eq_gain", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            var bObj = pMap.Get("band");
+                                            var gObj = pMap.Get("gain");
+                                            if (bObj != null && gObj != null &&
+                                                int.TryParse(bObj.ToString(), out int bandIdx) &&
+                                                double.TryParse(gObj.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double gainVal))
+                                            {
+                                                ApplyEqBandGain(tabId, bandIdx, gainVal);
+                                            }
+                                        }
+                                        else if (string.Equals(eventName, "set_eq_preset", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            var gList = pMap.Get("gains") as YviraList;
+                                            if (gList != null)
+                                            {
+                                                double[] gains = new double[gList.Items.Count];
+                                                for (int i = 0; i < gList.Items.Count; i++)
+                                                {
+                                                    if (double.TryParse(gList.Items[i]?.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double v))
+                                                        gains[i] = v;
+                                                }
+                                                ApplyEqPresetGains(tabId, gains);
+                                            }
                                         }
                                         else if (string.Equals(eventName, "set_site_permission", StringComparison.OrdinalIgnoreCase))
                                         {
@@ -509,7 +551,7 @@ namespace Yvira.Vm
         /// <summary>
         /// Navega uma aba especifica para a URL desejada, criando sua instancia dedicada caso nao exista.
         /// </summary>
-        public void NavigateTab(int tabId, string url)
+        public void NavigateTab(int tabId, string url, bool isPrivate = false)
         {
             if (_form == null || _form.IsDisposed) return;
 
@@ -518,6 +560,9 @@ namespace Yvira.Vm
                 try
                 {
                     _activeTabId = tabId;
+                    if (isPrivate) _privateTabs.Add(tabId);
+                    else _privateTabs.Remove(tabId);
+
                     bool isInternal = url.StartsWith("yvira://", StringComparison.OrdinalIgnoreCase);
 
                     if (isInternal)
@@ -557,6 +602,119 @@ namespace Yvira.Vm
                                 tabWv.CoreWebView2.Settings.IsStatusBarEnabled = false;
                                 tabWv.CoreWebView2.Settings.AreDevToolsEnabled = true;
 
+                                try
+                                {
+                                    await tabWv.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(GetEqScriptForTab(tabId));
+                                }
+                                catch { }
+
+                                // 1. Proteção de Privacidade & Rastreamento
+                                try
+                                {
+                                    tabWv.CoreWebView2.Profile.PreferredTrackingPreventionLevel = CoreWebView2TrackingPreventionLevel.Balanced;
+                                    if (isPrivate)
+                                    {
+                                        tabWv.CoreWebView2.Profile.IsPasswordAutosaveEnabled = false;
+                                        tabWv.CoreWebView2.Profile.IsGeneralAutofillEnabled = false;
+                                    }
+                                }
+                                catch { }
+
+                                // 2. Bloqueador Nativo de Rastreadores e Anúncios Maliciosos (Anti-Tracking Shield)
+                                tabWv.CoreWebView2.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
+                                tabWv.CoreWebView2.WebResourceRequested += (sArgs, args) =>
+                                {
+                                    try
+                                    {
+                                        if (Uri.TryCreate(args.Request.Uri, UriKind.Absolute, out var reqUri))
+                                        {
+                                            string host = reqUri.Host;
+                                            bool isBlocked = false;
+                                            foreach (var tracker in _trackerDomains)
+                                            {
+                                                if (host.Equals(tracker, StringComparison.OrdinalIgnoreCase) || host.EndsWith("." + tracker, StringComparison.OrdinalIgnoreCase))
+                                                {
+                                                    isBlocked = true;
+                                                    break;
+                                                }
+                                            }
+
+                                            if (isBlocked)
+                                            {
+                                                args.Response = _sharedEnv.CreateWebResourceResponse(null, 403, "Blocked by Yvira Shield", "Content-Type: text/plain");
+                                                SendData("rastreadorBloqueadoNativo", new Dictionary<string, object?>
+                                                {
+                                                    ["host"] = host,
+                                                    ["uri"] = args.Request.Uri,
+                                                    ["tabId"] = tabId
+                                                });
+                                            }
+                                        }
+                                    }
+                                    catch { }
+                                };
+
+                                // 3. Validação Estrita de Protocolos e Proteção contra Traversal (NavigationStarting)
+                                tabWv.CoreWebView2.NavigationStarting += (sArgs, args) =>
+                                {
+                                    try
+                                    {
+                                        if (Uri.TryCreate(args.Uri, UriKind.Absolute, out var navUri))
+                                        {
+                                            string scheme = navUri.Scheme.ToLowerInvariant();
+                                            if (scheme != "http" && scheme != "https" && scheme != "data" && scheme != "about")
+                                            {
+                                                args.Cancel = true;
+                                                Console.WriteLine($"[Yvira Security] Protocolo não autorizado bloqueado: {args.Uri}");
+                                                SendData("alertaSeguranca", new Dictionary<string, object?>
+                                                {
+                                                    ["tipo"] = "protocolo_bloqueado",
+                                                    ["uri"] = args.Uri
+                                                });
+                                            }
+                                        }
+                                    }
+                                    catch
+                                    {
+                                        args.Cancel = true;
+                                    }
+                                };
+
+                                // 4. Interceptação de Popups e Novas Janelas (NewWindowRequested)
+                                tabWv.CoreWebView2.NewWindowRequested += (sArgs, args) =>
+                                {
+                                    args.Handled = true;
+                                    if (!string.IsNullOrEmpty(args.Uri))
+                                    {
+                                        SendData("solicitarNovaAbaExterna", new Dictionary<string, object?>
+                                        {
+                                            ["url"] = args.Uri,
+                                            ["origemTabId"] = tabId
+                                        });
+                                    }
+                                };
+
+                                // 5. Interceptação e Confirmação de Downloads (DownloadStarting)
+                                tabWv.CoreWebView2.DownloadStarting += (sArgs, args) =>
+                                {
+                                    string ext = Path.GetExtension(args.ResultFilePath).ToLowerInvariant();
+                                    string fileName = Path.GetFileName(args.ResultFilePath);
+                                    bool isExecutable = ext is ".exe" or ".msi" or ".bat" or ".cmd" or ".ps1" or ".vbs" or ".scr";
+
+                                    SendData("downloadIniciado", new Dictionary<string, object?>
+                                    {
+                                        ["arquivo"] = fileName,
+                                        ["perigoso"] = isExecutable,
+                                        ["uri"] = args.DownloadOperation.Uri
+                                    });
+
+                                    if (isExecutable)
+                                    {
+                                        Console.WriteLine($"[Yvira Security] Alerta: Download de arquivo executável/script detectado: {fileName}");
+                                    }
+                                };
+
+                                // 6. Permissões de Sites
                                 tabWv.CoreWebView2.PermissionRequested += (sArgs, args) =>
                                 {
                                     try
@@ -639,6 +797,15 @@ namespace Yvira.Vm
                                         });
                                     }
                                 };
+
+                                tabWv.CoreWebView2.DOMContentLoaded += (sArgs, args) =>
+                                {
+                                    try
+                                    {
+                                        tabWv.CoreWebView2.ExecuteScriptAsync(GetEqScriptForTab(capturedId));
+                                    }
+                                    catch { }
+                                };
                             }
                         }
 
@@ -669,18 +836,32 @@ namespace Yvira.Vm
         }
 
         /// <summary>
-        /// Destroi a instancia WebView2 da aba fechada liberando recursos de memoria.
+        /// Destroi a instancia WebView2 da aba fechada liberando recursos de memoria e limpando dados caso seja privada.
         /// </summary>
         public void CloseTabControl(int tabId)
         {
             if (_form == null || _form.IsDisposed) return;
 
-            _form.BeginInvoke((MethodInvoker)(() =>
+            _form.BeginInvoke((MethodInvoker)(async () =>
             {
                 try
                 {
                     if (_tabWebViews.TryGetValue(tabId, out var wv))
                     {
+                        _eqGains.Remove(tabId);
+                        if (_privateTabs.Contains(tabId))
+                        {
+                            try
+                            {
+                                if (wv.CoreWebView2 != null)
+                                {
+                                    await wv.CoreWebView2.Profile.ClearBrowsingDataAsync();
+                                }
+                            }
+                            catch { }
+                            _privateTabs.Remove(tabId);
+                        }
+
                         if (_contentPanel != null) _contentPanel.Controls.Remove(wv);
                         else _form.Controls.Remove(wv);
                         wv.Dispose();
@@ -692,6 +873,247 @@ namespace Yvira.Vm
                     Console.WriteLine($"[CloseTabControl Erro]: {ex.Message}");
                 }
             }));
+        }
+
+        private string GetEqScriptForTab(int tabId)
+        {
+            if (!_eqGains.TryGetValue(tabId, out var gains) || gains == null || gains.Length == 0)
+            {
+                gains = new double[_eqFrequencies.Length];
+            }
+            string freqsJson = JsonSerializer.Serialize(_eqFrequencies);
+            string gainsJson = JsonSerializer.Serialize(gains);
+
+            return @"
+                (function() {
+                    try {
+                        if (!window.__yviraEq) {
+                            var freqs = " + freqsJson + @";
+                            var gains = " + gainsJson + @";
+                            window.__yviraEq = {
+                                ctx: null,
+                                filters: [],
+                                freqs: freqs,
+                                gains: gains,
+                                getContext: function() {
+                                    if (!this.ctx) {
+                                        var AudioContext = window.AudioContext || window.webkitAudioContext;
+                                        if (AudioContext) {
+                                            this.ctx = new AudioContext();
+                                            this.rebuildFilters();
+                                        }
+                                    }
+                                    if (this.ctx && this.ctx.state === 'suspended') {
+                                        this.ctx.resume().catch(function(){});
+                                    }
+                                    return this.ctx;
+                                },
+                                rebuildFilters: function() {
+                                    if (!this.ctx) return;
+                                    var prev = null;
+                                    this.filters = [];
+                                    for (var i = 0; i < this.freqs.length; i++) {
+                                        var f = this.ctx.createBiquadFilter();
+                                        if (i === 0) f.type = 'lowshelf';
+                                        else if (i === this.freqs.length - 1) f.type = 'highshelf';
+                                        else f.type = 'peaking';
+                                        f.frequency.value = this.freqs[i];
+                                        f.gain.value = this.gains[i] || 0;
+                                        f.Q.value = 1.4;
+                                        if (prev) prev.connect(f);
+                                        this.filters.push(f);
+                                        prev = f;
+                                    }
+                                    if (prev) prev.connect(this.ctx.destination);
+                                },
+                                hookMedia: function(el) {
+                                    if (!el || el.__yviraEqHooked) return;
+                                    var self = this;
+                                    var doHook = function() {
+                                        if (el.__yviraEqHooked) return;
+                                        var ctx = self.getContext();
+                                        if (!ctx || self.filters.length === 0) return;
+                                        try {
+                                            if (el.crossOrigin !== 'anonymous') {
+                                                try { el.crossOrigin = 'anonymous'; } catch(coe) {}
+                                            }
+                                            var src = ctx.createMediaElementSource(el);
+                                            src.connect(self.filters[0]);
+                                            el.__yviraEqHooked = true;
+                                            if (ctx.state === 'suspended') ctx.resume().catch(function(){});
+                                        } catch (e) {
+                                            // Fallback para streams desacoplados
+                                            try {
+                                                if (el.captureStream || el.mozCaptureStream) {
+                                                    var st = (el.captureStream ? el.captureStream() : el.mozCaptureStream());
+                                                    if (st && st.getAudioTracks && st.getAudioTracks().length > 0) {
+                                                        var streamSrc = ctx.createMediaStreamSource(st);
+                                                        streamSrc.connect(self.filters[0]);
+                                                        el.__yviraEqHooked = true;
+                                                        el.muted = true; // Muta saida direta para nao duplicar
+                                                        if (ctx.state === 'suspended') ctx.resume().catch(function(){});
+                                                    }
+                                                }
+                                            } catch (ce) {}
+                                        }
+                                    };
+                                    el.addEventListener('play', doHook);
+                                    el.addEventListener('playing', doHook);
+                                    el.addEventListener('canplay', doHook);
+                                    el.addEventListener('timeupdate', doHook, { once: true });
+                                    if (!el.paused) doHook();
+                                },
+                                hookAll: function() {
+                                    var self = this;
+                                    function deepFind(root) {
+                                        if (!root) return;
+                                        if (root.querySelectorAll) {
+                                            root.querySelectorAll('audio, video').forEach(function(el) {
+                                                self.hookMedia(el);
+                                            });
+                                            root.querySelectorAll('*').forEach(function(el) {
+                                                if (el.shadowRoot) deepFind(el.shadowRoot);
+                                            });
+                                        }
+                                    }
+                                    deepFind(document);
+                                },
+                                setGain: function(bandIdx, val) {
+                                    this.gains[bandIdx] = val;
+                                    if (this.filters[bandIdx]) {
+                                        this.filters[bandIdx].gain.value = val;
+                                    }
+                                    if (this.ctx && this.ctx.state === 'suspended') {
+                                        this.ctx.resume().catch(function(){});
+                                    }
+                                    if (window.__yviraContextBands) {
+                                        for (var k in window.__yviraContextBands) {
+                                            var nodeArr = window.__yviraContextBands[k];
+                                            if (nodeArr && nodeArr[bandIdx]) {
+                                                nodeArr[bandIdx].gain.value = val;
+                                            }
+                                        }
+                                    }
+                                }
+                            };
+
+                            // 1. Interceptação global de AudioNode.prototype.connect
+                            window.__yviraContextBands = {};
+                            var origConnect = AudioNode.prototype.connect;
+                            AudioNode.prototype.connect = function(destination, outputIndex, inputIndex) {
+                                try {
+                                    if (destination && (destination instanceof AudioDestinationNode || destination.constructor?.name === 'AudioDestinationNode')) {
+                                        var ctx = this.context;
+                                        if (ctx && !this.__yviraEqBypassed) {
+                                            var ctxId = ctx.__yvId || (ctx.__yvId = Math.random().toString(36).slice(2));
+                                            if (!window.__yviraContextBands[ctxId]) {
+                                                var bands = [];
+                                                var prev = null;
+                                                for (var i = 0; i < window.__yviraEq.freqs.length; i++) {
+                                                    var bf = ctx.createBiquadFilter();
+                                                    if (i === 0) bf.type = 'lowshelf';
+                                                    else if (i === window.__yviraEq.freqs.length - 1) bf.type = 'highshelf';
+                                                    else bf.type = 'peaking';
+                                                    bf.frequency.value = window.__yviraEq.freqs[i];
+                                                    bf.gain.value = window.__yviraEq.gains[i] || 0;
+                                                    bf.Q.value = 1.4;
+                                                    bf.__yviraEqBypassed = true;
+                                                    if (prev) origConnect.call(prev, bf, 0, 0);
+                                                    bands.push(bf);
+                                                    prev = bf;
+                                                }
+                                                origConnect.call(prev, destination, 0, 0);
+                                                window.__yviraContextBands[ctxId] = bands;
+                                            }
+                                            var activeBands = window.__yviraContextBands[ctxId];
+                                            if (activeBands && activeBands.length > 0) {
+                                                return origConnect.call(this, activeBands[0], outputIndex || 0, inputIndex || 0);
+                                            }
+                                        }
+                                    }
+                                } catch(e) {}
+                                return origConnect.apply(this, arguments);
+                            };
+
+                            window.__yviraEq.hookAll();
+
+                            // Intercepta criacao e play de elementos de midia dinamicamente
+                            var origPlay = HTMLMediaElement.prototype.play;
+                            HTMLMediaElement.prototype.play = function() {
+                                window.__yviraEq.hookMedia(this);
+                                return origPlay.apply(this, arguments);
+                            };
+
+                            var origCreate = document.createElement;
+                            document.createElement = function(tag) {
+                                var el = origCreate.apply(this, arguments);
+                                if (tag && (tag.toLowerCase() === 'video' || tag.toLowerCase() === 'audio')) {
+                                    setTimeout(function() { window.__yviraEq.hookMedia(el); }, 0);
+                                }
+                                return el;
+                            };
+
+                            // Ouve mudancas de pagina / SPA no YouTube e YouTube Music
+                            window.addEventListener('yt-navigate-finish', function() {
+                                setTimeout(function() { window.__yviraEq.hookAll(); }, 200);
+                            });
+                            window.addEventListener('yt-action', function() {
+                                window.__yviraEq.hookAll();
+                            });
+
+                            var obs = new MutationObserver(function() { window.__yviraEq.hookAll(); });
+                            obs.observe(document.body || document.documentElement, { childList: true, subtree: true });
+
+                            var unlock = function() {
+                                if (window.__yviraEq) {
+                                    window.__yviraEq.getContext();
+                                    window.__yviraEq.hookAll();
+                                }
+                            };
+                            window.addEventListener('click', unlock, { capture: true });
+                            window.addEventListener('keydown', unlock, { capture: true });
+                        }
+                    } catch(e) {}
+                })();
+            ";
+        }
+
+        private void ApplyEqBandGain(int tabId, int bandIdx, double gainVal)
+        {
+            if (!_eqGains.TryGetValue(tabId, out var gains) || gains == null)
+            {
+                gains = new double[_eqFrequencies.Length];
+                _eqGains[tabId] = gains;
+            }
+            if (bandIdx >= 0 && bandIdx < gains.Length)
+            {
+                gains[bandIdx] = gainVal;
+            }
+
+            if (_tabWebViews.TryGetValue(tabId, out var wv) && wv.CoreWebView2 != null)
+            {
+                string js = $"if (window.__yviraEq && window.__yviraEq.setGain) {{ window.__yviraEq.setGain({bandIdx}, {gainVal.ToString(System.Globalization.CultureInfo.InvariantCulture)}); }} else {{ {GetEqScriptForTab(tabId)} }}";
+                wv.CoreWebView2.ExecuteScriptAsync(js);
+            }
+        }
+
+        private void ApplyEqPresetGains(int tabId, double[] gains)
+        {
+            var targetGains = new double[_eqFrequencies.Length];
+            for (int i = 0; i < targetGains.Length; i++)
+            {
+                targetGains[i] = i < gains.Length ? gains[i] : 0.0;
+            }
+            _eqGains[tabId] = targetGains;
+
+            if (_tabWebViews.TryGetValue(tabId, out var wv) && wv.CoreWebView2 != null)
+            {
+                for (int i = 0; i < targetGains.Length; i++)
+                {
+                    string js = $"if (window.__yviraEq && window.__yviraEq.setGain) {{ window.__yviraEq.setGain({i}, {targetGains[i].ToString(System.Globalization.CultureInfo.InvariantCulture)}); }}";
+                    wv.CoreWebView2.ExecuteScriptAsync(js);
+                }
+            }
         }
 
         public void On(string eventName, object callback)

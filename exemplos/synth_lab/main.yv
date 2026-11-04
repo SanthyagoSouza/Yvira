@@ -1,0 +1,33 @@
+# Sintetizador Yvira Lab - DSP Interativo
+
+print("===============================================================");
+print("       YVIRA SYNTH LAB // POLIPHONIC & LIVE MULTI-BAND EQ      ");
+print("===============================================================\n");
+
+let app = criar_janela({
+    "titulo": "Yvira Synth Lab // Real-Time Tone Sculpting",
+    "view": "views/index.html",
+    "largura": 1100,
+    "altura": 680,
+    "min_largura": 900,
+    "min_altura": 580,
+    "barra_customizada": true,
+    "redimensionavel": true,
+    "cor_fundo": "#0b0e14"
+});
+
+fn on_synth_log(params) {
+    if (params != null && params.contains("msg")) {
+        print("[Synth]: " + params["msg"]);
+    }
+}
+
+app.ao_evento("synth_log", "on_synth_log");
+
+print("[Synth Lab]: Teclado musical pronto (8 brancas + 5 pretas mapeadas de A a K / W a U)");
+print("[Synth Lab]: Controles de Timbre, Equalizador de 6 Bandas, Ressonancia e Envelope ativos!");
+
+app.exibir();
+app.esperar();
+
+print("\n[Synth Lab]: Sessao finalizada.");

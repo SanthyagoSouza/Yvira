@@ -1,0 +1,7 @@
+{
+  "name": "yvira-pedalboard-dsp",
+  "version": "1.0.0",
+  "description": "Pedaleira Virtual e Gabinete IR em Yvira nativo com UI compacta",
+  "entry": "main.yv",
+  "author": "Antigravity & User"
+}

@@ -126,6 +126,11 @@ public class Parser
             return ParseClassDeclaration();
         }
 
+        if (Current.Type == TokenType.Enum)
+        {
+            return ParseEnumDeclaration();
+        }
+
         if (Current.Type == TokenType.Function)
         {
             return ParseFunctionDeclaration();
@@ -508,9 +513,9 @@ public class Parser
         var nameNode = new IdentifierNode(nameToken.Text);
 
         IdentifierNode? superNode = null;
-        if (Current.Type == TokenType.Extends)
+        if (Current.Type == TokenType.Extends || Current.Type == TokenType.Colon)
         {
-            Advance(); // consome 'extends'
+            Advance(); // consome 'extends' ou ':'
             var superToken = Match(TokenType.Identifier);
             superNode = new IdentifierNode(superToken.Text);
         }
@@ -539,6 +544,43 @@ public class Parser
         }
         Match(TokenType.CloseBrace); // consome '}'
         return new ClassDeclarationNode(nameNode, superNode, methods);
+    }
+
+    private EnumDeclarationNode ParseEnumDeclaration()
+    {
+        Advance(); // consome 'enum'
+        var nameToken = Match(TokenType.Identifier);
+        var nameNode = new IdentifierNode(nameToken.Text);
+
+        Match(TokenType.OpenBrace); // consome '{'
+        var members = new List<EnumMemberNode>();
+
+        while (Current.Type != TokenType.CloseBrace && Current.Type != TokenType.EndOfFile)
+        {
+            var memberToken = Match(TokenType.Identifier);
+            ExpressionNode? valNode = null;
+
+            if (Current.Type == TokenType.Assign)
+            {
+                Advance(); // consome '='
+                valNode = ParseExpression();
+            }
+
+            members.Add(new EnumMemberNode(memberToken.Text, valNode));
+
+            if (Current.Type == TokenType.Comma || Current.Type == TokenType.Semicolon)
+            {
+                Advance();
+            }
+            else if (Current.Type != TokenType.CloseBrace)
+            {
+                break;
+            }
+        }
+
+        Match(TokenType.CloseBrace); // consome '}'
+        if (Current.Type == TokenType.Semicolon) Advance();
+        return new EnumDeclarationNode(nameNode, members);
     }
 
     private MatchStatementNode ParseMatchStatement()
@@ -836,7 +878,15 @@ public class Parser
             if (Current.Type == TokenType.Dot)
             {
                 Advance(); // consome '.'
-                var memberToken = Match(TokenType.Identifier);
+                Token memberToken;
+                if (Current.Type == TokenType.Identifier || Current.Type == TokenType.Super || Current.Type == TokenType.Class)
+                {
+                    memberToken = Advance();
+                }
+                else
+                {
+                    memberToken = Match(TokenType.Identifier);
+                }
 
                 if (Current.Type == TokenType.OpenParen)
                 {

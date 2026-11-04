@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Yvira.Ast;
 using Yvira.Lexer;
@@ -23,6 +23,29 @@ public class Interpreter
     private SecurityPolicy _securityPolicy = new();
     public SecurityPolicy SecurityPolicy => _securityPolicy;
     public void SetSecurityPolicy(SecurityPolicy policy) => _securityPolicy = policy;
+    private int _callDepth = 0;
+    public const int MaxCallDepth = 10000;
+    private readonly Stack<string> _callStack = new();
+    public IReadOnlyCollection<string> CallStack => _callStack;
+
+    public void PushCallFrame(string functionName)
+    {
+        if (_callDepth >= MaxCallDepth)
+        {
+            throw new Exception($"Estouro de Pilha (StackOverflow): Limite de profundidade de chamadas ({MaxCallDepth}) excedido em '{functionName}'.");
+        }
+        _callDepth++;
+        _callStack.Push(functionName);
+    }
+
+    public void PopCallFrame()
+    {
+        if (_callDepth > 0)
+        {
+            _callDepth--;
+            _callStack.Pop();
+        }
+    }
     private readonly List<HttpServerInstance> _httpServers = new();
     public IReadOnlyList<HttpServerInstance> HttpServers => _httpServers;
 
@@ -175,6 +198,10 @@ public class Interpreter
 
             case ClassDeclarationNode classDecl:
                 ExecuteClassDeclaration(classDecl);
+                return null;
+
+            case EnumDeclarationNode enumDecl:
+                ExecuteEnumDeclaration(enumDecl);
                 return null;
 
             case ThrowStatementNode throwStmt:
@@ -472,6 +499,21 @@ public class Interpreter
             return;
         }
 
+        if (rawPath.Equals("switch", StringComparison.OrdinalIgnoreCase) || rawPath.Equals("rede", StringComparison.OrdinalIgnoreCase) || rawPath.Equals("network", StringComparison.OrdinalIgnoreCase))
+        {
+            var switchModule = SwitchModule.CreateModule(this);
+            if (string.IsNullOrEmpty(importStmt.Alias))
+            {
+                _environment.Define(rawPath.ToLowerInvariant(), switchModule);
+                ApplyModuleSymbols(switchModule, null);
+            }
+            else
+            {
+                ApplyModuleSymbols(switchModule, importStmt.Alias);
+            }
+            return;
+        }
+
         if (rawPath.Equals("doc", StringComparison.OrdinalIgnoreCase) || rawPath.Equals("document", StringComparison.OrdinalIgnoreCase) || rawPath.Equals("pdf", StringComparison.OrdinalIgnoreCase) || rawPath.Equals("excel", StringComparison.OrdinalIgnoreCase))
         {
             var docModule = DocumentModule.CreateModule(_currentDirectory);
@@ -603,6 +645,21 @@ public class Interpreter
             else
             {
                 ApplyModuleSymbols(cacheModule, importStmt.Alias);
+            }
+            return;
+        }
+
+        if (rawPath.Equals("switch", StringComparison.OrdinalIgnoreCase) || rawPath.Equals("rede", StringComparison.OrdinalIgnoreCase) || rawPath.Equals("network", StringComparison.OrdinalIgnoreCase))
+        {
+            var switchModule = SwitchModule.CreateModule(this);
+            if (string.IsNullOrEmpty(importStmt.Alias))
+            {
+                _environment.Define(rawPath.ToLowerInvariant(), switchModule);
+                ApplyModuleSymbols(switchModule, null);
+            }
+            else
+            {
+                ApplyModuleSymbols(switchModule, importStmt.Alias);
             }
             return;
         }
@@ -764,6 +821,34 @@ public class Interpreter
 
         var yvClass = new YviraClass(classDecl.Name.Name, superClass, methods, staticMethods);
         _environment.Define(classDecl.Name.Name, yvClass);
+    }
+
+    private void ExecuteEnumDeclaration(EnumDeclarationNode enumDecl)
+    {
+        var yvEnum = new YviraEnum(enumDecl.Name.Name);
+        double nextAutoVal = 0.0;
+
+        foreach (var member in enumDecl.Members)
+        {
+            object? val;
+            if (member.Value != null)
+            {
+                val = EvaluateExpression(member.Value);
+                if (val is double dVal)
+                {
+                    nextAutoVal = dVal + 1;
+                }
+            }
+            else
+            {
+                val = nextAutoVal;
+                nextAutoVal += 1.0;
+            }
+
+            yvEnum.AddMember(member.Name, val);
+        }
+
+        _environment.Define(enumDecl.Name.Name, yvEnum);
     }
 
     private void ExecuteFunctionDeclaration(FunctionDeclarationNode funcDecl)
@@ -1063,6 +1148,16 @@ public class Interpreter
             throw new Exception("Erro de Acesso: Mapas aceitam apenas uma chave [chave].");
         }
 
+        if (target is YviraByteArray bArr)
+        {
+            if (idx.Indices.Count == 1)
+            {
+                int index = Convert.ToInt32(EvaluateExpression(idx.Indices[0]));
+                return (double)bArr.Get(index);
+            }
+            throw new Exception("Erro de Acesso: ByteArray aceita apenas um índice [index].");
+        }
+
         if (target is string str)
         {
             if (idx.Indices.Count == 1)
@@ -1161,6 +1256,34 @@ public class Interpreter
                 return computed;
             }
             throw new Exception("Erro de Atribuição: Mapas aceitam apenas uma chave [chave].");
+        }
+
+        if (target is YviraByteArray bArr)
+        {
+            if (idxAssign.Indices.Count == 1)
+            {
+                int index = Convert.ToInt32(EvaluateExpression(idxAssign.Indices[0]));
+                byte byteVal = Convert.ToByte(Convert.ToInt32(rightValue) & 0xFF);
+                if (idxAssign.OperatorToken.Type == TokenType.Assign)
+                {
+                    bArr.Set(index, byteVal);
+                    return (double)byteVal;
+                }
+
+                byte curByte = bArr.Get(index);
+                int computed = idxAssign.OperatorToken.Type switch
+                {
+                    TokenType.PlusAssign => curByte + Convert.ToInt32(rightValue),
+                    TokenType.MinusAssign => curByte - Convert.ToInt32(rightValue),
+                    TokenType.StarAssign => curByte * Convert.ToInt32(rightValue),
+                    TokenType.SlashAssign => curByte / Math.Max(1, Convert.ToInt32(rightValue)),
+                    _ => throw new Exception($"Operador não suportado: {idxAssign.OperatorToken.Text}")
+                };
+                byte resByte = (byte)(computed & 0xFF);
+                bArr.Set(index, resByte);
+                return (double)resByte;
+            }
+            throw new Exception("Erro de Atribuição: ByteArray aceita apenas um índice [index].");
         }
 
         throw new Exception($"Erro de Atribuição: Objeto '{target?.GetType().Name}' não suporta atribuição por índice.");
@@ -1284,6 +1407,15 @@ public class Interpreter
             };
         }
 
+        if (target is YviraByteArray bArrProp)
+        {
+            return member.MemberName switch
+            {
+                "length" or "len" or "count" or "tamanho" => (double)bArrProp.Length,
+                _ => throw new Exception($"Erro de Membro: Propriedade '{member.MemberName}' não existe em ByteArray.")
+            };
+        }
+
         if (target is YviraClass yvCls)
         {
             var sm = yvCls.FindStaticMethod(member.MemberName);
@@ -1294,6 +1426,16 @@ public class Interpreter
         if (target is YviraInstance instance)
         {
             return instance.Get(member.MemberName);
+        }
+
+        if (target is YviraSuperInstance superInst)
+        {
+            return superInst.Get(member.MemberName);
+        }
+
+        if (target is YviraEnum yvEnum)
+        {
+            return yvEnum.Get(member.MemberName);
         }
 
         if (target is YviraMap m)
@@ -1321,6 +1463,30 @@ public class Interpreter
         
 
 
+        if (target is YviraByteArray bArr)
+        {
+            return method.MethodName switch
+            {
+                "writeU8" or "write_u8" or "push" => MethodHelper_WriteU8(bArr, args),
+                "writeU16" or "write_u16" => MethodHelper_WriteU16(bArr, args),
+                "writeU32" or "write_u32" => MethodHelper_WriteU32(bArr, args),
+                "writeI32" or "write_i32" => MethodHelper_WriteI32(bArr, args),
+                "writeF64" or "write_f64" => MethodHelper_WriteF64(bArr, args),
+                "writeString" or "write_string" => MethodHelper_WriteString(bArr, args),
+                "writeBytes" or "write_bytes" => MethodHelper_WriteBytes(bArr, args),
+                "readU8" or "read_u8" => (double)bArr.ReadU8(Convert.ToInt32(args[0])),
+                "readU16" or "read_u16" => (double)bArr.ReadU16(Convert.ToInt32(args[0]), args.Count > 1 ? Convert.ToBoolean(args[1]) : true),
+                "readU32" or "read_u32" => (double)bArr.ReadU32(Convert.ToInt32(args[0]), args.Count > 1 ? Convert.ToBoolean(args[1]) : true),
+                "readF64" or "read_f64" => bArr.ReadF64(Convert.ToInt32(args[0]), args.Count > 1 ? Convert.ToBoolean(args[1]) : true),
+                "readString" or "read_string" => bArr.ReadString(Convert.ToInt32(args[0]), Convert.ToInt32(args[1])),
+                "slice" => bArr.Slice(Convert.ToInt32(args[0]), args.Count > 1 ? Convert.ToInt32(args[1]) : bArr.Length - Convert.ToInt32(args[0])),
+                "clear" => MethodHelper_Clear(bArr),
+                "length" or "len" or "tamanho" => (double)bArr.Length,
+                "toList" or "to_list" => new YviraList(bArr.ToByteArray().Select(b => (object?)(double)b)),
+                _ => throw new Exception($"Erro de Método: Método '{method.MethodName}' não suportado para ByteArray.")
+            };
+        }
+
         if (target is YviraClass yvCls)
         {
             var sm = yvCls.FindStaticMethod(method.MethodName);
@@ -1338,7 +1504,16 @@ public class Interpreter
             {
                 return yvFunc.Call(this, args);
             }
-            throw new Exception($"Erro de M�todo: '{method.MethodName}' n�o � um m�todo execut�vel na classe '{instance.Class.Name}'.");
+        }
+
+        if (target is YviraSuperInstance superInst)
+        {
+            var methodOrProp = superInst.Get(method.MethodName);
+            if (methodOrProp is YviraFunction yvFunc)
+            {
+                return yvFunc.Call(this, args);
+            }
+            throw new Exception($"Erro de Metodo: '{method.MethodName}' nao e um metodo executavel na superclasse '{superInst.SuperClass.Name}'.");
         }
 
         if (target is YviraMatrix mat)
@@ -1373,6 +1548,19 @@ public class Interpreter
                 "startsWith" or "starts_with" when args.Count >= 1 => str.StartsWith(args[0]?.ToString() ?? ""),
                 "endsWith" or "ends_with" when args.Count >= 1 => str.EndsWith(args[0]?.ToString() ?? ""),
                 "indexOf" or "index_of" when args.Count >= 1 => (double)str.IndexOf(args[0]?.ToString() ?? ""),
+                "charCodeAt" or "char_code" or "codeAt" when args.Count >= 1 =>
+                    Convert.ToInt32(args[0]) >= 0 && Convert.ToInt32(args[0]) < str.Length
+                        ? (double)(int)str[Convert.ToInt32(args[0])]
+                        : -1.0,
+                "charAt" or "char_at" when args.Count >= 1 =>
+                    Convert.ToInt32(args[0]) >= 0 && Convert.ToInt32(args[0]) < str.Length
+                        ? str[Convert.ToInt32(args[0])].ToString()
+                        : "",
+                "isDigit" or "is_digit" => str.Length > 0 && char.IsDigit(str[0]),
+                "isAlpha" or "is_alpha" => str.Length > 0 && (char.IsLetter(str[0]) || str[0] == '_'),
+                "isAlnum" or "is_alnum" => str.Length > 0 && (char.IsLetterOrDigit(str[0]) || str[0] == '_'),
+                "isWhitespace" or "is_whitespace" => str.Length > 0 && char.IsWhiteSpace(str[0]),
+                "slice" => SubstringHelper(str, args),
                 "replace" when args.Count >= 2 => str.Replace(args[0]?.ToString() ?? "", args[1]?.ToString() ?? ""),
                 "length" or "len" or "tamanho" => (double)str.Length,
                 "split" => new YviraList(str.Split(args.Count >= 1 ? args[0]!.ToString()! : " ").Select(x => (object?)x)),
@@ -1531,6 +1719,87 @@ public class Interpreter
         return str.Substring(start, Math.Max(0, length));
     }
 
+    private static object MethodHelper_WriteU8(YviraByteArray bArr, List<object?> args)
+    {
+        if (args.Count >= 1) bArr.WriteU8(Convert.ToByte(Convert.ToInt32(args[0]) & 0xFF));
+        return bArr;
+    }
+
+    private static object MethodHelper_WriteU16(YviraByteArray bArr, List<object?> args)
+    {
+        if (args.Count >= 1)
+        {
+            ushort val = Convert.ToUInt16(Convert.ToInt32(args[0]) & 0xFFFF);
+            bool le = args.Count > 1 ? Convert.ToBoolean(args[1]) : true;
+            bArr.WriteU16(val, le);
+        }
+        return bArr;
+    }
+
+    private static object MethodHelper_WriteU32(YviraByteArray bArr, List<object?> args)
+    {
+        if (args.Count >= 1)
+        {
+            uint val = Convert.ToUInt32(args[0]);
+            bool le = args.Count > 1 ? Convert.ToBoolean(args[1]) : true;
+            bArr.WriteU32(val, le);
+        }
+        return bArr;
+    }
+
+    private static object MethodHelper_WriteI32(YviraByteArray bArr, List<object?> args)
+    {
+        if (args.Count >= 1)
+        {
+            int val = Convert.ToInt32(args[0]);
+            bool le = args.Count > 1 ? Convert.ToBoolean(args[1]) : true;
+            bArr.WriteI32(val, le);
+        }
+        return bArr;
+    }
+
+    private static object MethodHelper_WriteF64(YviraByteArray bArr, List<object?> args)
+    {
+        if (args.Count >= 1)
+        {
+            double val = Convert.ToDouble(args[0]);
+            bool le = args.Count > 1 ? Convert.ToBoolean(args[1]) : true;
+            bArr.WriteF64(val, le);
+        }
+        return bArr;
+    }
+
+    private static object MethodHelper_WriteString(YviraByteArray bArr, List<object?> args)
+    {
+        if (args.Count >= 1 && args[0] != null)
+        {
+            bArr.WriteString(args[0]!.ToString()!);
+        }
+        return bArr;
+    }
+
+    private static object MethodHelper_WriteBytes(YviraByteArray bArr, List<object?> args)
+    {
+        if (args.Count >= 1)
+        {
+            if (args[0] is YviraByteArray src)
+            {
+                bArr.WriteBytes(src.ToByteArray());
+            }
+            else if (args[0] is YviraList yl)
+            {
+                bArr.WriteBytes(yl.Select(x => Convert.ToByte(Convert.ToInt32(x) & 0xFF)).ToArray());
+            }
+        }
+        return bArr;
+    }
+
+    private static object? MethodHelper_Clear(YviraByteArray bArr)
+    {
+        bArr.Clear();
+        return null;
+    }
+
     private object? EvaluateCall(CallExpressionNode call)
     {
         string funcName = call.Callee.Name;
@@ -1543,6 +1812,87 @@ public class Interpreter
         // Funções nativas da biblioteca padrão da linguagem Yvira
         switch (funcName)
         {
+            case "ord":
+            case "char_code":
+            case "code":
+                if (evaluatedArgs.Count > 0 && evaluatedArgs[0] != null)
+                {
+                    string s = evaluatedArgs[0]!.ToString()!;
+                    int idx = evaluatedArgs.Count > 1 ? Convert.ToInt32(evaluatedArgs[1]) : 0;
+                    if (idx >= 0 && idx < s.Length)
+                    {
+                        return (double)(int)s[idx];
+                    }
+                }
+                return -1.0;
+
+            case "chr":
+            case "char":
+            case "from_char_code":
+                if (evaluatedArgs.Count > 0 && evaluatedArgs[0] != null)
+                {
+                    int codePoint = Convert.ToInt32(evaluatedArgs[0]);
+                    return ((char)codePoint).ToString();
+                }
+                return "";
+
+            case "is_digit":
+            case "isdigit":
+                if (evaluatedArgs.Count > 0 && evaluatedArgs[0] != null)
+                {
+                    string s = evaluatedArgs[0]!.ToString()!;
+                    return s.Length > 0 && char.IsDigit(s[0]);
+                }
+                return false;
+
+            case "is_alpha":
+            case "isalpha":
+                if (evaluatedArgs.Count > 0 && evaluatedArgs[0] != null)
+                {
+                    string s = evaluatedArgs[0]!.ToString()!;
+                    return s.Length > 0 && (char.IsLetter(s[0]) || s[0] == '_');
+                }
+                return false;
+
+            case "is_alnum":
+            case "isalnum":
+                if (evaluatedArgs.Count > 0 && evaluatedArgs[0] != null)
+                {
+                    string s = evaluatedArgs[0]!.ToString()!;
+                    return s.Length > 0 && (char.IsLetterOrDigit(s[0]) || s[0] == '_');
+                }
+                return false;
+
+            case "is_whitespace":
+            case "isspace":
+                if (evaluatedArgs.Count > 0 && evaluatedArgs[0] != null)
+                {
+                    string s = evaluatedArgs[0]!.ToString()!;
+                    return s.Length > 0 && char.IsWhiteSpace(s[0]);
+                }
+                return false;
+
+            case "bytes":
+            case "byte_array":
+            case "bytearray":
+            case "buffer":
+                if (evaluatedArgs.Count == 0) return new YviraByteArray();
+                if (evaluatedArgs[0] is double dSize) return new YviraByteArray(Convert.ToInt32(dSize));
+                if (evaluatedArgs[0] is int iSize) return new YviraByteArray(iSize);
+                if (evaluatedArgs[0] is YviraList ylBytes)
+                {
+                    var bArrInst = new YviraByteArray(ylBytes.Count);
+                    foreach (var it in ylBytes) bArrInst.WriteU8(Convert.ToByte(Convert.ToInt32(it) & 0xFF));
+                    return bArrInst;
+                }
+                if (evaluatedArgs[0] is string strBytes)
+                {
+                    var bArrInst = new YviraByteArray();
+                    bArrInst.WriteString(strBytes);
+                    return bArrInst;
+                }
+                return new YviraByteArray();
+
             case "list":
                 return new YviraList(evaluatedArgs);
 
@@ -1552,6 +1902,7 @@ public class Interpreter
                 {
                     var a0 = evaluatedArgs[0];
                     if (a0 is string s) return (double)s.Length;
+                    if (a0 is YviraByteArray bArrLen) return (double)bArrLen.Length;
                     if (a0 is YviraList l) return (double)l.Count;
                     if (a0 is YviraMap m) return (double)m.Count;
                     if (a0 is YviraMatrix mx) return (double)(mx.Rows > 1 ? mx.Rows : mx.Length);
@@ -1833,6 +2184,38 @@ public class Interpreter
 
                 return winObj;
 
+            case "is_instance":
+            case "isinstance":
+            case "tipo_e":
+                if (evaluatedArgs.Count >= 2)
+                {
+                    var inst = evaluatedArgs[0];
+                    var cls = evaluatedArgs[1];
+                    return CheckIsInstance(inst, cls);
+                }
+                return false;
+
+            case "type":
+            case "tipo":
+            case "typeof":
+                if (evaluatedArgs.Count > 0)
+                {
+                    var val = evaluatedArgs[0];
+                    if (val == null) return "null";
+                    if (val is double || val is int || val is long) return "number";
+                    if (val is string) return "string";
+                    if (val is bool) return "bool";
+                    if (val is YviraList) return "list";
+                    if (val is YviraMap) return "map";
+                    if (val is YviraByteArray) return "bytes";
+                    if (val is YviraMatrix) return "matrix";
+                    if (val is YviraEnum) return "enum";
+                    if (val is YviraClass) return "class";
+                    if (val is YviraInstance yi) return yi.Class.Name;
+                    return val.GetType().Name;
+                }
+                return "undefined";
+
             case "toNumber":
             case "to_number":
                 if (evaluatedArgs.Count == 0 || evaluatedArgs[0] == null) return 0.0;
@@ -1857,6 +2240,65 @@ public class Interpreter
                 if (evaluatedArgs.Count == 0 || evaluatedArgs[0] == null) return 0.0;
                 double numToFloor = Convert.ToDouble(evaluatedArgs[0]);
                 return Math.Floor(numToFloor);
+
+            case "ceil":
+                if (evaluatedArgs.Count == 0 || evaluatedArgs[0] == null) return 0.0;
+                return Math.Ceiling(Convert.ToDouble(evaluatedArgs[0]));
+
+            case "abs":
+                if (evaluatedArgs.Count == 0 || evaluatedArgs[0] == null) return 0.0;
+                return Math.Abs(Convert.ToDouble(evaluatedArgs[0]));
+
+            case "sin":
+                if (evaluatedArgs.Count == 0 || evaluatedArgs[0] == null) return 0.0;
+                return Math.Sin(Convert.ToDouble(evaluatedArgs[0]));
+
+            case "cos":
+                if (evaluatedArgs.Count == 0 || evaluatedArgs[0] == null) return 0.0;
+                return Math.Cos(Convert.ToDouble(evaluatedArgs[0]));
+
+            case "tan":
+                if (evaluatedArgs.Count == 0 || evaluatedArgs[0] == null) return 0.0;
+                return Math.Tan(Convert.ToDouble(evaluatedArgs[0]));
+
+            case "tanh":
+                if (evaluatedArgs.Count == 0 || evaluatedArgs[0] == null) return 0.0;
+                return Math.Tanh(Convert.ToDouble(evaluatedArgs[0]));
+
+            case "sqrt":
+                if (evaluatedArgs.Count == 0 || evaluatedArgs[0] == null) return 0.0;
+                return Math.Sqrt(Convert.ToDouble(evaluatedArgs[0]));
+
+            case "exp":
+                if (evaluatedArgs.Count == 0 || evaluatedArgs[0] == null) return 0.0;
+                return Math.Exp(Convert.ToDouble(evaluatedArgs[0]));
+
+            case "log":
+                if (evaluatedArgs.Count == 0 || evaluatedArgs[0] == null) return 0.0;
+                return Math.Log(Convert.ToDouble(evaluatedArgs[0]));
+
+            case "min":
+                if (evaluatedArgs.Count >= 2)
+                    return Math.Min(Convert.ToDouble(evaluatedArgs[0]), Convert.ToDouble(evaluatedArgs[1]));
+                return evaluatedArgs.Count > 0 ? Convert.ToDouble(evaluatedArgs[0]) : 0.0;
+
+            case "max":
+                if (evaluatedArgs.Count >= 2)
+                    return Math.Max(Convert.ToDouble(evaluatedArgs[0]), Convert.ToDouble(evaluatedArgs[1]));
+                return evaluatedArgs.Count > 0 ? Convert.ToDouble(evaluatedArgs[0]) : 0.0;
+
+            case "clamp":
+                if (evaluatedArgs.Count >= 3)
+                {
+                    double val = Convert.ToDouble(evaluatedArgs[0]);
+                    double minV = Convert.ToDouble(evaluatedArgs[1]);
+                    double maxV = Convert.ToDouble(evaluatedArgs[2]);
+                    return Math.Clamp(val, minV, maxV);
+                }
+                return 0.0;
+
+            case "pi":
+                return Math.PI;
 
             case "round":
                 if (evaluatedArgs.Count == 0 || evaluatedArgs[0] == null) return 0.0;
@@ -1997,6 +2439,24 @@ public class Interpreter
             return IsTruthy(EvaluateExpression(bin.Right));
         }
 
+        // Operador de Tipo: expr is Tipo
+        if (op == TokenType.Is)
+        {
+            if (bin.Right is IdentifierNode idNode)
+            {
+                // Se o identificador existe no ambiente (ex: BinaryExpr), usa seu valor (YviraClass)
+                // Caso contrário (ex: number, string, list, bool), passa o nome literal da primitiva!
+                if (_environment.Exists(idNode.Name))
+                {
+                    return CheckIsInstance(left, _environment.Get(idNode.Name));
+                }
+                return CheckIsInstance(left, idNode.Name);
+            }
+
+            var rVal = EvaluateExpression(bin.Right);
+            return CheckIsInstance(left, rVal);
+        }
+
         var right = EvaluateExpression(bin.Right);
 
         return op switch
@@ -2018,6 +2478,9 @@ public class Interpreter
             TokenType.LessThan => Convert.ToDouble(left) < Convert.ToDouble(right),
             TokenType.GreaterOrEqual => Convert.ToDouble(left) >= Convert.ToDouble(right),
             TokenType.LessOrEqual => Convert.ToDouble(left) <= Convert.ToDouble(right),
+
+            // Operador de Tipo: expr is Tipo
+            TokenType.Is => CheckIsInstance(left, right),
 
             _ => throw new Exception($"Operador binário não suportado: {bin.OperatorToken.Text}")
         };
@@ -2100,6 +2563,51 @@ public class Interpreter
             throw new Exception("Erro de Execução: Divisão por zero.");
         }
         return left / right;
+    }
+
+    private static bool CheckIsInstance(object? obj, object? targetType)
+    {
+        if (obj == null || targetType == null) return false;
+
+        if (targetType is YviraClass targetClass)
+        {
+            if (obj is YviraInstance inst)
+            {
+                return inst.Class.IsSubclassOf(targetClass);
+            }
+            if (obj is YviraClass cls)
+            {
+                return cls.IsSubclassOf(targetClass);
+            }
+            return false;
+        }
+
+        if (targetType is YviraEnum targetEnum)
+        {
+            if (obj is double || obj is int || obj is string)
+            {
+                return targetEnum.HasMember(obj.ToString() ?? "");
+            }
+            return false;
+        }
+
+        if (targetType is string typeName)
+        {
+            string t = typeName.ToLowerInvariant();
+            return t switch
+            {
+                "number" or "num" or "int" or "float" or "double" => IsNumeric(obj),
+                "string" or "str" or "texto" => obj is string,
+                "bool" or "boolean" => obj is bool,
+                "list" or "lista" => obj is YviraList || (obj is YviraMatrix mxList && mxList.Rows <= 1),
+                "map" or "mapa" or "dict" => obj is YviraMap,
+                "bytes" or "bytearray" => obj is YviraByteArray,
+                "matrix" or "matriz" => obj is YviraMatrix,
+                _ => obj is YviraInstance yInst && yInst.Class.Name.Equals(typeName, StringComparison.OrdinalIgnoreCase)
+            };
+        }
+
+        return false;
     }
 
     private static bool AreEqual(object? a, object? b)

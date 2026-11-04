@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Yvira Pulse - Network Sentinel & Topology Graph</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <style>
+    :root {
+      --bg-dark: #0a0d14;
+      --card-bg: #121722;
+      --card-border: #1c2438;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59, 130, 246, 0.25);
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* BARRA DE TÍTULO CUSTOMIZADA */
+    .titlebar {
+      height: 38px;
+      background-color: #080a10;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      app-region: drag;
+      -webkit-app-region: drag;
+    }
+
+    .titlebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .pulse-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 12px var(--success);
+      animation: pulseAnim 2s infinite;
+    }
+
+    @keyframes pulseAnim {
+      0% { transform: scale(0.95); box-shadow: 0 0 4px var(--success); }
+      50% { transform: scale(1.15); box-shadow: 0 0 14px var(--success); }
+      100% { transform: scale(0.95); box-shadow: 0 0 4px var(--success); }
+    }
+
+    /* BARRA DE ABAS (TABS) NO TOPO */
+    .tabs-nav {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: #0d121c;
+      padding: 2px 4px;
+      border-radius: 6px;
+      border: 1px solid var(--card-border);
+      app-region: no-drag;
+      -webkit-app-region: no-drag;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tab-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-btn.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    .titlebar-controls {
+      display: flex;
+      gap: 6px;
+      app-region: no-drag;
+      -webkit-app-region: no-drag;
+    }
+
+    .ctrl-btn {
+      width: 28px;
+      height: 24px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: all 0.15s;
+    }
+
+    .ctrl-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+
+    .ctrl-btn.close:hover {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    /* LAYOUT PRINCIPAL */
+    .app-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 16px;
+      gap: 16px;
+    }
+
+    /* BARRA DE ESTATÍSTICAS DO TOPO */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent);
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .stat-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* TOOLBAR / CONTROLES DE SCAN */
+    .toolbar {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .search-input {
+      background: #0a0d14;
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 7px 12px;
+      color: #fff;
+      font-size: 12px;
+      width: 260px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent);
+    }
+
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      filter: brightness(1.15);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    .btn-secondary {
+      background: #1e293b;
+      color: #cbd5e1;
+      border: 1px solid var(--card-border);
+    }
+
+    .btn-secondary:hover {
+      background: #334155;
+    }
+
+    .badge-auto {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* CONTEÚDO PRINCIPAL DIVIDIDO EM 2 COLUNAS */
+    .main-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 16px;
+      overflow: hidden;
+    }
+
+    /* TABELA DE DISPOSITIVOS */
+    .table-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--card-border);
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .table-container {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      text-align: left;
+    }
+
+    th {
+      background: #0d121c;
+      color: var(--text-muted);
+      font-weight: 600;
+      padding: 10px 14px;
+      position: sticky;
+      top: 0;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #161d2d;
+    }
+
+    tr:hover {
+      background: rgba(59, 130, 246, 0.05);
+      cursor: pointer;
+    }
+
+    tr.selected {
+      background: rgba(59, 130, 246, 0.12);
+      border-left: 3px solid var(--accent);
+    }
+
+    .device-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      background: #1e293b;
+      color: #94a3b8;
+    }
+
+    .badge-router { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+    .badge-pc { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .badge-mobile { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+    .badge-intelbras { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+
+    /* PAINEL LATERAL DE DETALHES */
+    .detail-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .detail-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .detail-box {
+      background: #0d121c;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .detail-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .kv-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      padding: 4px 0;
+      border-bottom: 1px solid #141b2a;
+    }
+
+    .kv-row:last-child {
+      border-bottom: none;
+    }
+
+    .kv-key {
+      color: var(--text-muted);
+    }
+
+    .kv-val {
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .port-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 8px;
+      background: #121824;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      font-size: 11px;
+    }
+
+    .port-badge {
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--success);
+    }
+
+    /* ABA DO MAPA DE GRAFOS DE TOPOLOGIA */
+    .topology-container {
+      flex: 1;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+    }
+
+    #topologyCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .topology-overlay {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      background: rgba(13, 18, 28, 0.85);
+      border: 1px solid var(--card-border);
+      padding: 10px 14px;
+      border-radius: 8px;
+      backdrop-filter: blur(8px);
+      font-size: 12px;
+      pointer-events: none;
+    }
+
+    .topology-legend {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      background: rgba(13, 18, 28, 0.85);
+      border: 1px solid var(--card-border);
+      padding: 8px 12px;
+      border-radius: 8px;
+      backdrop-filter: blur(8px);
+      display: flex;
+      gap: 12px;
+      font-size: 11px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-color {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #252f44;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3b82f6;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" style="height: 100%; display: flex; flex-direction: column;">
+    <!-- Barra de Título Customizada -->
+    <header class="titlebar">
+      <div class="titlebar-brand">
+        <div class="pulse-dot"></div>
+        <span>YVIRA PULSE</span>
+        <span style="color: var(--text-muted); font-size: 11px; font-weight: normal;">| Sentinel & Topology Engine</span>
+      </div>
+
+      <!-- Abas de Navegação -->
+      <div class="tabs-nav">
+        <button 
+          :class="['tab-btn', { active: abaAtiva === 'dashboard' }]"
+          @click="abaAtiva = 'dashboard'"
+        >
+          📊 Dashboard & Dispositivos
+        </button>
+        <button 
+          :class="['tab-btn', { active: abaAtiva === 'topologia' }]"
+          @click="trocarParaTopologia"
+        >
+          🕸️ Topologia em Grafo
+        </button>
+      </div>
+
+      <div class="titlebar-controls">
+        <button class="ctrl-btn" @click="minimizar" title="Minimizar">&#8211;</button>
+        <button class="ctrl-btn" @click="maximizar" title="Maximizar">&#9633;</button>
+        <button class="ctrl-btn close" @click="fechar" title="Fechar">&#10005;</button>
+      </div>
+    </header>
+
+    <!-- Container da Aplicação -->
+    <main class="app-container">
+      <!-- 4 Cards Superiores de Métricas (Fixos para ambas as abas) -->
+      <section class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">Dispositivos Conectados</span>
+          <span class="stat-value">{{ dispositivos.length }} <span class="stat-sub">hosts na LAN</span></span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Conexões TCP no Sistema</span>
+          <span class="stat-value">{{ totalConexoesTcp }} <span class="stat-sub">sockets ativos</span></span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Serviços e Portas Abertas</span>
+          <span class="stat-value">{{ totalPortasAbertas }} <span class="stat-sub">detectadas</span></span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Automação @time</span>
+          <span class="stat-value" style="color: var(--success);">{{ tempoAtualizacao }}s <span class="stat-sub">intervalo de varredura</span></span>
+        </div>
+      </section>
+
+      <!-- ABA 1: DASHBOARD E DISPOSITIVOS -->
+      <template v-if="abaAtiva === 'dashboard'">
+        <!-- Barra de Ferramentas / Filtros -->
+        <section class="toolbar">
+          <div class="toolbar-left">
+            <input 
+              type="text" 
+              v-model="filtro" 
+              placeholder="🔍 Filtrar por IP, MAC, Fabricante ou Host..." 
+              class="search-input"
+            />
+            <button class="btn" @click="forcarVarredura" :disabled="escaneando">
+              <span v-if="escaneando">⚡ Escaneando...</span>
+              <span v-else>🔄 Forçar Varredura</span>
+            </button>
+            <div class="badge-auto">
+              <span>● @time.sincronizarRede ativo</span>
+            </div>
+          </div>
+          <div>
+            <span style="font-size: 11px; color: var(--text-muted);">Última sincronização: <b>{{ ultimaSincronizacao }}</b></span>
+          </div>
+        </section>
+
+        <!-- Grade Principal (Tabela + Detalhes) -->
+        <section class="main-grid">
+          <!-- Tabela com Dispositivos -->
+          <div class="table-panel">
+            <div class="panel-header">
+              <span>Dispositivos Mapeados ({{ dispositivosFiltrados.length }})</span>
+              <span style="font-size: 11px; color: var(--text-muted);">Clique para inspecionar</span>
+            </div>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Endereço IP</th>
+                    <th>Endereço MAC</th>
+                    <th>Fabricante (OUI Kismet)</th>
+                    <th>Nome do Host</th>
+                    <th>Categoria</th>
+                    <th>Latência</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr 
+                    v-for="d in dispositivosFiltrados" 
+                    :key="d.ip" 
+                    :class="{ selected: selecionado && selecionado.ip === d.ip }"
+                    @click="selecionar(d)"
+                  >
+                    <td><span class="pulse-dot" style="display: inline-block;"></span></td>
+                    <td style="font-weight: 700; color: #fff;">{{ d.ip }}</td>
+                    <td style="font-family: monospace; color: var(--text-muted);">{{ d.mac || 'N/D' }}</td>
+                    <td><b>{{ d.fabricante }}</b></td>
+                    <td>{{ d.nome || '-' }}</td>
+                    <td>
+                      <span :class="['device-badge', getBadgeClass(d.categoria)]">
+                        {{ d.categoria }}
+                      </span>
+                    </td>
+                    <td>{{ d.latencia_ms }}ms</td>
+                  </tr>
+                  <tr v-if="dispositivosFiltrados.length === 0">
+                    <td colspan="7" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                      Nenhum dispositivo localizado no momento.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Painel Lateral: Inspeção do Dispositivo Selecionado -->
+          <div class="detail-panel">
+            <div class="panel-header">
+              <span>Inspeção de Host</span>
+              <span v-if="selecionado" style="color: var(--accent); font-weight: 700;">{{ selecionado.ip }}</span>
+            </div>
+            
+            <div v-if="selecionado" class="detail-body">
+              <!-- Box 1: Hardware & Identificação -->
+              <div class="detail-box">
+                <div class="detail-title">Hardware & L2</div>
+                <div class="kv-row"><span class="kv-key">IP:</span><span class="kv-val">{{ selecionado.ip }}</span></div>
+                <div class="kv-row"><span class="kv-key">MAC:</span><span class="kv-val" style="font-family: monospace;">{{ selecionado.mac }}</span></div>
+                <div class="kv-row"><span class="kv-key">Fabricante:</span><span class="kv-val">{{ selecionado.fabricante }}</span></div>
+                <div class="kv-row"><span class="kv-key">Categoria:</span><span class="kv-val">{{ selecionado.categoria }}</span></div>
+                <div class="kv-row"><span class="kv-key">Host/NetBIOS:</span><span class="kv-val">{{ selecionado.nome || 'N/A' }}</span></div>
+              </div>
+
+              <!-- Box 2: Ações de Controle de Rede -->
+              <div class="detail-box">
+                <div class="detail-title">Ações Rápidas</div>
+                <div style="display: flex; gap: 8px; margin-top: 6px;">
+                  <button class="btn btn-secondary" style="flex: 1;" @click="dispararPing(selecionado.ip)">Ping</button>
+                  <button class="btn btn-secondary" style="flex: 1;" @click="dispararWakeOnLan(selecionado.mac)">Wake-on-LAN</button>
+                </div>
+              </div>
+
+              <!-- Box 3: Serviços e Portas Abertas -->
+              <div class="detail-box">
+                <div class="detail-title">
+                  <span>Serviços / Portas</span>
+                  <span>{{ selecionado.servicos ? selecionado.servicos.length : 0 }}</span>
+                </div>
+                <div v-if="selecionado.servicos && selecionado.servicos.length > 0">
+                  <div v-for="s in selecionado.servicos" :key="s.porta" class="port-item">
+                    <div>
+                      <span class="port-badge">Porta {{ s.porta }}</span>
+                      <span style="margin-left: 8px; font-weight: 600;">{{ s.servico }}</span>
+                    </div>
+                    <span v-if="s.banner" style="color: var(--text-muted); font-size: 10px;">{{ s.banner }}</span>
+                  </div>
+                </div>
+                <div v-else style="color: var(--text-muted); font-size: 11px; padding: 6px 0;">
+                  Nenhuma porta padrão aberta detectada.
+                </div>
+              </div>
+
+              <!-- Box 4: SNMP Info (se for switch gerenciável) -->
+              <div v-if="selecionado.snmp_ativo" class="detail-box" style="border-color: #3b82f6;">
+                <div class="detail-title" style="color: #60a5fa;">Switch SNMP Telemetria</div>
+                <div class="kv-row"><span class="kv-key">Nome Switch:</span><span class="kv-val">{{ selecionado.snmp_nome }}</span></div>
+                <div class="kv-row"><span class="kv-key">Uptime:</span><span class="kv-val">{{ selecionado.snmp_uptime }}</span></div>
+                <div class="kv-row"><span class="kv-key">Portas Up:</span><span class="kv-val" style="color: var(--success);">{{ selecionado.snmp_portas_ativas }} / {{ selecionado.snmp_portas_total }}</span></div>
+              </div>
+            </div>
+
+            <div v-else class="detail-body" style="align-items: center; justify-content: center; text-align: center; color: var(--text-muted);">
+              <div>
+                <p style="font-size: 28px; margin-bottom: 8px;">📡</p>
+                <p>Selecione um dispositivo da lista para visualizar detalhes avançados e serviços.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </template>
+
+      <!-- ABA 2: MAPA TOPOLÓGICO EM GRAFO VIVO (CANVAS) -->
+      <template v-else-if="abaAtiva === 'topologia'">
+        <section class="topology-container">
+          <canvas id="topologyCanvas" @click="tratarCliqueCanvas" @mousemove="tratarMoveCanvas"></canvas>
+          
+          <div class="topology-overlay">
+            <p style="font-weight: 700; color: #fff; margin-bottom: 2px;">🌐 Mapa Topológico em Tempo Real</p>
+            <p style="color: var(--text-muted); font-size: 11px;">
+              Mostrando o Gateway Central e nós distribuídos. Passe o mouse ou clique em qualquer nó para detalhes.
+            </p>
+          </div>
+
+          <div class="topology-legend">
+            <div class="legend-item"><div class="legend-color" style="background: #3b82f6;"></div><span>Gateway / Roteador</span></div>
+            <div class="legend-item"><div class="legend-color" style="background: #10b981;"></div><span>Estação PC</span></div>
+            <div class="legend-item"><div class="legend-color" style="background: #f59e0b;"></div><span>Mobile / Celular</span></div>
+            <div class="legend-item"><div class="legend-color" style="background: #8b5cf6;"></div><span>Outros / IoT</span></div>
+          </div>
+        </section>
+      </template>
+    </main>
+  </div>
+
+  <script>
+    const { createApp, ref, computed, onMounted, nextTick } = Vue;
+
+    createApp({
+      setup() {
+        const abaAtiva = ref("dashboard");
+        const dispositivos = ref([]);
+        const selecionado = ref(null);
+        const filtro = ref("");
+        const totalConexoesTcp = ref(0);
+        const tempoAtualizacao = ref(4);
+        const escaneando = ref(false);
+        const ultimaSincronizacao = ref("Iniciando...");
+
+        let animFrameId = null;
+        let nosGrafo = [];
+        let hoverNo = null;
+
+        const dispositivosFiltrados = computed(() => {
+          if (!filtro.value.trim()) return dispositivos.value;
+          const term = filtro.value.toLowerCase();
+          return dispositivos.value.filter(d => 
+            (d.ip && d.ip.toLowerCase().includes(term)) ||
+            (d.mac && d.mac.toLowerCase().includes(term)) ||
+            (d.fabricante && d.fabricante.toLowerCase().includes(term)) ||
+            (d.nome && d.nome.toLowerCase().includes(term)) ||
+            (d.categoria && d.categoria.toLowerCase().includes(term))
+          );
+        });
+
+        const totalPortasAbertas = computed(() => {
+          let total = 0;
+          dispositivos.value.forEach(d => {
+            if (d.servicos) total += d.servicos.length;
+          });
+          return total;
+        });
+
+        function selecionar(d) {
+          selecionado.value = d;
+        }
+
+        function getBadgeClass(cat) {
+          if (!cat) return '';
+          const c = cat.toLowerCase();
+          if (c.includes('roteador') || c.includes('switch')) return 'badge-router';
+          if (c.includes('windows') || c.includes('linux')) return 'badge-pc';
+          if (c.includes('móvel') || c.includes('samsung') || c.includes('apple')) return 'badge-mobile';
+          if (c.includes('intelbras')) return 'badge-intelbras';
+          return '';
+        }
+
+        function dispararPing(ip) {
+          if (window.yvira && window.yvira.emit) {
+            window.yvira.emit("ping_host", { ip: ip });
+          }
+        }
+
+        function dispararWakeOnLan(mac) {
+          if (window.yvira && window.yvira.emit) {
+            window.yvira.emit("wol_host", { mac: mac });
+            alert("Pacote Wake-on-LAN enviado para o MAC: " + mac);
+          }
+        }
+
+        function forcarVarredura() {
+          escaneando.value = true;
+          if (window.yvira && window.yvira.emit) {
+            window.yvira.emit("forcar_scan", {});
+          }
+        }
+
+        function minimizar() {
+          if (window.yvira && window.yvira.emit) window.yvira.emit("minimizar", {});
+        }
+        function maximizar() {
+          if (window.yvira && window.yvira.emit) window.yvira.emit("maximizar", {});
+        }
+        function fechar() {
+          if (window.yvira && window.yvira.emit) window.yvira.emit("fechar", {});
+        }
+
+        function trocarParaTopologia() {
+          abaAtiva.value = 'topologia';
+          nextTick(() => {
+            iniciarRenderizadorGrafo();
+          });
+        }
+
+        // =========================================================
+        // MOTOR DE RENDERIZAÇÃO DO GRAFO TOPOLÓGICO VIVO (CANVAS)
+        // =========================================================
+        function iniciarRenderizadorGrafo() {
+          const canvas = document.getElementById('topologyCanvas');
+          if (!canvas) return;
+          const ctx = canvas.getContext('2d');
+
+          function redimensionar() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            atualizarPosicoesNos(canvas.width, canvas.height);
+          }
+          redimensionar();
+          window.onresize = redimensionar;
+
+          let tick = 0;
+          function loop() {
+            tick += 0.03;
+            desenharGrafo(ctx, canvas.width, canvas.height, tick);
+            if (abaAtiva.value === 'topologia') {
+              animFrameId = requestAnimationFrame(loop);
+            }
+          }
+          if (animFrameId) cancelAnimationFrame(animFrameId);
+          animFrameId = requestAnimationFrame(loop);
+        }
+
+        function atualizarPosicoesNos(width, height) {
+          nosGrafo = [];
+          if (dispositivos.value.length === 0) return;
+
+          const cx = width / 2;
+          const cy = height / 2;
+
+          // Gateway central
+          const gateway = dispositivos.value.find(d => d.ip.endsWith('.1')) || dispositivos.value[0];
+          nosGrafo.push({
+            dispositivo: gateway,
+            x: cx,
+            y: cy,
+            raio: 28,
+            cor: '#3b82f6',
+            tipo: 'Gateway',
+            pulsar: true
+          });
+
+          // Demais nós orbitando ao redor do Gateway
+          const outros = dispositivos.value.filter(d => d.ip !== gateway.ip);
+          const totalOutros = outros.length;
+          const raioOrbita = Math.min(width, height) * 0.32;
+
+          outros.forEach((dev, idx) => {
+            const angulo = (idx / totalOutros) * (Math.PI * 2) - Math.PI / 2;
+            const x = cx + Math.cos(angulo) * raioOrbita;
+            const y = cy + Math.sin(angulo) * raioOrbita;
+
+            let cor = '#8b5cf6';
+            const cat = dev.categoria ? dev.categoria.toLowerCase() : '';
+            if (cat.includes('pc') || cat.includes('windows')) cor = '#10b981';
+            else if (cat.includes('móvel') || cat.includes('samsung') || cat.includes('apple')) cor = '#f59e0b';
+            else if (cat.includes('roteador') || cat.includes('switch')) cor = '#3b82f6';
+
+            nosGrafo.push({
+              dispositivo: dev,
+              x: x,
+              y: y,
+              raio: 18,
+              cor: cor,
+              tipo: dev.categoria,
+              pulsar: false
+            });
+          });
+        }
+
+        function desenharGrafo(ctx, width, height, tick) {
+          ctx.clearRect(0, 0, width, height);
+
+          // Grid de fundo sutil
+          ctx.strokeStyle = '#121927';
+          ctx.lineWidth = 1;
+          const gridSize = 40;
+          for (let x = 0; x < width; x += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0); ctx.lineTo(x, height);
+            ctx.stroke();
+          }
+          for (let y = 0; y < height; y += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(0, y); ctx.lineTo(width, y);
+            ctx.stroke();
+          }
+
+          if (nosGrafo.length === 0) return;
+          const gatewayNo = nosGrafo[0];
+
+          // 1. Linhas de Conexão com Pulsos de Dados
+          for (let i = 1; i < nosGrafo.length; i++) {
+            const no = nosGrafo[i];
+
+            // Linha base
+            ctx.beginPath();
+            ctx.moveTo(gatewayNo.x, gatewayNo.y);
+            ctx.lineTo(no.x, no.y);
+            ctx.strokeStyle = '#1c2638';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Ponto de luz viajando pela linha (pulso de tráfego)
+            const t = (Math.sin(tick + i) + 1) / 2;
+            const px = gatewayNo.x + (no.x - gatewayNo.x) * t;
+            const py = gatewayNo.y + (no.y - gatewayNo.y) * t;
+
+            ctx.beginPath();
+            ctx.arc(px, py, 3, 0, Math.PI * 2);
+            ctx.fillStyle = no.cor;
+            ctx.shadowColor = no.cor;
+            ctx.shadowBlur = 8;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+          }
+
+          // 2. Desenho dos Nós
+          nosGrafo.forEach((no, idx) => {
+            const isHover = hoverNo === no;
+            const raio = isHover ? no.raio + 4 : no.raio;
+
+            // Halo pulsante para o Gateway
+            if (no.pulsar) {
+              const pulseSize = no.raio + 8 + Math.sin(tick * 3) * 6;
+              ctx.beginPath();
+              ctx.arc(no.x, no.y, pulseSize, 0, Math.PI * 2);
+              ctx.fillStyle = 'rgba(59, 130, 246, 0.15)';
+              ctx.fill();
+            }
+
+            // Círculo principal
+            ctx.beginPath();
+            ctx.arc(no.x, no.y, raio, 0, Math.PI * 2);
+            ctx.fillStyle = '#0f1420';
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = no.cor;
+            ctx.stroke();
+
+            // Ícone central simplificado
+            ctx.fillStyle = '#fff';
+            ctx.font = `${idx === 0 ? 14 : 11}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            let icone = '💻';
+            const cat = no.tipo ? no.tipo.toLowerCase() : '';
+            if (idx === 0 || cat.includes('roteador')) icone = '🌐';
+            else if (cat.includes('móvel')) icone = '📱';
+            else if (cat.includes('intelbras')) icone = '📡';
+            ctx.fillText(icone, no.x, no.y);
+
+            // Labels de IP e Fabricante abaixo do nó
+            ctx.font = '11px sans-serif';
+            ctx.fillStyle = '#fff';
+            ctx.fillText(no.dispositivo.ip, no.x, no.y + raio + 14);
+
+            ctx.font = '10px sans-serif';
+            ctx.fillStyle = '#94a3b8';
+            const sub = no.dispositivo.fabricante || no.dispositivo.nome || '';
+            ctx.fillText(sub.length > 15 ? sub.substring(0, 15) + '...' : sub, no.x, no.y + raio + 26);
+          });
+        }
+
+        function tratarMoveCanvas(e) {
+          const canvas = document.getElementById('topologyCanvas');
+          if (!canvas) return;
+          const rect = canvas.getBoundingClientRect();
+          const mx = e.clientX - rect.left;
+          const my = e.clientY - rect.top;
+
+          hoverNo = null;
+          for (const no of nosGrafo) {
+            const dx = mx - no.x;
+            const dy = my - no.y;
+            if (Math.sqrt(dx * dx + dy * dy) <= no.raio) {
+              hoverNo = no;
+              canvas.style.cursor = 'pointer';
+              return;
+            }
+          }
+          canvas.style.cursor = 'default';
+        }
+
+        function tratarCliqueCanvas(e) {
+          if (hoverNo) {
+            selecionado.value = hoverNo.dispositivo;
+            abaAtiva.value = 'dashboard';
+          }
+        }
+
+        // --- RECEBIMENTO DOS DADOS ENVIADOS PELO BACKEND YVIRA (@time) ---
+        window.receber_dados_rede = function(dados) {
+          if (dados.dispositivos) {
+            dispositivos.value = dados.dispositivos;
+            // Mantém a seleção atualizada
+            if (selecionado.value) {
+              const atual = dispositivos.value.find(x => x.ip === selecionado.value.ip);
+              if (atual) selecionado.value = atual;
+            } else if (dispositivos.value.length > 0) {
+              selecionado.value = dispositivos.value[0];
+            }
+
+            // Atualiza topologia se a aba estiver aberta
+            if (abaAtiva.value === 'topologia') {
+              const canvas = document.getElementById('topologyCanvas');
+              if (canvas) atualizarPosicoesNos(canvas.width, canvas.height);
+            }
+          }
+          if (dados.total_conexoes_tcp !== undefined) {
+            totalConexoesTcp.value = dados.total_conexoes_tcp;
+          }
+          const now = new Date();
+          ultimaSincronizacao.value = now.toLocaleTimeString();
+          escaneando.value = false;
+        };
+
+        window.notificar_ping = function(res) {
+          alert(`Ping em ${res.host} -> ${res.sucesso ? 'Sucesso (' + res.tempo_ms + 'ms)' : 'Falhou: ' + res.status}`);
+        };
+
+        onMounted(() => {
+          if (window.yvira && window.yvira.emit) {
+            window.yvira.emit("iniciar", {});
+          }
+        });
+
+        return {
+          abaAtiva,
+          dispositivos,
+          selecionado,
+          filtro,
+          totalConexoesTcp,
+          totalPortasAbertas,
+          tempoAtualizacao,
+          escaneando,
+          ultimaSincronizacao,
+          dispositivosFiltrados,
+          selecionar,
+          getBadgeClass,
+          dispararPing,
+          dispararWakeOnLan,
+          forcarVarredura,
+          minimizar,
+          maximizar,
+          fechar,
+          trocarParaTopologia,
+          tratarMoveCanvas,
+          tratarCliqueCanvas
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>

@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Yvira Synth Lab - Famous Timbres & Tone Sculpting</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: radial-gradient(circle at 50% 20%, #161b26 0%, #080a0f 100%);
+      color: #e2e8f0;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Barra Superior */
+    .title-bar {
+      height: 38px;
+      background: rgba(13, 16, 24, 0.95);
+      border-bottom: 1px solid #1f293d;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      color: #94a3b8;
+    }
+    .badge {
+      background: #00f0ff22;
+      color: #00f0ff;
+      border: 1px solid #00f0ff55;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .main-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 10px 16px 14px;
+      gap: 10px;
+      min-height: 0;
+    }
+
+    /* BARRA DE PRESETS FAMOSOS */
+    .famous-bar {
+      background: #111520;
+      border: 1px solid #232d42;
+      border-radius: 8px;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .famous-title {
+      font-size: 11px;
+      font-weight: 800;
+      color: #f59e0b;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .famous-presets-list {
+      display: flex;
+      gap: 8px;
+      flex: 1;
+      overflow-x: auto;
+    }
+    .famous-btn {
+      background: #182030;
+      border: 1px solid #2d3b55;
+      color: #cbd5e1;
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: all 0.15s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .famous-btn:hover {
+      background: #25334d;
+      border-color: #38bdf8;
+      color: #fff;
+    }
+    .famous-btn.active {
+      background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+      border-color: #60a5fa;
+      color: #fff;
+      box-shadow: 0 0 12px rgba(37, 99, 235, 0.5);
+    }
+    .famous-btn span.artist {
+      font-size: 9px;
+      color: #94a3b8;
+      font-weight: 500;
+      margin-top: 1px;
+    }
+    .famous-btn.active span.artist {
+      color: #e0f2fe;
+    }
+
+    /* Grid do Rack Superior */
+    .rack-grid {
+      display: grid;
+      grid-template-columns: 340px 1fr 230px;
+      gap: 12px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .rack-panel {
+      background: #11151f;
+      border: 1px solid #1e2638;
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 8px 20px rgba(0,0,0,0.4);
+      position: relative;
+      overflow-y: auto;
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #1a2336;
+      padding-bottom: 5px;
+    }
+    .panel-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      color: #38bdf8;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Seletor de Modo da Onda */
+    .wave-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .wave-tab-btn {
+      flex: 1;
+      background: #182030;
+      border: 1px solid #2a3750;
+      color: #94a3b8;
+      padding: 4px 3px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 10px;
+      font-weight: 600;
+      text-align: center;
+      transition: all 0.15s;
+    }
+    .wave-tab-btn.active {
+      background: #0284c7;
+      border-color: #38bdf8;
+      color: #fff;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+    }
+
+    /* Área de Desenho da Onda */
+    .draw-container {
+      background: #07090e;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      position: relative;
+      height: 85px;
+      margin-bottom: 6px;
+    }
+    canvas#waveDrawCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: crosshair;
+    }
+    .draw-hint {
+      position: absolute;
+      top: 4px;
+      left: 6px;
+      font-size: 9px;
+      color: #475569;
+      pointer-events: none;
+    }
+
+    /* Knobs Layout */
+    .knob-row {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .knob-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      width: 58px;
+    }
+    .knob-label {
+      font-size: 8.5px;
+      font-weight: 700;
+      color: #94a3b8;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      text-align: center;
+    }
+    .knob-val {
+      font-family: 'Consolas', monospace;
+      font-size: 10px;
+      color: #38bdf8;
+      background: #090c12;
+      padding: 1px 4px;
+      border-radius: 3px;
+      border: 1px solid #1a2336;
+      min-width: 40px;
+      text-align: center;
+    }
+
+    /* SVG Rotary Knob */
+    .knob-dial {
+      width: 42px;
+      height: 42px;
+      cursor: pointer;
+      touch-action: none;
+      position: relative;
+    }
+
+    /* Osciloscópio */
+    .scope-box {
+      background: #07090e;
+      border: 1px solid #192233;
+      border-radius: 6px;
+      height: 65px;
+      position: relative;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    canvas#scopeCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* SEÇÃO DO TECLADO MUSICAL EXPANDIDO (1.5 OITAVAS: F3 A C5) */
+    .keyboard-section {
+      background: #0e121a;
+      border: 1px solid #1e2638;
+      border-radius: 8px;
+      padding: 8px 14px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+    .keyboard-legend {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      color: #64748b;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .octave-label-bar {
+      width: 100%;
+      display: flex;
+      margin-bottom: 4px;
+      font-size: 9px;
+      font-weight: 700;
+      color: #94a3b8;
+    }
+    .octave-sub {
+      width: 196px;
+      text-align: center;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px dashed rgba(56, 189, 248, 0.3);
+      border-radius: 4px;
+      padding: 1px 0;
+      color: #38bdf8;
+    }
+    .octave-main {
+      flex: 1;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px dashed rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      padding: 1px 0;
+      margin-left: 6px;
+    }
+    .suggested-chord {
+      color: #f59e0b;
+      font-weight: 700;
+    }
+
+    .piano-keyboard {
+      position: relative;
+      display: flex;
+      height: 145px;
+    }
+
+    /* Teclas Brancas (12 teclas: F3 a C5) */
+    .white-key {
+      width: 49px;
+      height: 140px;
+      background: linear-gradient(to bottom, #f0f0f0 0%, #ffffff 80%, #d8d8d8 100%);
+      border: 1px solid #202020;
+      border-radius: 0 0 6px 6px;
+      margin-right: -1px;
+      position: relative;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+      padding-bottom: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.4), inset 0 -2px 4px rgba(0,0,0,0.2);
+      transition: background 0.05s, transform 0.05s;
+      z-index: 1;
+    }
+    .white-key.active, .white-key:active {
+      background: linear-gradient(to bottom, #dbeafe 0%, #93c5fd 100%);
+      transform: translateY(2px);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.6), inset 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .white-key.lower-octave {
+      background: linear-gradient(to bottom, #e2e8f0 0%, #f1f5f9 80%, #cbd5e1 100%);
+      border-color: #334155;
+    }
+    .white-key .note-name {
+      font-weight: 700;
+      font-size: 12px;
+      color: #0f172a;
+    }
+    .white-key .key-hint {
+      font-size: 10px;
+      font-weight: 800;
+      color: #1e40af;
+      background: #dbeafe;
+      padding: 1px 5px;
+      border-radius: 4px;
+      margin-top: 3px;
+      border: 1px solid #93c5fd;
+    }
+    .white-key.lower-octave .key-hint {
+      color: #0369a1;
+      background: #e0f2fe;
+      border-color: #7dd3fc;
+    }
+
+    /* Teclas Pretas (8 teclas) */
+    .black-key {
+      width: 30px;
+      height: 90px;
+      background: linear-gradient(to bottom, #334155 0%, #0f172a 75%, #000000 100%);
+      border: 1px solid #000;
+      border-radius: 0 0 5px 5px;
+      position: absolute;
+      top: 0;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+      padding-bottom: 5px;
+      box-shadow: 0 6px 10px rgba(0,0,0,0.7), inset 0 -1px 2px rgba(255,255,255,0.2);
+      transition: background 0.05s, transform 0.05s;
+      z-index: 2;
+    }
+    .black-key.active, .black-key:active {
+      background: linear-gradient(to bottom, #1e3a8a 0%, #2563eb 100%);
+      transform: translateY(2px);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.9);
+    }
+    .black-key .note-name {
+      font-weight: 700;
+      font-size: 10px;
+      color: #f8fafc;
+    }
+    .black-key .key-hint {
+      font-size: 9px;
+      font-weight: 800;
+      color: #f1f5f9;
+      background: #334155;
+      padding: 1px 4px;
+      border-radius: 3px;
+      margin-top: 2px;
+      border: 1px solid #475569;
+    }
+    .black-key.lower-octave .key-hint {
+      background: #1e293b;
+      border-color: #38bdf8;
+      color: #38bdf8;
+    }
+
+    /* Posições exatas das 8 Pretas ao longo das 12 brancas (cada branca = 48px efetivo) */
+    /* Meia oitava inferior (F3 a B3): F#3, G#3, A#3 */
+    .bk-fs3 { left: 34px; }
+    .bk-gs3 { left: 82px; }
+    .bk-as3 { left: 130px; }
+
+    /* Oitava principal (C4 a C5): C#4, D#4, F#4, G#4, A#4 */
+    .bk-cs4 { left: 226px; }
+    .bk-ds4 { left: 274px; }
+    .bk-fs4 { left: 370px; }
+    .bk-gs4 { left: 418px; }
+    .bk-as4 { left: 466px; }
+  </style>
+</head>
+<body>
+
+  <!-- Barra Superior -->
+  <div class="title-bar">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <span style="font-weight:700; color:#fff;">YVIRA // ICONIC SYNTH LAB</span>
+      <span class="badge">1.5 Oitavas (F3 a C5) // Live DSP</span>
+    </div>
+    <div style="font-size:11px;">Mapeado: <b>Z X C V</b> (Meia Oitava Grave) + <b>A a K</b> (Oitava Central)</div>
+  </div>
+
+  <div class="main-container">
+
+    <!-- BARRA DE PRESETS FAMOSOS -->
+    <div class="famous-bar">
+      <div class="famous-title">⭐ Hinos do Sintetizador:</div>
+      <div class="famous-presets-list">
+        <button class="famous-btn active" onclick="applyFamousPreset('jump')">
+          Jump (Oberheim OB-Xa)
+          <span class="artist">Van Halen (1984)</span>
+        </button>
+        <button class="famous-btn" onclick="applyFamousPreset('final_countdown')">
+          The Final Countdown
+          <span class="artist">Europe (Roland JX-8P)</span>
+        </button>
+        <button class="famous-btn" onclick="applyFamousPreset('take_on_me')">
+          Take On Me (Main Lead)
+          <span class="artist">a-ha (Juno-60)</span>
+        </button>
+        <button class="famous-btn" onclick="applyFamousPreset('sweet_dreams')">
+          Sweet Dreams (Bass Groove)
+          <span class="artist">Eurythmics (SH-101)</span>
+        </button>
+        <button class="famous-btn" onclick="applyFamousPreset('stranger_things')">
+          Stranger Things (Arp Lead)
+          <span class="artist">Survive (Prophet-5)</span>
+        </button>
+        <button class="famous-btn" onclick="applyFamousPreset('billie_jean')">
+          Billie Jean (Rhodes/Synth)
+          <span class="artist">Michael Jackson (Yamaha GS1)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- RACK SUPERIOR: ESCULTOR DE ONDA + EQ MULTI-BANDAS + ENVELOPE -->
+    <div class="rack-grid">
+
+      <!-- PAINEL 1: O ESCULTOR DE ONDA -->
+      <div class="rack-panel">
+        <div class="panel-header">
+          <span class="panel-title">1. ESCULTOR DE ONDA (TIMBRE BASE)</span>
+          <span id="activeVoicesTag" style="font-size:10px; color:#10b981; font-weight:700;">VOZES: 0</span>
+        </div>
+
+        <div class="wave-tabs">
+          <div class="wave-tab-btn active" data-mode="custom">Custom Wave</div>
+          <div class="wave-tab-btn" data-mode="sawtooth">Saw</div>
+          <div class="wave-tab-btn" data-mode="square">Pulse</div>
+          <div class="wave-tab-btn" data-mode="triangle">Tri</div>
+          <div class="wave-tab-btn" data-mode="sine">Sine</div>
+        </div>
+
+        <!-- Canvas de Desenho Manual da Onda -->
+        <div class="draw-container">
+          <span class="draw-hint">✏️ Desenhe a forma da onda aqui com o mouse ao vivo!</span>
+          <canvas id="waveDrawCanvas"></canvas>
+        </div>
+
+        <!-- Knobs de Harmônicos Aditivos da Onda -->
+        <div style="font-size:8.5px; color:#64748b; font-weight:700; margin-bottom:4px; text-transform:uppercase;">
+          Harmônicos (H1 a H4) & Detune do Oscilador:
+        </div>
+        <div class="knob-row">
+          <div class="knob-container">
+            <span class="knob-label">H1 (Fund.)</span>
+            <div class="knob-dial" data-knob="harm-1" data-min="0" data-max="100" data-val="100" data-unit="%"></div>
+            <span class="knob-val" id="val-harm-1">100 %</span>
+          </div>
+          <div class="knob-container">
+            <span class="knob-label">H2 (8va)</span>
+            <div class="knob-dial" data-knob="harm-2" data-min="0" data-max="100" data-val="65" data-unit="%"></div>
+            <span class="knob-val" id="val-harm-2">65 %</span>
+          </div>
+          <div class="knob-container">
+            <span class="knob-label">H3 (5ta)</span>
+            <div class="knob-dial" data-knob="harm-3" data-min="0" data-max="100" data-val="35" data-unit="%"></div>
+            <span class="knob-val" id="val-harm-3">35 %</span>
+          </div>
+          <div class="knob-container">
+            <span class="knob-label">Detune</span>
+            <div class="knob-dial" data-knob="detune" data-min="-50" data-max="50" data-val="14" data-unit="c"></div>
+            <span class="knob-val" id="val-detune">+14 c</span>
+          </div>
+        </div>
+
+        <!-- Osciloscópio de Saída Real -->
+        <div class="scope-box">
+          <canvas id="scopeCanvas"></canvas>
+        </div>
+      </div>
+
+      <!-- PAINEL 2: EQUALIZADOR DE 6 BANDAS + DRIVE & CUTOFF -->
+      <div class="rack-panel">
+        <div class="panel-header">
+          <span class="panel-title">2. MULTI-BAND TONE SHAPER (EQ CIRÚRGICO)</span>
+          <span style="font-size:10px; color:#94a3b8;">+/- 18 dB por banda</span>
+        </div>
+
+        <div style="color:#64748b; font-size:10px; margin-bottom:6px;">
+          Esculpa as faixas de frequência do timbre:
+        </div>
+
+        <div class="knob-row" style="justify-content: space-between;">
+          <!-- 60 Hz Sub -->
+          <div class="knob-container">
+            <span class="knob-label">60 Hz</span>
+            <div class="knob-dial" data-knob="eq-60" data-min="-18" data-max="18" data-val="0" data-unit="dB"></div>
+            <span class="knob-val" id="val-eq-60">0 dB</span>
+            <span style="font-size:8px; color:#475569;">SUB</span>
+          </div>
+
+          <!-- 200 Hz Graves -->
+          <div class="knob-container">
+            <span class="knob-label">200 Hz</span>
+            <div class="knob-dial" data-knob="eq-200" data-min="-18" data-max="18" data-val="2" data-unit="dB"></div>
+            <span class="knob-val" id="val-eq-200">+2 dB</span>
+            <span style="font-size:8px; color:#475569;">BASS</span>
+          </div>
+
+          <!-- 500 Hz Médios-Baixos -->
+          <div class="knob-container">
+            <span class="knob-label">500 Hz</span>
+            <div class="knob-dial" data-knob="eq-500" data-min="-18" data-max="18" data-val="1" data-unit="dB"></div>
+            <span class="knob-val" id="val-eq-500">+1 dB</span>
+            <span style="font-size:8px; color:#475569;">LOW-MID</span>
+          </div>
+
+          <!-- 1.2 kHz Médios -->
+          <div class="knob-container">
+            <span class="knob-label">1.2 kHz</span>
+            <div class="knob-dial" data-knob="eq-1k" data-min="-18" data-max="18" data-val="4" data-unit="dB"></div>
+            <span class="knob-val" id="val-eq-1k">+4 dB</span>
+            <span style="font-size:8px; color:#475569;">MID</span>
+          </div>
+
+          <!-- 3.5 kHz Ataque/Presença -->
+          <div class="knob-container">
+            <span class="knob-label">3.5 kHz</span>
+            <div class="knob-dial" data-knob="eq-3k" data-min="-18" data-max="18" data-val="6" data-unit="dB"></div>
+            <span class="knob-val" id="val-eq-3k">+6 dB</span>
+            <span style="font-size:8px; color:#475569;">PRESENCE</span>
+          </div>
+
+          <!-- 10 kHz Brilho / Ar -->
+          <div class="knob-container">
+            <span class="knob-label">10 kHz</span>
+            <div class="knob-dial" data-knob="eq-10k" data-min="-18" data-max="18" data-val="3" data-unit="dB"></div>
+            <span class="knob-val" id="val-eq-10k">+3 dB</span>
+            <span style="font-size:8px; color:#475569;">AIR</span>
+          </div>
+        </div>
+
+        <!-- Filtro Master Low-Pass + Saturação WaveShaper -->
+        <div style="margin-top:10px; padding-top:8px; border-top:1px dashed #1e2638; display:flex; justify-content:space-around;">
+          <div class="knob-container">
+            <span class="knob-label">Cutoff</span>
+            <div class="knob-dial" data-knob="cutoff" data-min="100" data-max="16000" data-val="9800" data-unit="Hz"></div>
+            <span class="knob-val" id="val-cutoff">9800 Hz</span>
+          </div>
+          <div class="knob-container">
+            <span class="knob-label">Resonance</span>
+            <div class="knob-dial" data-knob="resonance" data-min="0" data-max="15" data-val="2.8" data-unit="Q"></div>
+            <span class="knob-val" id="val-resonance">2.8 Q</span>
+          </div>
+          <div class="knob-container">
+            <span class="knob-label">Drive (Clip)</span>
+            <div class="knob-dial" data-knob="drive" data-min="0" data-max="100" data-val="12" data-unit="%"></div>
+            <span class="knob-val" id="val-drive">12 %</span>
+          </div>
+          <div class="knob-container">
+            <span class="knob-label">Sub-Bass</span>
+            <div class="knob-dial" data-knob="sub" data-min="0" data-max="100" data-val="25" data-unit="%"></div>
+            <span class="knob-val" id="val-sub">25 %</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAINEL 3: ENVELOPE (ADSR) & MASTER -->
+      <div class="rack-panel">
+        <div class="panel-header">
+          <span class="panel-title">3. ENVELOPE (ADSR)</span>
+        </div>
+
+        <div class="knob-row">
+          <div class="knob-container">
+            <span class="knob-label">Attack</span>
+            <div class="knob-dial" data-knob="env-a" data-min="5" data-max="1500" data-val="15" data-unit="ms"></div>
+            <span class="knob-val" id="val-env-a">15 ms</span>
+          </div>
+          <div class="knob-container">
+            <span class="knob-label">Decay</span>
+            <div class="knob-dial" data-knob="env-d" data-min="10" data-max="2000" data-val="450" data-unit="ms"></div>
+            <span class="knob-val" id="val-env-d">450 ms</span>
+          </div>
+          <div class="knob-container">
+            <span class="knob-label">Sustain</span>
+            <div class="knob-dial" data-knob="env-s" data-min="0" data-max="100" data-val="85" data-unit="%"></div>
+            <span class="knob-val" id="val-env-s">85 %</span>
+          </div>
+          <div class="knob-container">
+            <span class="knob-label">Release</span>
+            <div class="knob-dial" data-knob="env-r" data-min="20" data-max="3000" data-val="350" data-unit="ms"></div>
+            <span class="knob-val" id="val-env-r">350 ms</span>
+          </div>
+        </div>
+
+        <div style="margin-top:auto; padding-top:8px; border-top:1px solid #1a2336; display:flex; justify-content:center;">
+          <div class="knob-container" style="width:85px;">
+            <span class="knob-label" style="color:#38bdf8;">MASTER VOL</span>
+            <div class="knob-dial" data-knob="master-vol" data-min="0" data-max="100" data-val="75" data-unit="%"></div>
+            <span class="knob-val" id="val-master-vol">75 %</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- SEÇÃO INFERIOR: TECLADO MUSICAL EXPANDIDO (12 BRANCAS + 8 PRETAS) -->
+    <div class="keyboard-section">
+      <div class="keyboard-legend">
+        <span>TECLADO FÍSICO: <b>Z X C V</b> (Meia Oitava Grave) | <b>A S D F G H J K</b> (Oitava Central)</span>
+        <span id="chordTip" class="suggested-chord">🎸 Dica p/ Jump: Toque o acorde de Dó Maior (A + D + G), depois Fá (F + H + K)!</span>
+      </div>
+
+      <div class="octave-label-bar">
+        <div class="octave-sub">◀ MEIA OITAVA GRAVE (F3 a B3)</div>
+        <div class="octave-main">OITAVA PRINCIPAL (C4 a C5) ▶</div>
+      </div>
+
+      <div class="piano-keyboard" id="pianoKeyboard">
+        <!-- 4 TECLAS BRANCAS DA MEIA OITAVA GRAVE (F3, G3, A3, B3) -->
+        <div class="white-key lower-octave" data-note="F3" data-freq="174.61" data-key="z">
+          <span class="note-name">F3</span>
+          <span class="key-hint">Z</span>
+        </div>
+        <div class="white-key lower-octave" data-note="G3" data-freq="196.00" data-key="x">
+          <span class="note-name">G3</span>
+          <span class="key-hint">X</span>
+        </div>
+        <div class="white-key lower-octave" data-note="A3" data-freq="220.00" data-key="c">
+          <span class="note-name">A3</span>
+          <span class="key-hint">C</span>
+        </div>
+        <div class="white-key lower-octave" data-note="B3" data-freq="246.94" data-key="v">
+          <span class="note-name">B3</span>
+          <span class="key-hint">V</span>
+        </div>
+
+        <!-- 8 TECLAS BRANCAS DA OITAVA PRINCIPAL (C4 a C5) -->
+        <div class="white-key" data-note="C4" data-freq="261.63" data-key="a">
+          <span class="note-name">C4</span>
+          <span class="key-hint">A</span>
+        </div>
+        <div class="white-key" data-note="D4" data-freq="293.66" data-key="s">
+          <span class="note-name">D4</span>
+          <span class="key-hint">S</span>
+        </div>
+        <div class="white-key" data-note="E4" data-freq="329.63" data-key="d">
+          <span class="note-name">E4</span>
+          <span class="key-hint">D</span>
+        </div>
+        <div class="white-key" data-note="F4" data-freq="349.23" data-key="f">
+          <span class="note-name">F4</span>
+          <span class="key-hint">F</span>
+        </div>
+        <div class="white-key" data-note="G4" data-freq="392.00" data-key="g">
+          <span class="note-name">G4</span>
+          <span class="key-hint">G</span>
+        </div>
+        <div class="white-key" data-note="A4" data-freq="440.00" data-key="h">
+          <span class="note-name">A4</span>
+          <span class="key-hint">H</span>
+        </div>
+        <div class="white-key" data-note="B4" data-freq="493.88" data-key="j">
+          <span class="note-name">B4</span>
+          <span class="key-hint">J</span>
+        </div>
+        <div class="white-key" data-note="C5" data-freq="523.25" data-key="k">
+          <span class="note-name">C5</span>
+          <span class="key-hint">K</span>
+        </div>
+
+        <!-- 3 PRETAS DA MEIA OITAVA GRAVE (F#3, G#3, A#3) -->
+        <div class="black-key lower-octave bk-fs3" data-note="F#3" data-freq="185.00" data-key="s_shift" data-customkey="1">
+          <span class="note-name">F#3</span>
+          <span class="key-hint">1</span>
+        </div>
+        <div class="black-key lower-octave bk-gs3" data-note="G#3" data-freq="207.65" data-key="s_shift" data-customkey="2">
+          <span class="note-name">G#3</span>
+          <span class="key-hint">2</span>
+        </div>
+        <div class="black-key lower-octave bk-as3" data-note="A#3" data-freq="233.08" data-key="s_shift" data-customkey="3">
+          <span class="note-name">A#3</span>
+          <span class="key-hint">3</span>
+        </div>
+
+        <!-- 5 PRETAS DA OITAVA PRINCIPAL (C#4, D#4, F#4, G#4, A#4) -->
+        <div class="black-key bk-cs4" data-note="C#4" data-freq="277.18" data-key="w">
+          <span class="note-name">C#</span>
+          <span class="key-hint">W</span>
+        </div>
+        <div class="black-key bk-ds4" data-note="D#4" data-freq="311.13" data-key="e">
+          <span class="note-name">D#</span>
+          <span class="key-hint">E</span>
+        </div>
+        <div class="black-key bk-fs4" data-note="F#4" data-freq="369.99" data-key="t">
+          <span class="note-name">F#</span>
+          <span class="key-hint">T</span>
+        </div>
+        <div class="black-key bk-gs4" data-note="G#4" data-freq="415.30" data-key="y">
+          <span class="note-name">G#</span>
+          <span class="key-hint">Y</span>
+        </div>
+        <div class="black-key bk-as4" data-note="A#4" data-freq="466.16" data-key="u">
+          <span class="note-name">A#</span>
+          <span class="key-hint">U</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ==========================================
+    // AUDIO ENGINE DSP EM WEB AUDIO (POLIFONICO)
+    // ==========================================
+    let audioCtx = null;
+    let masterGain = null;
+    let mainFilter = null;
+    let waveShaperNode = null;
+    let eqBands = {};
+    let analyser = null;
+
+    let customPeriodicWave = null;
+    const NUM_HARMONICS = 32;
+    let realCoeffs = new Float32Array(NUM_HARMONICS);
+    let imagCoeffs = new Float32Array(NUM_HARMONICS);
+
+    const WAVE_POINTS = 256;
+    let customWaveform = new Float32Array(WAVE_POINTS);
+
+    const SynthConfig = {
+      mode: 'custom',
+      detune: 14,
+      subGain: 0.25,
+      cutoff: 9800,
+      resonance: 2.8,
+      drive: 0.12,
+      attack: 0.015,
+      decay: 0.45,
+      sustain: 0.85,
+      release: 0.35,
+      masterVol: 0.75,
+      harmonics: [1.0, 0.70, 0.40, 0.20],
+      eq: {
+        60: 0,
+        200: 2,
+        500: 1,
+        1000: 4,
+        3000: 6,
+        10000: 3
+      }
+    };
+
+    function initAudio() {
+      if (audioCtx) return;
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContextClass();
+
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 1024;
+
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = SynthConfig.masterVol;
+
+      waveShaperNode = audioCtx.createWaveShaper();
+      updateDistortionCurve(SynthConfig.drive);
+
+      mainFilter = audioCtx.createBiquadFilter();
+      mainFilter.type = 'lowpass';
+      mainFilter.frequency.value = SynthConfig.cutoff;
+      mainFilter.Q.value = SynthConfig.resonance;
+
+      const eqFreqs = [60, 200, 500, 1000, 3000, 10000];
+      let lastNode = mainFilter;
+
+      eqFreqs.forEach(freq => {
+        const filter = audioCtx.createBiquadFilter();
+        if (freq === 60) {
+          filter.type = 'lowshelf';
+        } else if (freq === 10000) {
+          filter.type = 'highshelf';
+        } else {
+          filter.type = 'peaking';
+          filter.Q.value = 1.2;
+        }
+        filter.frequency.value = freq;
+        filter.gain.value = SynthConfig.eq[freq] || 0;
+
+        lastNode.connect(filter);
+        lastNode = filter;
+        eqBands[freq] = filter;
+      });
+
+      lastNode.connect(waveShaperNode);
+      waveShaperNode.connect(masterGain);
+      masterGain.connect(analyser);
+      analyser.connect(audioCtx.destination);
+
+      applyFamousPreset('jump');
+      startScope();
+    }
+
+    function recomputePeriodicWave() {
+      if (!audioCtx) return;
+
+      realCoeffs.fill(0);
+      imagCoeffs.fill(0);
+
+      for (let k = 1; k < NUM_HARMONICS; k++) {
+        let sumReal = 0;
+        let sumImag = 0;
+        for (let n = 0; n < WAVE_POINTS; n++) {
+          let angle = (2 * Math.PI * k * n) / WAVE_POINTS;
+          sumReal += customWaveform[n] * Math.cos(angle);
+          sumImag += -customWaveform[n] * Math.sin(angle);
+        }
+        realCoeffs[k] = (2 / WAVE_POINTS) * sumReal;
+        imagCoeffs[k] = (2 / WAVE_POINTS) * sumImag;
+
+        if (k <= 4) {
+          let multiplier = SynthConfig.harmonics[k - 1];
+          imagCoeffs[k] += multiplier * 0.4;
+        }
+      }
+
+      customPeriodicWave = audioCtx.createPeriodicWave(realCoeffs, imagCoeffs, { disableNormalization: false });
+
+      activeVoices.forEach(voice => {
+        if (SynthConfig.mode === 'custom' && customPeriodicWave) {
+          voice.osc1.setPeriodicWave(customPeriodicWave);
+          voice.osc2.setPeriodicWave(customPeriodicWave);
+        }
+      });
+    }
+
+    function updateDistortionCurve(driveAmount) {
+      if (!waveShaperNode) return;
+      const k = driveAmount * 50;
+      const n_samples = 44100;
+      const curve = new Float32Array(n_samples);
+      const deg = Math.PI / 180;
+      for (let i = 0; i < n_samples; ++i) {
+        let x = (i * 2) / n_samples - 1;
+        if (k === 0) {
+          curve[i] = x;
+        } else {
+          curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+        }
+      }
+      waveShaperNode.curve = curve;
+      waveShaperNode.oversample = '2x';
+    }
+
+    // Gerenciador de Vozes Polifônicas Dual-Oscillator
+    const activeVoices = new Map();
+
+    function noteOn(freq, noteName) {
+      initAudio();
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      if (activeVoices.has(freq)) {
+        noteOff(freq);
+      }
+
+      const now = audioCtx.currentTime;
+
+      const osc1 = audioCtx.createOscillator();
+      const osc2 = audioCtx.createOscillator();
+
+      if (SynthConfig.mode === 'custom' && customPeriodicWave) {
+        osc1.setPeriodicWave(customPeriodicWave);
+        osc2.setPeriodicWave(customPeriodicWave);
+      } else {
+        osc1.type = SynthConfig.mode;
+        osc2.type = SynthConfig.mode;
+      }
+
+      osc1.frequency.setValueAtTime(freq, now);
+      osc2.frequency.setValueAtTime(freq, now);
+
+      osc1.detune.setValueAtTime(-SynthConfig.detune, now);
+      osc2.detune.setValueAtTime(SynthConfig.detune, now);
+
+      const subOsc = audioCtx.createOscillator();
+      subOsc.type = 'sine';
+      subOsc.frequency.setValueAtTime(freq / 2, now);
+
+      const subGain = audioCtx.createGain();
+      subGain.gain.setValueAtTime(SynthConfig.subGain, now);
+      subOsc.connect(subGain);
+
+      const envGain = audioCtx.createGain();
+      envGain.gain.setValueAtTime(0.0001, now);
+      envGain.gain.linearRampToValueAtTime(0.5, now + Math.max(0.005, SynthConfig.attack));
+      envGain.gain.linearRampToValueAtTime(Math.max(0.001, 0.5 * SynthConfig.sustain), now + SynthConfig.attack + SynthConfig.decay);
+
+      osc1.connect(envGain);
+      osc2.connect(envGain);
+      subGain.connect(envGain);
+      envGain.connect(mainFilter);
+
+      osc1.start(now);
+      osc2.start(now);
+      subOsc.start(now);
+
+      activeVoices.set(freq, {
+        osc1,
+        osc2,
+        subOsc,
+        envGain,
+        noteName
+      });
+
+      updateVoiceCounter();
+    }
+
+    function noteOff(freq) {
+      if (!activeVoices.has(freq)) return;
+      const voice = activeVoices.get(freq);
+      activeVoices.delete(freq);
+
+      const now = audioCtx.currentTime;
+      const releaseTime = Math.max(0.02, SynthConfig.release);
+
+      voice.envGain.gain.cancelScheduledValues(now);
+      voice.envGain.gain.setValueAtTime(voice.envGain.gain.value, now);
+      voice.envGain.gain.exponentialRampToValueAtTime(0.0001, now + releaseTime);
+
+      setTimeout(() => {
+        try {
+          voice.osc1.stop();
+          voice.osc2.stop();
+          voice.subOsc.stop();
+          voice.osc1.disconnect();
+          voice.osc2.disconnect();
+          voice.subOsc.disconnect();
+          voice.envGain.disconnect();
+        } catch(e) {}
+      }, releaseTime * 1000 + 50);
+
+      updateVoiceCounter();
+    }
+
+    function updateVoiceCounter() {
+      const el = document.getElementById('activeVoicesTag');
+      if (el) {
+        el.innerText = `VOZES: ${activeVoices.size}`;
+        el.style.color = activeVoices.size > 0 ? '#38bdf8' : '#10b981';
+      }
+    }
+
+    // ==========================================
+    // PRESETS FAMOSOS COM NOVAS DICAS EXPANDIDAS
+    // ==========================================
+    const FAMOUS_PRESETS = {
+      jump: {
+        name: 'Jump (Van Halen)',
+        chordTip: '🎸 Dica p/ Jump: Toque o baixo em C ou acorde C4 (A + D + G), depois F (F + H + K)!',
+        mode: 'custom',
+        detune: 14,
+        subGain: 0.25,
+        cutoff: 9800,
+        resonance: 2.8,
+        drive: 0.12,
+        attack: 0.015,
+        decay: 0.45,
+        sustain: 0.85,
+        release: 0.35,
+        harmonics: [1.0, 0.70, 0.40, 0.20],
+        eq: { 60: 0, 200: 2, 500: 1, 1000: 4, 3000: 6, 10000: 3 },
+        waveGen: (t) => {
+          let saw = 1.0 - 2.0 * t;
+          return saw + 0.3 * Math.sin(2 * Math.PI * t);
+        }
+      },
+      final_countdown: {
+        name: 'The Final Countdown (Europe)',
+        chordTip: '🎺 Dica: Toque o riff tema: B3 -> A3 -> B3 -> E3 ou C4 -> B3 -> C4!',
+        mode: 'custom',
+        detune: 18,
+        subGain: 0.15,
+        cutoff: 12000,
+        resonance: 4.5,
+        drive: 0.18,
+        attack: 0.025,
+        decay: 0.35,
+        sustain: 0.9,
+        release: 0.4,
+        harmonics: [1.0, 0.85, 0.55, 0.30],
+        eq: { 60: -2, 200: 0, 500: 2, 1000: 5, 3000: 8, 10000: 5 },
+        waveGen: (t) => {
+          let saw = 1.0 - 2.0 * t;
+          return Math.tanh(saw * 2.2);
+        }
+      },
+      take_on_me: {
+        name: 'Take On Me (a-ha)',
+        chordTip: '⚡ Dica: O riff icônico pulando oitavas agora alcança todas as notas graves em F3/G3!',
+        mode: 'custom',
+        detune: 8,
+        subGain: 0.3,
+        cutoff: 8500,
+        resonance: 5.0,
+        drive: 0.1,
+        attack: 0.008,
+        decay: 0.25,
+        sustain: 0.7,
+        release: 0.2,
+        harmonics: [1.0, 0.4, 0.6, 0.15],
+        eq: { 60: -3, 200: -1, 500: -2, 1000: 3, 3000: 7, 10000: 6 },
+        waveGen: (t) => {
+          return t < 0.35 ? 1.0 : -1.0;
+        }
+      },
+      sweet_dreams: {
+        name: 'Sweet Dreams (Eurythmics)',
+        chordTip: '🎹 Dica Perfeita: Riff real completo! C4 -> Eb4 -> C4 -> G3 -> Ab3 (Teclas: A -> E -> A -> X -> 2)!',
+        mode: 'custom',
+        detune: 5,
+        subGain: 0.65,
+        cutoff: 2800,
+        resonance: 6.5,
+        drive: 0.35,
+        attack: 0.008,
+        decay: 0.3,
+        sustain: 0.3,
+        release: 0.15,
+        harmonics: [1.0, 0.8, 0.1, 0.05],
+        eq: { 60: 6, 200: 5, 500: -4, 1000: -2, 3000: 2, 10000: -6 },
+        waveGen: (t) => {
+          let saw = 1.0 - 2.0 * t;
+          let pulse = t < 0.5 ? 1.0 : -1.0;
+          return 0.6 * pulse + 0.4 * saw;
+        }
+      },
+      stranger_things: {
+        name: 'Stranger Things (Survive)',
+        chordTip: '🌌 Dica: Comece o arpejo lá de baixo em G3 (X) ou C4 (A)!',
+        mode: 'custom',
+        detune: 10,
+        subGain: 0.45,
+        cutoff: 5500,
+        resonance: 4.0,
+        drive: 0.2,
+        attack: 0.03,
+        decay: 0.6,
+        sustain: 0.6,
+        release: 0.7,
+        harmonics: [1.0, 0.5, 0.25, 0.08],
+        eq: { 60: 3, 200: 2, 500: 0, 1000: 2, 3000: 4, 10000: 2 },
+        waveGen: (t) => {
+          let tri = 2 * Math.abs(2 * (t - Math.floor(t + 0.5))) - 1;
+          let saw = 1.0 - 2.0 * t;
+          return 0.65 * saw + 0.35 * tri;
+        }
+      },
+      billie_jean: {
+        name: 'Billie Jean (Michael Jackson)',
+        chordTip: '✨ Dica: Linha de baixo/acordes graves em F#3 (1) -> G#3 (2) -> A3 (C)!',
+        mode: 'custom',
+        detune: 6,
+        subGain: 0.2,
+        cutoff: 6500,
+        resonance: 2.0,
+        drive: 0.08,
+        attack: 0.005,
+        decay: 0.5,
+        sustain: 0.4,
+        release: 0.35,
+        harmonics: [1.0, 0.6, 0.3, 0.1],
+        eq: { 60: 1, 200: 3, 500: -1, 1000: 2, 3000: 5, 10000: 4 },
+        waveGen: (t) => {
+          let rad = 2 * Math.PI * t;
+          return Math.sin(rad) + 0.45 * Math.sin(2 * rad) + 0.2 * Math.sin(3 * rad);
+        }
+      }
+    };
+
+    function applyFamousPreset(key) {
+      const p = FAMOUS_PRESETS[key];
+      if (!p) return;
+
+      document.querySelectorAll('.famous-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('onclick').includes(key));
+      });
+
+      document.getElementById('chordTip').innerText = p.chordTip;
+
+      SynthConfig.detune = p.detune;
+      SynthConfig.subGain = p.subGain;
+      SynthConfig.cutoff = p.cutoff;
+      SynthConfig.resonance = p.resonance;
+      SynthConfig.drive = p.drive;
+      SynthConfig.attack = p.attack;
+      SynthConfig.decay = p.decay;
+      SynthConfig.sustain = p.sustain;
+      SynthConfig.release = p.release;
+      SynthConfig.harmonics = [...p.harmonics];
+      SynthConfig.eq = { ...p.eq };
+
+      for (let i = 0; i < WAVE_POINTS; i++) {
+        let t = i / WAVE_POINTS;
+        customWaveform[i] = p.waveGen(t);
+      }
+
+      let maxAmp = 0.001;
+      for (let i = 0; i < WAVE_POINTS; i++) {
+        if (Math.abs(customWaveform[i]) > maxAmp) maxAmp = Math.abs(customWaveform[i]);
+      }
+      for (let i = 0; i < WAVE_POINTS; i++) {
+        customWaveform[i] = customWaveform[i] / maxAmp;
+      }
+
+      renderWaveDrawCanvas();
+      recomputePeriodicWave();
+      syncAllKnobUI();
+
+      if (audioCtx) {
+        mainFilter.frequency.setTargetAtTime(p.cutoff, audioCtx.currentTime, 0.02);
+        mainFilter.Q.setTargetAtTime(p.resonance, audioCtx.currentTime, 0.02);
+        updateDistortionCurve(p.drive);
+        [60, 200, 500, 1000, 3000, 10000].forEach(f => {
+          if (eqBands[f]) eqBands[f].gain.setTargetAtTime(p.eq[f] || 0, audioCtx.currentTime, 0.02);
+        });
+      }
+    }
+
+    function syncAllKnobUI() {
+      setKnobValue('harm-1', SynthConfig.harmonics[0] * 100);
+      setKnobValue('harm-2', SynthConfig.harmonics[1] * 100);
+      setKnobValue('harm-3', SynthConfig.harmonics[2] * 100);
+      setKnobValue('detune', SynthConfig.detune);
+
+      setKnobValue('eq-60', SynthConfig.eq[60]);
+      setKnobValue('eq-200', SynthConfig.eq[200]);
+      setKnobValue('eq-500', SynthConfig.eq[500]);
+      setKnobValue('eq-1k', SynthConfig.eq[1000]);
+      setKnobValue('eq-3k', SynthConfig.eq[3000]);
+      setKnobValue('eq-10k', SynthConfig.eq[10000]);
+
+      setKnobValue('cutoff', SynthConfig.cutoff);
+      setKnobValue('resonance', SynthConfig.resonance);
+      setKnobValue('drive', SynthConfig.drive * 100);
+      setKnobValue('sub', SynthConfig.subGain * 100);
+
+      setKnobValue('env-a', SynthConfig.attack * 1000);
+      setKnobValue('env-d', SynthConfig.decay * 1000);
+      setKnobValue('env-s', SynthConfig.sustain * 100);
+      setKnobValue('env-r', SynthConfig.release * 1000);
+      setKnobValue('master-vol', SynthConfig.masterVol * 100);
+    }
+
+    function setKnobValue(id, val) {
+      const dial = document.querySelector(`.knob-dial[data-knob="${id}"]`);
+      if (!dial) return;
+      dial.dataset.val = val;
+      const min = parseFloat(dial.dataset.min);
+      const max = parseFloat(dial.dataset.max);
+      const unit = dial.dataset.unit || '';
+
+      const norm = (val - min) / (max - min);
+      const deg = -135 + norm * 270;
+      dial.innerHTML = createKnobDialSVG(deg);
+
+      const valSpan = document.getElementById('val-' + id);
+      if (valSpan) {
+        let formatted = Number.isInteger(val) ? val : val.toFixed(1);
+        if (unit === 'dB' && val > 0) formatted = '+' + formatted;
+        if (id === 'detune' && val > 0) formatted = '+' + formatted;
+        valSpan.innerText = `${formatted} ${unit}`;
+      }
+    }
+
+    // ==========================================
+    // CANVAS DE DESENHO DA ONDA LIVRE
+    // ==========================================
+    const drawCanvas = document.getElementById('waveDrawCanvas');
+    const drawCtx = drawCanvas.getContext('2d');
+    let isDrawing = false;
+
+    function renderWaveDrawCanvas() {
+      drawCanvas.width = drawCanvas.parentElement.clientWidth;
+      drawCanvas.height = drawCanvas.parentElement.clientHeight;
+
+      const w = drawCanvas.width;
+      const h = drawCanvas.height;
+
+      drawCtx.fillStyle = '#07090e';
+      drawCtx.fillRect(0, 0, w, h);
+
+      drawCtx.strokeStyle = '#1e293b';
+      drawCtx.lineWidth = 1;
+      drawCtx.beginPath();
+      drawCtx.moveTo(0, h / 2);
+      drawCtx.lineTo(w, h / 2);
+      drawCtx.stroke();
+
+      drawCtx.strokeStyle = '#38bdf8';
+      drawCtx.lineWidth = 2.5;
+      drawCtx.shadowBlur = 8;
+      drawCtx.shadowColor = '#38bdf8';
+
+      drawCtx.beginPath();
+      for (let i = 0; i < WAVE_POINTS; i++) {
+        let x = (i / (WAVE_POINTS - 1)) * w;
+        let y = ((1.0 - customWaveform[i]) / 2.0) * h;
+        if (i === 0) drawCtx.moveTo(x, y);
+        else drawCtx.lineTo(x, y);
+      }
+      drawCtx.stroke();
+      drawCtx.shadowBlur = 0;
+    }
+
+    function setWavePointFromMouse(e) {
+      const rect = drawCanvas.getBoundingClientRect();
+      const clientX = Math.max(rect.left, Math.min(rect.right, e.clientX));
+      const clientY = Math.max(rect.top, Math.min(rect.bottom, e.clientY));
+
+      const normX = (clientX - rect.left) / rect.width;
+      const normY = (clientY - rect.top) / rect.height;
+
+      const amp = 1.0 - normY * 2.0;
+      const index = Math.floor(normX * (WAVE_POINTS - 1));
+
+      const brushRadius = 8;
+      for (let offset = -brushRadius; offset <= brushRadius; offset++) {
+        let idx = index + offset;
+        if (idx >= 0 && idx < WAVE_POINTS) {
+          let factor = 1.0 - Math.abs(offset) / (brushRadius + 1);
+          customWaveform[idx] = customWaveform[idx] * (1 - factor) + amp * factor;
+        }
+      }
+
+      renderWaveDrawCanvas();
+      recomputePeriodicWave();
+    }
+
+    drawCanvas.addEventListener('mousedown', (e) => {
+      isDrawing = true;
+      setWavePointFromMouse(e);
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (isDrawing) {
+        setWavePointFromMouse(e);
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDrawing = false;
+    });
+
+    window.addEventListener('resize', () => {
+      renderWaveDrawCanvas();
+    });
+    setTimeout(renderWaveDrawCanvas, 100);
+
+    // ==========================================
+    // MAPEAMENTO DO TECLADO EXPANDIDO COM Z X C V E 1 2 3
+    // ==========================================
+    const keyMap = {
+      // Meia Oitava Grave Brancas
+      'z': 'F3',
+      'x': 'G3',
+      'c': 'A3',
+      'v': 'B3',
+
+      // Meia Oitava Grave Pretas
+      '1': 'F#3',
+      '2': 'G#3',
+      '3': 'A#3',
+
+      // Oitava Central Brancas
+      'a': 'C4',
+      's': 'D4',
+      'd': 'E4',
+      'f': 'F4',
+      'g': 'G4',
+      'h': 'A4',
+      'j': 'B4',
+      'k': 'C5',
+
+      // Oitava Central Pretas
+      'w': 'C#4',
+      'e': 'D#4',
+      't': 'F#4',
+      'y': 'G#4',
+      'u': 'A#4'
+    };
+
+    const noteToElemMap = new Map();
+    document.querySelectorAll('.white-key, .black-key').forEach(el => {
+      noteToElemMap.set(el.dataset.note, el);
+
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const freq = parseFloat(el.dataset.freq);
+        el.classList.add('active');
+        noteOn(freq, el.dataset.note);
+      });
+
+      el.addEventListener('mouseup', () => {
+        const freq = parseFloat(el.dataset.freq);
+        el.classList.remove('active');
+        noteOff(freq);
+      });
+
+      el.addEventListener('mouseleave', () => {
+        if (el.classList.contains('active')) {
+          const freq = parseFloat(el.dataset.freq);
+          el.classList.remove('active');
+          noteOff(freq);
+        }
+      });
+    });
+
+    const pressedPhysicalKeys = new Set();
+
+    window.addEventListener('keydown', (e) => {
+      const k = e.key.toLowerCase();
+      if (keyMap[k] && !pressedPhysicalKeys.has(k)) {
+        pressedPhysicalKeys.add(k);
+        const note = keyMap[k];
+        const el = noteToElemMap.get(note);
+        if (el) {
+          el.classList.add('active');
+          noteOn(parseFloat(el.dataset.freq), note);
+        }
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      const k = e.key.toLowerCase();
+      if (keyMap[k]) {
+        pressedPhysicalKeys.delete(k);
+        const note = keyMap[k];
+        const el = noteToElemMap.get(note);
+        if (el) {
+          el.classList.remove('active');
+          noteOff(parseFloat(el.dataset.freq));
+        }
+      }
+    });
+
+    // ==========================================
+    // CONTROLES DE KNOBS ROTATIVOS VIRTUAIS
+    // ==========================================
+    function createKnobDialSVG(angleDeg) {
+      const rad = (angleDeg - 90) * Math.PI / 180;
+      const cx = 21, cy = 21, r = 15;
+      const x = cx + r * Math.cos(rad);
+      const y = cy + r * Math.sin(rad);
+
+      return `
+        <svg viewBox="0 0 42 42" style="width:100%; height:100%;">
+          <circle cx="21" cy="21" r="18" fill="#141a24" stroke="#253047" stroke-width="2"/>
+          <circle cx="21" cy="21" r="14" fill="#1b2331" />
+          <line x1="21" y1="21" x2="${x}" y2="${y}" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="21" cy="21" r="3.5" fill="#00f0ff" />
+        </svg>
+      `;
+    }
+
+    document.querySelectorAll('.knob-dial').forEach(dial => {
+      const id = dial.dataset.knob;
+      let min = parseFloat(dial.dataset.min);
+      let max = parseFloat(dial.dataset.max);
+      let val = parseFloat(dial.dataset.val);
+      const unit = dial.dataset.unit || '';
+
+      function updateKnob(v) {
+        val = Math.max(min, Math.min(max, v));
+        dial.dataset.val = val;
+        
+        const norm = (val - min) / (max - min);
+        const deg = -135 + norm * 270;
+        dial.innerHTML = createKnobDialSVG(deg);
+
+        const valSpan = document.getElementById('val-' + id);
+        if (valSpan) {
+          let formatted = Number.isInteger(val) ? val : val.toFixed(1);
+          if (unit === 'dB' && val > 0) formatted = '+' + formatted;
+          if (id === 'detune' && val > 0) formatted = '+' + formatted;
+          valSpan.innerText = `${formatted} ${unit}`;
+        }
+
+        applyDspParam(id, val);
+      }
+
+      let isDragging = false;
+      let startY = 0;
+      let startVal = 0;
+
+      dial.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startY = e.clientY;
+        startVal = val;
+        document.body.style.cursor = 'ns-resize';
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const delta = (startY - e.clientY) / 110;
+        const range = max - min;
+        updateKnob(startVal + delta * range);
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (isDragging) {
+          isDragging = false;
+          document.body.style.cursor = 'default';
+        }
+      });
+
+      updateKnob(val);
+    });
+
+    function applyDspParam(id, val) {
+      if (id.startsWith('harm-')) {
+        const hIdx = parseInt(id.replace('harm-', '')) - 1;
+        SynthConfig.harmonics[hIdx] = val / 100;
+        recomputePeriodicWave();
+        return;
+      }
+
+      if (!audioCtx) return;
+
+      if (id.startsWith('eq-')) {
+        const freqMap = {
+          'eq-60': 60,
+          'eq-200': 200,
+          'eq-500': 500,
+          'eq-1k': 1000,
+          'eq-3k': 3000,
+          'eq-10k': 10000
+        };
+        const f = freqMap[id];
+        if (f && eqBands[f]) {
+          eqBands[f].gain.setTargetAtTime(val, audioCtx.currentTime, 0.02);
+          SynthConfig.eq[f] = val;
+        }
+      } else if (id === 'cutoff') {
+        SynthConfig.cutoff = val;
+        mainFilter.frequency.setTargetAtTime(val, audioCtx.currentTime, 0.02);
+      } else if (id === 'resonance') {
+        SynthConfig.resonance = val;
+        mainFilter.Q.setTargetAtTime(val, audioCtx.currentTime, 0.02);
+      } else if (id === 'detune') {
+        SynthConfig.detune = val;
+      } else if (id === 'drive') {
+        SynthConfig.drive = val / 100;
+        updateDistortionCurve(SynthConfig.drive);
+      } else if (id === 'master-vol') {
+        SynthConfig.masterVol = val / 100;
+        masterGain.gain.setTargetAtTime(SynthConfig.masterVol, audioCtx.currentTime, 0.02);
+      } else if (id === 'env-a') {
+        SynthConfig.attack = val / 1000;
+      } else if (id === 'env-d') {
+        SynthConfig.decay = val / 1000;
+      } else if (id === 'env-s') {
+        SynthConfig.sustain = val / 100;
+      } else if (id === 'env-r') {
+        SynthConfig.release = val / 1000;
+      } else if (id === 'sub') {
+        SynthConfig.subGain = val / 100;
+      }
+    }
+
+    // ==========================================
+    // OSCILOSCÓPIO EM TEMPO REAL
+    // ==========================================
+    function startScope() {
+      const canvas = document.getElementById('scopeCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const bufferLength = analyser.fftSize;
+      const dataArray = new Uint8Array(bufferLength);
+
+      function resize() {
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      function draw() {
+        requestAnimationFrame(draw);
+        analyser.getByteTimeDomainData(dataArray);
+
+        ctx.fillStyle = '#07090e';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.strokeStyle = '#111724';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for(let x = 0; x < canvas.width; x += 25) {
+          ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height);
+        }
+        for(let y = 0; y < canvas.height; y += 18) {
+          ctx.moveTo(0, y); ctx.lineTo(canvas.width, y);
+        }
+        ctx.stroke();
+
+        ctx.lineWidth = 2.0;
+        ctx.strokeStyle = '#00f0ff';
+        ctx.shadowBlur = 5;
+        ctx.shadowColor = '#00f0ff';
+
+        ctx.beginPath();
+        const sliceWidth = canvas.width * 1.0 / bufferLength;
+        let x = 0;
+
+        for (let i = 0; i < bufferLength; i++) {
+          const v = dataArray[i] / 128.0;
+          const y = v * canvas.height / 2;
+
+          if (i === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+          x += sliceWidth;
+        }
+
+        ctx.lineTo(canvas.width, canvas.height / 2);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+      draw();
+    }
+  </script>
+</body>
+</html>

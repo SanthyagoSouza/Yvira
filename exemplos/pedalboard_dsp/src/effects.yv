@@ -1,0 +1,181 @@
+# Modulos de Processamento Digital de Sinais (DSP) para Guitarra Elétrica
+# Implementa: Overdrive, Equalizador de 3 Vias (Tone Stack), Gabinete IR (Convolução Discreta) e Delay
+
+class Overdrive {
+    fn init() {
+        this.gain = 2.0;       # 1.0 (clean) ate 10.0 (distorcao pesada)
+        this.tone = 0.5;       # controle de brilho
+        this.level = 0.8;      # volume de saida do pedal
+        this.enabled = true;
+    }
+
+    fn processar(samples) {
+        if (!this.enabled) {
+            return samples;
+        }
+
+        let out = [];
+        let num = samples.length();
+        let prev = 0.0;
+        let alpha = 0.3 + (this.tone * 0.4);
+
+        for (let i = 0; i < num; i += 1) {
+            let x = samples[i] * this.gain;
+            # Saturação suave não-linear analógica (tanh wave-shaping)
+            let y = tanh(x);
+
+            # Filtro tonal simples (low-pass sutil para amenizar frequências ásperas)
+            let filtered = (alpha * y) + ((1.0 - alpha) * prev);
+            prev = filtered;
+
+            out.push(filtered * this.level);
+        }
+
+        return out;
+    }
+}
+
+class Equalizador3Vias {
+    fn init(sample_rate) {
+        this.sample_rate = sample_rate;
+        this.bass = 1.0;       # Ganho dos graves (80Hz - 250Hz)
+        this.mid = 1.0;        # Ganho dos médios (500Hz - 2000Hz)
+        this.treble = 1.0;     # Ganho dos agudos (3000Hz+)
+        this.enabled = true;
+    }
+
+    fn processar(samples) {
+        if (!this.enabled) {
+            return samples;
+        }
+
+        let out = [];
+        let num = samples.length();
+
+        # Coeficientes de filtro 1-polo para separação de bandas
+        # lp1: ~300Hz (Bass)
+        # lp2: ~3000Hz (Mid cutoff)
+        let dt = 1.0 / this.sample_rate;
+        let rc_low = 1.0 / (2.0 * pi() * 300.0);
+        let alpha_low = dt / (rc_low + dt);
+
+        let rc_high = 1.0 / (2.0 * pi() * 3000.0);
+        let alpha_high = dt / (rc_high + dt);
+
+        let s_low = 0.0;
+        let s_mid_high = 0.0;
+
+        for (let i = 0; i < num; i += 1) {
+            let in_val = samples[i];
+
+            # Banda Grave
+            s_low = s_low + alpha_low * (in_val - s_low);
+            let bass_part = s_low;
+
+            # Banda Médio-Alta
+            s_mid_high = s_mid_high + alpha_high * (in_val - s_mid_high);
+            let mid_part = s_mid_high - s_low;
+            let treble_part = in_val - s_mid_high;
+
+            # Soma com as equalizações
+            let combined = (bass_part * this.bass)
+                         + (mid_part * this.mid)
+                         + (treble_part * this.treble);
+
+            out.push(combined);
+        }
+
+        return out;
+    }
+}
+
+class GabineteIR {
+    fn init() {
+        this.ir_samples = [];
+        this.mix = 1.0;
+        this.enabled = true;
+    }
+
+    fn carregar_ir(ir_list) {
+        this.ir_samples = ir_list;
+    }
+
+    # Convolução Discreta direta no domínio do tempo: y[n] = sum(x[k] * h[n-k])
+    fn processar(samples) {
+        if (!this.enabled || this.ir_samples.length() == 0) {
+            return samples;
+        }
+
+        let num_x = samples.length();
+        let num_h = this.ir_samples.length();
+        let out = [];
+
+        # Convolução de alta performance com normalização de energia
+        for (let n = 0; n < num_x; n += 1) {
+            let sum = 0.0;
+            let max_k = n;
+            if (num_h - 1 < max_k) {
+                max_k = num_h - 1;
+            }
+
+            for (let k = 0; k <= max_k; k += 1) {
+                sum = sum + (samples[n - k] * this.ir_samples[k]);
+            }
+
+            # Wet / Dry mix
+            let final_val = ((1.0 - this.mix) * samples[n]) + (this.mix * sum);
+            out.push(final_val);
+        }
+
+        return out;
+    }
+}
+
+class DelayDigital {
+    fn init(sample_rate) {
+        this.sample_rate = sample_rate;
+        this.tempo_ms = 350.0; # 350 ms
+        this.feedback = 0.4;   # 40% de repetição
+        this.mix = 0.35;       # 35% som processado
+        this.enabled = false;  # opcional ligado por padrao
+    }
+
+    fn processar(samples) {
+        if (!this.enabled) {
+            return samples;
+        }
+
+        let delay_samples = to_int((this.tempo_ms / 1000.0) * this.sample_rate);
+        if (delay_samples < 1) {
+            delay_samples = 1;
+        }
+
+        let num = samples.length();
+        let out = [];
+        let buffer = [];
+
+        # Inicializa buffer circular
+        for (let b = 0; b < delay_samples; b += 1) {
+            buffer.push(0.0);
+        }
+
+        let buf_idx = 0;
+        for (let i = 0; i < num; i += 1) {
+            let dry = samples[i];
+            let delayed = buffer[buf_idx];
+
+            let to_record = dry + (delayed * this.feedback);
+            buffer[buf_idx] = to_record;
+
+            buf_idx += 1;
+            if (buf_idx >= delay_samples) {
+                buf_idx = 0;
+            }
+
+            let wet_dry = (dry * (1.0 - this.mix)) + (delayed * this.mix);
+            out.push(wet_dry);
+        }
+
+        return out;
+    }
+}

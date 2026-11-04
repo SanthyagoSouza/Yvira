@@ -1,0 +1,34 @@
+# ==============================================================================
+# Cliente Corporativo Desktop - Yvira Finance Corp Client
+# Arquitetura: Single-Instance Desktop GUI conectada ao Servidor REST na porta 8085
+# ==============================================================================
+
+print("==================================================================");
+print("     YVIRA FINANCE CORP // CLIENTE DESKTOP CORPORATIVO            ");
+print("==================================================================\n");
+
+let app = criar_janela({
+    "titulo": "Yvira Finance Corp // Gestão Financeira Pessoal Multi-Usuário",
+    "view": "views/index.html",
+    "largura": 1280,
+    "altura": 780,
+    "min_largura": 1050,
+    "min_altura": 680,
+    "barra_customizada": true,
+    "redimensionavel": true,
+    "cor_fundo": "#0f172a"
+});
+
+fn on_app_log(params) {
+    if (params != null && params.contains("msg")) {
+        print("[Finance Client]: " + params["msg"]);
+    }
+}
+
+app.ao_evento("client_log", "on_app_log");
+
+print("[Finance Client]: Conectando à infraestrutura corporativa (http://localhost:8085)...");
+app.exibir();
+app.esperar();
+
+print("\n[Finance Client]: Sessão encerrada.");

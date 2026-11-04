@@ -86,6 +86,8 @@ public enum TokenType
     Extends,      // extends
     Static,       // static
     Super,        // super
+    Enum,         // enum
+    Is,           // is
     InterpolatedString, // $"... {expr} ..."
 
     // ==========================================

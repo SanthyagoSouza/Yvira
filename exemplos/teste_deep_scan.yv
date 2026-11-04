@@ -1,0 +1,47 @@
+import "switch" as Switch
+
+print("==================================================")
+print("     YVIRA DEEP NETWORK MAPPING & AUDITING        ")
+print("==================================================")
+
+# Executa auditoria profunda nos dispositivos da rede local
+let mapa = Switch.mapear_rede({
+    alvo: "192.168.0.1-45",
+    timeout_ms: 300,
+    coletar_banners: true,
+    identificar_nomes: true,
+    tentar_snmp: true
+})
+
+print("Dispositivos mapeados com sucesso: " + mapa.tamanho())
+
+for (let i = 0; i < mapa.tamanho(); i = i + 1) {
+    let dev = mapa[i]
+    print("\n--------------------------------------------------")
+    print("[IP]          : " + dev.ip + " (Latência: " + dev.latencia_ms + "ms)")
+    print("[MAC]         : " + dev.mac)
+    print("[Fabricante]  : " + dev.fabricante)
+    print("[Categoria]   : " + dev.categoria)
+    if dev.nome != "" {
+        print("[Nome / Host] : " + dev.nome + (dev.workgroup != "" ? " [Grupo: " + dev.workgroup + "]" : ""))
+    }
+    
+    let servicos = dev.servicos
+    if servicos.tamanho() > 0 {
+        print("[Serviços Detectados]:")
+        for (let s = 0; s < servicos.tamanho(); s = s + 1) {
+            let srv = servicos[s]
+            let bannerInfo = srv.banner != "" ? " -> " + srv.banner : ""
+            print("   * Porta " + srv.porta + " (" + srv.servico + ")" + bannerInfo)
+        }
+    }
+
+    if dev.snmp_ativo {
+        print("[SNMP Switch Info]:")
+        print("   * Nome do Switch: " + dev.snmp_nome)
+        print("   * Descrição/SO  : " + dev.snmp_descricao)
+        print("   * Uptime        : " + dev.snmp_uptime)
+        print("   * Portas        : " + dev.snmp_portas_ativas + " conectadas de " + dev.snmp_portas_total + " portas")
+    }
+}
+print("\n==================================================")

@@ -1,0 +1,667 @@
+/* Quad Cortex Dynamic DSP Rack & QuadLab Studio CSS */
+:root {
+    --qc-bg: #07090c;
+    --qc-chassis: #0d1016;
+    --qc-card: #13171f;
+    --qc-border: #1d2533;
+    --qc-border-highlight: #2e3a4e;
+    --qc-cyan: #00e5ff;
+    --qc-cyan-glow: rgba(0, 229, 255, 0.4);
+    --qc-orange: #ff6d00;
+    --qc-orange-glow: rgba(255, 109, 0, 0.4);
+    --qc-green: #00e676;
+    --qc-green-glow: rgba(0, 230, 118, 0.4);
+    --qc-purple: #b388ff;
+    --qc-purple-glow: rgba(179, 136, 255, 0.4);
+    --qc-blue: #2979ff;
+    --qc-blue-glow: rgba(41, 121, 255, 0.4);
+    --qc-gold: #ffd600;
+    --qc-gold-glow: rgba(255, 214, 0, 0.4);
+    --qc-pink: #ff4081;
+    --qc-text: #f0f4f8;
+    --qc-text-dim: #748296;
+    --qc-wire: #26303f;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+}
+
+body {
+    background: var(--qc-bg);
+    color: var(--qc-text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Custom Titlebar */
+.qc-titlebar {
+    height: 38px;
+    background: #050608;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    border-bottom: 1px solid #141922;
+    cursor: grab;
+}
+
+.qc-titlebar:active { cursor: grabbing; }
+
+.qc-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.badge-cortex {
+    background: linear-gradient(135deg, var(--qc-cyan), #0091ea);
+    color: #000;
+    font-size: 9px;
+    font-weight: 900;
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+
+.badge-lab {
+    background: linear-gradient(135deg, var(--qc-gold), #ff6d00);
+    color: #000;
+    font-size: 9px;
+    font-weight: 900;
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+
+.qc-win-controls { display: flex; gap: 6px; }
+
+.qc-btn-win {
+    background: transparent;
+    border: none;
+    color: var(--qc-text-dim);
+    width: 26px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.15s;
+}
+
+.qc-btn-win:hover { background: #19202a; color: #fff; }
+.qc-btn-win.close:hover { background: #ff1744; color: #fff; }
+
+/* Main Chassis */
+.qc-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 10px 14px;
+    gap: 10px;
+    background: radial-gradient(circle at 50% 0%, #10141c 0%, var(--qc-bg) 85%);
+}
+
+/* Header Bar */
+.qc-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--qc-card);
+    border: 1px solid var(--qc-border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+
+.qc-controls-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+/* Painel Global Master EQ */
+.qc-global-eq-panel {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #090c12;
+    border: 1px solid #1c2636;
+    border-radius: 6px;
+    padding: 4px 10px;
+    position: relative;
+}
+
+.qc-global-eq-panel::before {
+    content: "GLOBAL EQ";
+    position: absolute;
+    top: -6px;
+    left: 8px;
+    background: #090c12;
+    padding: 0 4px;
+    font-size: 8px;
+    font-weight: 900;
+    color: var(--qc-cyan);
+    letter-spacing: 0.5px;
+}
+
+.qc-meter-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.qc-meter-label {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--qc-text-dim);
+    width: 65px;
+}
+
+.qc-slider {
+    -webkit-appearance: none;
+    width: 75px;
+    height: 4px;
+    border-radius: 2px;
+    background: #1e2532;
+    outline: none;
+}
+
+.qc-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--qc-cyan);
+    cursor: pointer;
+    box-shadow: 0 0 8px var(--qc-cyan);
+}
+
+.qc-meter-val {
+    font-size: 11px;
+    font-family: monospace;
+    color: var(--qc-cyan);
+    width: 34px;
+}
+
+.qc-bpm-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #080b10;
+    border: 1px solid var(--qc-border);
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.qc-bpm-input {
+    width: 48px;
+    background: transparent;
+    border: none;
+    color: var(--qc-cyan);
+    font-family: monospace;
+    font-weight: 800;
+    font-size: 13px;
+    text-align: center;
+    outline: none;
+}
+
+.qc-actions-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-live {
+    background: #141a24;
+    color: var(--qc-text);
+    border: 1px solid #222d3e;
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-weight: 800;
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: 0.2s;
+}
+
+.btn-live.active {
+    background: linear-gradient(135deg, #00c853, #00e676);
+    color: #000;
+    border-color: #69f0ae;
+    box-shadow: 0 0 15px var(--qc-green-glow);
+}
+
+.live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #546e7a;
+}
+
+.btn-live.active .live-dot {
+    background: #000;
+    box-shadow: 0 0 8px #fff;
+}
+
+.btn-qc {
+    background: #151b24;
+    color: var(--qc-text);
+    border: 1px solid var(--qc-border);
+    padding: 7px 11px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: 0.15s;
+}
+
+.btn-qc:hover { background: #1f2735; border-color: #313f54; }
+
+/* Add Block Dropdown */
+.add-block-dropdown { position: relative; display: inline-block; }
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 36px;
+    background: #10141c;
+    border: 1px solid var(--qc-border-highlight);
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.85);
+    z-index: 100;
+    min-width: 180px;
+    overflow: hidden;
+}
+
+.dropdown-menu.show { display: block; }
+
+.dropdown-item {
+    padding: 9px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--qc-text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: 0.15s;
+}
+
+.dropdown-item:hover { background: #18202c; color: var(--qc-cyan); }
+
+/* SIGNAL ROUTING LANE VISUALIZER */
+.qc-routing-visualizer {
+    background: #06080b;
+    border: 1px solid #141820;
+    border-radius: 8px;
+    padding: 7px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.8);
+}
+
+.routing-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--qc-text-dim);
+    letter-spacing: 0.8px;
+}
+
+.routing-lane {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    overflow-x: auto;
+}
+
+.route-pin {
+    padding: 3px 9px;
+    background: #10131b;
+    border: 1px solid #1e2533;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--qc-text-dim);
+    white-space: nowrap;
+}
+
+.route-pin.io { background: #080a0e; border-color: #12151c; }
+.route-pin.active { color: #fff; border-color: var(--qc-cyan); box-shadow: 0 0 10px rgba(0,229,255,0.25); }
+
+.route-wire {
+    width: 16px;
+    height: 3px;
+    background: var(--qc-wire);
+    border-radius: 2px;
+}
+
+.route-wire.active { background: var(--qc-cyan); box-shadow: 0 0 6px var(--qc-cyan-glow); }
+
+/* KANBAN / REORDERABLE BLOCKS RACK */
+.qc-blocks-rack {
+    flex: 1;
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.qc-card {
+    flex: 0 0 230px;
+    background: var(--qc-card);
+    border: 2px solid var(--qc-border);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    padding: 10px 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    transition: 0.15s border-color, 0.15s transform;
+    cursor: grab;
+    position: relative;
+}
+
+.qc-card.active { border-color: #313d50; }
+.qc-card.custom { border-color: #553c9a; background: linear-gradient(180deg, #151121, #0f0d19); }
+.qc-card.custom.active { border-color: var(--qc-gold); box-shadow: 0 0 15px rgba(255, 214, 0, 0.25); }
+.qc-card.dragging { opacity: 0.35; transform: scale(0.98); }
+.qc-card.drag-over { border-color: var(--qc-cyan); box-shadow: 0 0 15px var(--qc-cyan-glow); }
+
+/* Card Top Controls */
+.qc-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #1a212d;
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+}
+
+.qc-card-header-left { display: flex; flex-direction: column; }
+
+.qc-card-title {
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+}
+
+.qc-card-type { font-size: 8px; color: var(--qc-text-dim); }
+
+.qc-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-card-action {
+    background: transparent;
+    border: none;
+    color: var(--qc-text-dim);
+    font-size: 11px;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: 0.15s;
+}
+
+.btn-card-action:hover { background: #222b3a; color: var(--qc-cyan); }
+.btn-card-action.del:hover { background: #ef444422; color: #ef4444; }
+
+/* Footswitch */
+.qc-footswitch {
+    width: 32px;
+    height: 32px;
+    background: radial-gradient(circle at 35% 35%, #546073 0%, #0e1219 75%);
+    border: 2px solid #333e4f;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.7), inset 0 2px 4px rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.1s;
+}
+
+.qc-footswitch:active { transform: scale(0.92); }
+
+.qc-footswitch-led {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #283240;
+    transition: 0.2s;
+}
+
+.qc-card.active .qc-footswitch-led { background: var(--qc-cyan); box-shadow: 0 0 10px var(--qc-cyan); }
+.qc-card.overdrive.active .qc-footswitch-led { background: var(--qc-orange); box-shadow: 0 0 10px var(--qc-orange); }
+.qc-card.cab.active .qc-footswitch-led { background: var(--qc-green); box-shadow: 0 0 10px var(--qc-green); }
+.qc-card.delay.active .qc-footswitch-led { background: var(--qc-purple); box-shadow: 0 0 10px var(--qc-purple); }
+.qc-card.reverb.active .qc-footswitch-led { background: var(--qc-blue); box-shadow: 0 0 10px var(--qc-blue); }
+.qc-card.custom.active .qc-footswitch-led { background: var(--qc-gold); box-shadow: 0 0 10px var(--qc-gold); }
+
+/* Card Controls Stack */
+.qc-card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    gap: 6px;
+}
+
+.qc-param {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.qc-param-lbl {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    font-weight: 800;
+    color: var(--qc-text-dim);
+}
+
+.qc-param-lbl .val {
+    color: var(--qc-cyan);
+    font-family: monospace;
+}
+
+.qc-select-model {
+    background: #090c12;
+    color: var(--qc-text);
+    border: 1px solid #1f2736;
+    padding: 5px 6px;
+    border-radius: 5px;
+    font-size: 10px;
+    font-weight: 700;
+    outline: none;
+    cursor: pointer;
+    width: 100%;
+}
+
+/* ========================================================
+   MODAL / QUADLAB STUDIO IDE (CIRCUIT & ALGORITHM LAB)
+   ======================================================== */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(3, 4, 7, 0.88);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-overlay.active { display: flex; }
+
+.quadlab-window {
+    width: 860px;
+    height: 560px;
+    background: #0c0f16;
+    border: 2px solid var(--qc-border-highlight);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 15px 50px rgba(0,0,0,0.95), 0 0 25px rgba(255, 214, 0, 0.2);
+    overflow: hidden;
+}
+
+.quadlab-header {
+    height: 44px;
+    background: #07090e;
+    border-bottom: 1px solid var(--qc-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+}
+
+.quadlab-title {
+    font-size: 13px;
+    font-weight: 900;
+    color: var(--qc-gold);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: 0.8px;
+}
+
+.quadlab-body {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 16px;
+    padding: 16px;
+    overflow-y: auto;
+}
+
+.quadlab-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #11151e;
+    border: 1px solid var(--qc-border);
+    border-radius: 8px;
+    padding: 14px;
+    overflow-y: auto;
+}
+
+.quadlab-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.quadlab-label {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--qc-text-dim);
+    text-transform: uppercase;
+}
+
+.quadlab-input {
+    background: #070a0f;
+    border: 1px solid var(--qc-border);
+    color: var(--qc-text);
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    outline: none;
+}
+
+.quadlab-input:focus { border-color: var(--qc-gold); }
+
+.code-editor-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #070a0f;
+    border: 1px solid var(--qc-border);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.code-editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--qc-cyan);
+}
+
+.code-textarea {
+    flex: 1;
+    background: #040507;
+    border: 1px solid #161d28;
+    border-radius: 6px;
+    padding: 10px;
+    color: #69f0ae;
+    font-family: Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.5;
+    outline: none;
+    resize: none;
+}
+
+.code-textarea:focus { border-color: var(--qc-gold); }
+
+.quadlab-footer {
+    height: 48px;
+    background: #07090e;
+    border-top: 1px solid var(--qc-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+}
+
+/* Footer / Status Telemetry */
+.qc-footer {
+    height: 28px;
+    background: #050608;
+    border-top: 1px solid #131720;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    font-size: 10px;
+    color: var(--qc-text-dim);
+}
+
+.qc-indicator { display: flex; align-items: center; gap: 6px; }
+
+.qc-led-online {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--qc-green);
+    box-shadow: 0 0 6px var(--qc-green);
+}

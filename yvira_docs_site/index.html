@@ -421,7 +421,11 @@
       <a class="nav-link" onclick="navegarPara('criptografia-defesa')"><span>🔐 Criptografia de Senhas e Cifras</span></a>
       <a class="nav-link" onclick="navegarPara('sandbox-anti-taint')"><span>🛡️ Sandbox e Proteção de Segurança</span></a>
 
-      <div class="nav-category">8. Compilação para Produção</div>
+      <div class="nav-category">8. Redes, Switches & Infraestrutura</div>
+      <a class="nav-link" onclick="navegarPara('modulo-switch-rede')"><span>🌐 Módulo Switch & Mapeamento L2-L7</span></a>
+      <a class="nav-link" onclick="navegarPara('painel-topologia-grafo')"><span>🕸️ Topologia em Grafo & Sentinel</span></a>
+
+      <div class="nav-category">9. Compilação para Produção</div>
       <a class="nav-link" onclick="navegarPara('build-compilador')"><span>📦 Gerar Executável (.exe) em 1 Clique</span></a>
     </nav>
   </aside>
@@ -443,8 +447,9 @@
         <div class="hero-features">
           <div class="feature-tag">🖥️ GUI Nativa (HTML/CSS)</div>
           <div class="feature-tag">💻 CLI Central com Menus</div>
+          <div class="feature-tag">🌐 Mapeamento de Redes L2-L7</div>
           <div class="feature-tag">💾 SQLite Embutido</div>
-          <div class="feature-tag">⚡ Async @spawn</div>
+          <div class="feature-tag">⚡ Async @spawn & @time</div>
           <div class="feature-tag">🔒 Criptografia AES-256</div>
           <div class="feature-tag">📦 Gera .exe Independente</div>
         </div>
@@ -1602,9 +1607,100 @@ sec.<span class="fn">sandbox</span>({
         </div>
       </section>
 
-      <!-- 27. BUILD COMPILADOR -->
+      <!-- 27. MODULO SWITCH E REDE -->
+      <section class="doc-section" id="modulo-switch-rede">
+        <h2>27. Módulo Switch & Mapeamento Profundo de Rede (L2 a L7)</h2>
+        
+        <div class="why-box">
+          <strong>🤔 Para que serve o módulo <code>switch</code> (ou <code>rede</code>)?</strong><br>
+          Transforma o Yvira em uma central nativa de telecomunicações e NOC. Ele varre sub-redes em Camada 2 via ARP ultrarrápido (mesmo com Firewall bloqueando ICMP), identifica o fabricante do hardware pelo MAC em uma base de <strong>+59.200 fornecedores</strong> (Kismet OUI), captura nomes NetBIOS de máquinas Windows/Samba, faz scanner concorrente de portas com leitura de banners e puxa telemetria SNMP de switches gerenciáveis.
+        </div>
+
+        <div class="code-block">
+          <div class="code-header"><span>scanner_rede.yv</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code>import <span class="str">"switch"</span> as Switch;
+
+<span class="comment"># 1. Auditoria completa e profunda da sub-rede local</span>
+let dispositivos = Switch.<span class="fn">mapear_rede</span>({
+    <span class="str">"alvo"</span>: <span class="str">"192.168.0.1-50"</span>,
+    <span class="str">"timeout_ms"</span>: <span class="num">300</span>,
+    <span class="str">"coletar_banners"</span>: <span class="kw">true</span>,
+    <span class="str">"identificar_nomes"</span>: <span class="kw">true</span>,
+    <span class="str">"tentar_snmp"</span>: <span class="kw">true</span>
+});
+
+for (let i = <span class="num">0</span>; i &lt; dispositivos.tamanho(); i = i + <span class="num">1</span>) {
+    let d = dispositivos[i];
+    print(<span class="str">"Dispositivo: "</span> + d.ip + <span class="str">" ["</span> + d.fabricante + <span class="str">"] - "</span> + d.categoria);
+    if (d.nome != <span class="str">""</span>) print(<span class="str">"  Nome do Host: "</span> + d.nome);
+}
+
+<span class="comment"># 2. Ping direto com latência e TTL</span>
+let res = Switch.<span class="fn">ping</span>(<span class="str">"192.168.0.1"</span>, <span class="num">500</span>);
+print(<span class="str">"Gateway ativo: "</span> + res.sucesso + <span class="str">" ("</span> + res.tempo_ms + <span class="str">"ms)"</span>);
+
+<span class="comment"># 3. Ligar computadores remotamente via Magic Packet</span>
+Switch.<span class="fn">wake_on_lan</span>(<span class="str">"20:C1:9B:60:22:69"</span>);
+
+<span class="comment"># 4. Controle Remoto de Switches Físicos via SSH (Cisco, MikroTik, Linux)</span>
+let sw = Switch.<span class="fn">conectar</span>({
+    <span class="str">"host"</span>: <span class="str">"192.168.88.1"</span>,
+    <span class="str">"usuario"</span>: <span class="str">"admin"</span>,
+    <span class="str">"senha"</span>: <span class="str">"admin123"</span>,
+    <span class="str">"porta"</span>: <span class="num">22</span>
+});
+
+if (sw.<span class="fn">conectado</span>()) {
+    let retorno = sw.<span class="fn">executar</span>(<span class="str">"/interface print"</span>);
+    print(retorno);
+    sw.<span class="fn">desconectar</span>();
+}</code></pre>
+        </div>
+      </section>
+
+      <!-- 28. PAINEL TOPOLOGIA EM GRAFO -->
+      <section class="doc-section" id="painel-topologia-grafo">
+        <h2>28. Yvira Pulse: Monitor com Topologia em Grafo Vivo & @time</h2>
+        
+        <div class="why-box">
+          <strong>🤔 Como unir Automação Nativa, Vue.js 3 e Topologia em Canvas?</strong><br>
+          O projeto <code>exemplos/yvira_network_monitor</code> (Yvira Pulse) combina a automação em segundo plano <code>@time.sincronizarRede(5)</code> com uma interface desktop moderna de duas abas: um <strong>Dashboard Operacional</strong> e um <strong>Grafo Topológico Interativo</strong> desenhado via Canvas com o Gateway centralizado, nós satélites coloridos por papel e feixes luminosos de tráfego em tempo real.
+        </div>
+
+        <div class="code-block">
+          <div class="code-header"><span>main.yv (Sentinel com @time)</span><button class="copy-btn" onclick="copiarCodigo(this)">Copiar</button></div>
+          <pre><code>import <span class="str">"switch"</span> as Switch;
+
+let app = <span class="fn">criar_janela</span>({
+    <span class="str">"titulo"</span>: <span class="str">"Yvira Pulse - Sentinel"</span>,
+    <span class="str">"view"</span>: <span class="str">"views/index.html"</span>,
+    <span class="str">"largura"</span>: <span class="num">1240</span>,
+    <span class="str">"altura"</span>: <span class="num">780</span>
+});
+
+fn sincronizarRede() {
+    let lista = Switch.<span class="fn">mapear_rede</span>({ <span class="str">"alvo"</span>: <span class="str">"192.168.0.1-50"</span> });
+    let conns = Switch.<span class="fn">obter_conexoes_tcp</span>();
+
+    <span class="comment"># Emite os novos dados reativamente para o Vue.js 3</span>
+    app.<span class="fn">emitir</span>(<span class="str">"receber_dados_rede"</span>, {
+        <span class="str">"dispositivos"</span>: lista,
+        <span class="str">"total_conexoes_tcp"</span>: conns.<span class="fn">tamanho</span>()
+    });
+}
+
+<span class="comment"># Automação nativa: sincroniza a cada 5 segundos sem travar a interface</span>
+@time.<span class="fn">sincronizarRede</span>(<span class="num">5</span>);
+
+app.<span class="fn">show</span>();
+app.<span class="fn">wait</span>();
+@stop.<span class="fn">sincronizarRede</span>();</code></pre>
+        </div>
+      </section>
+
+      <!-- 29. BUILD COMPILADOR -->
       <section class="doc-section" id="build-compilador">
-        <h2>27. Gerando o Executável Final (.exe) em 1 Clique (yvira bundle)</h2>
+        <h2>29. Gerando o Executável Final (.exe) em 1 Clique (yvira bundle)</h2>
         
         <div class="why-box">
           <strong>🤔 Como entregar seu programa para qualquer pessoa no Windows?</strong><br>

@@ -14,6 +14,7 @@ Bem-vindo ao **Manual Prático do Yvira**! Este documento foi escrito para ser u
 6. [Temporizador em Segundo Plano sem Travar a Tela (`@time`)](#6-temporizador-em-segundo-plano-sem-travar-a-tela-time)
 7. [Realtime Multiplayer e WebSockets (`@realtime`)](#7-realtime-multiplayer-e-websockets-realtime)
 8. [Gerando Executável Independente (.exe) (`yvira build`)](#8-gerando-executável-independente-exe-yvira-build)
+9. [Gerenciamento e Diagnóstico de Rede Nativo (`switch` / `rede`)](#9-gerenciamento-e-diagnóstico-de-rede-nativo-switch--rede)
 
 ---
 
@@ -230,3 +231,56 @@ O compilador vai:
 1. Empacotar o script `.yv` e a pasta `views/` inteira (HTML, CSS, imagens).
 2. Carimbar o ícone oficial do Yvira (`.ico`) no executável.
 3. Gerar um arquivo `.exe` único e portátil que roda no Windows com dois cliques!
+
+---
+
+## 9. Gerenciamento e Diagnóstico de Rede Nativo (`switch` / `rede`)
+
+O Yvira possui ferramentas de engenharia de rede embutidas para descoberta de hosts, auditoria de portas, telemetria SNMP e controle de switches físicos via SSH:
+
+### 9.1 Mapeamento Profundo da Rede Local (L2 a L7):
+```yvira
+import "switch" as Switch
+
+# Varre a rede, resolve nomes, fabricantes IEEE e portas abertas
+let hosts = Switch.mapear_rede({
+    alvo: "192.168.0.1-50",
+    timeout_ms: 250,
+    coletar_banners: true,
+    identificar_nomes: true,
+    tentar_snmp: true
+})
+
+for (let i = 0; i < hosts.tamanho(); i = i + 1) {
+    let h = hosts[i]
+    print(h.ip + " | MAC: " + h.mac + " | " + h.fabricante + " | Tipo: " + h.categoria)
+}
+```
+
+### 9.2 Ping, Scan de Portas e Wake-on-LAN:
+```yvira
+# Ping direto com latência e TTL
+let pingRes = Switch.ping("192.168.0.1", 500)
+
+# Varredura concorrente de portas TCP
+let portas = Switch.scan_portas("192.168.0.1", [22, 80, 443, 8291], 300)
+
+# Ligar máquina remotamente via MAC Address
+Switch.wake_on_lan("20:C1:9B:60:22:69")
+```
+
+### 9.3 Controle Remoto de Switches/Roteadores via SSH:
+```yvira
+let sw = Switch.conectar({
+    host: "192.168.88.1",
+    usuario: "admin",
+    senha: "sua_senha",
+    porta: 22
+})
+
+if sw.conectado() {
+    let saida = sw.executar("/interface print")
+    print(saida)
+    sw.desconectar()
+}
+```

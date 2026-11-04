@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -22,6 +22,20 @@ public static class FileSystemModule
                 throw new FileNotFoundException($"Arquivo não encontrado: {path}");
             return File.ReadAllText(path);
         });
+
+        // fs.readBytes(path) -> YviraByteArray
+        methods["readBytes"] = new HostFunction("fs.readBytes", (interp, args) =>
+        {
+            if (args.Count == 0 || args[0] == null)
+                throw new Exception("fs.readBytes requer o caminho do arquivo.");
+            string path = ResolvePath(baseDirectory, args[0]!.ToString()!);
+            (interp?.SecurityPolicy ?? securityPolicy)?.AssertFsRead(path, baseDirectory);
+            if (!File.Exists(path))
+                throw new FileNotFoundException($"Arquivo não encontrado: {path}");
+            byte[] rawBytes = File.ReadAllBytes(path);
+            return new YviraByteArray(rawBytes);
+        });
+        methods["read_bytes"] = methods["readBytes"];
 
         // fs.readLines(path) -> YviraList
         methods["readLines"] = new HostFunction("fs.readLines", (interp, args) =>
@@ -52,6 +66,39 @@ public static class FileSystemModule
             File.WriteAllText(path, content);
             return true;
         });
+
+        // fs.writeBytes(path, byteArray) -> bool
+        methods["writeBytes"] = new HostFunction("fs.writeBytes", (interp, args) =>
+        {
+            if (args.Count < 2)
+                throw new Exception("fs.writeBytes requer caminho e conteúdo binário.");
+            string path = ResolvePath(baseDirectory, args[0]?.ToString() ?? "");
+            (interp?.SecurityPolicy ?? securityPolicy)?.AssertFsWrite(path, baseDirectory);
+            string? dir = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+            if (args[1] is YviraByteArray bArr)
+            {
+                File.WriteAllBytes(path, bArr.ToByteArray());
+            }
+            else if (args[1] is YviraList yl)
+            {
+                byte[] raw = yl.Select(x => Convert.ToByte(Convert.ToInt32(x) & 0xFF)).ToArray();
+                File.WriteAllBytes(path, raw);
+            }
+            else if (args[1] is byte[] rawDirect)
+            {
+                File.WriteAllBytes(path, rawDirect);
+            }
+            else
+            {
+                throw new Exception("fs.writeBytes requer um objeto ByteArray ou lista de bytes.");
+            }
+            return true;
+        });
+        methods["write_bytes"] = methods["writeBytes"];
 
         // fs.append(path, content) -> bool
         methods["append"] = new HostFunction("fs.append", (interp, args) =>

@@ -1,0 +1,170 @@
+# Controlador Quad Cortex DSP Yvira
+# Gerenciamento de Presets, Leitura de IRs WAV do disco e Gravador de Áudio PCM
+
+import "fs";
+import "pipeline.yv";
+
+let pipelineGlobal = null;
+let appGlobal = null;
+
+# Retorna a lista de IRs disponíveis na pasta 'irs/'
+fn listar_irs_disponiveis() {
+    let pasta = "irs";
+    if (fs.exists("../irs")) {
+        pasta = "../irs";
+    } else if (fs.exists("irs")) {
+        pasta = "irs";
+    } else if (fs.exists("exemplos/pedalboard_dsp/irs")) {
+        pasta = "exemplos/pedalboard_dsp/irs";
+    } else {
+        return [];
+    }
+
+    let arquivos = fs.list(pasta);
+    let lista = [];
+    for (let i = 0; i < arquivos.length(); i += 1) {
+        let nome = arquivos[i];
+        if (nome.ends_with(".wav") || nome.ends_with(".WAV")) {
+            lista.push({
+                "nome": nome,
+                "caminho": pasta + "/" + nome
+            });
+        }
+    }
+    return lista;
+}
+
+# Lê e decodifica qualquer arquivo WAV de IR em float samples normalizados para o ConvolverNode
+fn carregar_ir_wav(caminho) {
+    let caminho_resolvido = caminho;
+    if (!fs.exists(caminho_resolvido)) {
+        if (fs.exists("../" + caminho)) {
+            caminho_resolvido = "../" + caminho;
+        } else if (fs.exists("exemplos/pedalboard_dsp/" + caminho)) {
+            caminho_resolvido = "exemplos/pedalboard_dsp/" + caminho;
+        } else if (fs.exists("irs/" + caminho)) {
+            caminho_resolvido = "irs/" + caminho;
+        } else {
+            let lista = listar_irs_disponiveis();
+            if (lista.length() > 0) {
+                caminho_resolvido = lista[0]["caminho"];
+            } else {
+                print("[QuadCortex Core]: Nenhum IR encontrado no disco.");
+                return null;
+            }
+        }
+    }
+
+    print("[QuadCortex Core]: Lendo arquivo WAV de IR: " + caminho_resolvido);
+    let raw_bytes = fs.read_bytes(caminho_resolvido);
+    let wav = WavFile();
+    let samples = wav.decode_pcm16_mono(raw_bytes);
+
+    print("[QuadCortex Core]: IR carregado com " + samples.length() + " amostras (" + wav.sample_rate + "Hz, " + wav.channels + " canais).");
+
+    return {
+        "caminho": caminho_resolvido,
+        "sample_rate": wav.sample_rate,
+        "samples": samples
+    };
+}
+
+# Salva arquivo de gravação de áudio no disco
+fn on_salvar_gravacao(dados) {
+    if (dados == null || !dados.contains("samples")) { return; }
+
+    let samples = dados["samples"];
+    let sample_rate = dados.contains("sample_rate") ? dados["sample_rate"] : 44100;
+    let nome_arquivo = dados.contains("nome") ? dados["nome"] : "take_guitarra.wav";
+
+    let pasta = "gravacoes";
+    if (!fs.exists("gravacoes") && fs.exists("exemplos/pedalboard_dsp/gravacoes")) {
+        pasta = "exemplos/pedalboard_dsp/gravacoes";
+    }
+
+    let caminho = pasta + "/" + nome_arquivo;
+    print("[QuadCortex Gravador]: Codificando " + samples.length() + " amostras em WAV 16-bit...");
+
+    let wav = WavFile();
+    let wav_bytes = wav.encode_pcm16_mono(samples, sample_rate);
+    fs.write_bytes(caminho, wav_bytes);
+
+    print("[QuadCortex Gravador]: Gravação salva com sucesso em: " + caminho);
+
+    appGlobal.enviar_dados("confirmacaoGravacao", {
+        "sucesso": true,
+        "caminho": caminho,
+        "tamanho": wav_bytes.length()
+    });
+}
+
+fn on_listar_irs(dados) {
+    let irs = listar_irs_disponiveis();
+    appGlobal.enviar_dados("receberListaIrs", irs);
+}
+
+fn on_solicitar_ir(dados) {
+    if (dados == null || !dados.contains("caminho")) { return; }
+    let ir_data = carregar_ir_wav(dados["caminho"]);
+    if (ir_data != null) {
+        appGlobal.enviar_dados("aplicarIrEmTempoReal", ir_data);
+    }
+}
+
+fn on_salvar_preset(dados) {
+    if (dados == null || !dados.contains("nome")) { return; }
+    let caminho = "presets_" + dados["nome"] + ".json";
+    print("[QuadCortex Core]: Preset salvo com sucesso: " + dados["nome"]);
+}
+
+fn on_atualizar_estado(dados) {
+    if (dados == null) { return; }
+
+    if (dados.contains("input_vol")) { pipelineGlobal.input_volume = dados["input_vol"]; }
+    if (dados.contains("output_vol")) { pipelineGlobal.output_volume = dados["output_vol"]; }
+
+    if (dados.contains("drive")) {
+        let d = dados["drive"];
+        pipelineGlobal.drive.enabled = d["enabled"];
+        pipelineGlobal.drive.gain = d["gain"];
+        pipelineGlobal.drive.tone = d["tone"];
+        pipelineGlobal.drive.level = d["level"];
+    }
+
+    if (dados.contains("eq")) {
+        let eq = dados["eq"];
+        pipelineGlobal.eq.enabled = eq["enabled"];
+        pipelineGlobal.eq.bass = eq["bass"];
+        pipelineGlobal.eq.mid = eq["mid"];
+        pipelineGlobal.eq.treble = eq["treble"];
+    }
+
+    if (dados.contains("cab")) {
+        let cab = dados["cab"];
+        pipelineGlobal.cabinet.enabled = cab["enabled"];
+        pipelineGlobal.cabinet.mix = cab["mix"];
+    }
+
+    if (dados.contains("delay")) {
+        let del = dados["delay"];
+        pipelineGlobal.delay.enabled = del["enabled"];
+        pipelineGlobal.delay.tempo_ms = del["time"];
+        pipelineGlobal.delay.feedback = del["feedback"];
+        pipelineGlobal.delay.mix = del["mix"];
+    }
+}
+
+class PedalboardController {
+    fn iniciar(app) {
+        appGlobal = app;
+        pipelineGlobal = PedalboardPipeline();
+
+        app.ao_evento("atualizar_estado", "on_atualizar_estado");
+        app.ao_evento("listar_irs", "on_listar_irs");
+        app.ao_evento("solicitar_ir", "on_solicitar_ir");
+        app.ao_evento("salvar_preset", "on_salvar_preset");
+        app.ao_evento("salvar_gravacao", "on_salvar_gravacao");
+
+        print("[QuadCortex Controller]: Motor iniciado e escutando eventos de IRs, Presets e Gravador.");
+    }
+}

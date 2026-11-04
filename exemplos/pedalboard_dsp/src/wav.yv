@@ -1,0 +1,173 @@
+# Modulo de Áudio WAV PCM (Decodificação e Codificação) em Yvira
+# Manipula formato standard PCM 16-bit Mono / Stereo a 44100Hz
+
+class WavFile {
+    fn init() {
+        this.sample_rate = 44100;
+        this.channels = 1;
+        this.bits_per_sample = 16;
+    }
+
+    # Salva uma lista de floats (-1.0 a 1.0) em formato WAV PCM 16-bit
+    fn encode_pcm16_mono(samples, sample_rate) {
+        let num_samples = samples.length();
+        let byte_rate = sample_rate * 2;
+        let block_align = 2;
+        let data_size = num_samples * 2;
+        let total_file_size = 36 + data_size;
+
+        let b = bytes(44 + data_size);
+
+        # RIFF Header
+        b.write_u8(82);  # 'R'
+        b.write_u8(73);  # 'I'
+        b.write_u8(70);  # 'F'
+        b.write_u8(70);  # 'F'
+        b.write_u32(total_file_size);
+        b.write_u8(87);  # 'W'
+        b.write_u8(65);  # 'A'
+        b.write_u8(86);  # 'V'
+        b.write_u8(69);  # 'E'
+
+        # "fmt " subchunk
+        b.write_u8(102); # 'f'
+        b.write_u8(109); # 'm'
+        b.write_u8(116); # 't'
+        b.write_u8(32);  # ' '
+        b.write_u32(16); # Tamanho do fmt chunk (16 bytes para PCM)
+        b.write_u16(1);  # Formato de áudio 1 = PCM
+        b.write_u16(1);  # Num Channels = 1 (Mono)
+        b.write_u32(sample_rate);
+        b.write_u32(byte_rate);
+        b.write_u16(block_align);
+        b.write_u16(16); # Bits per sample
+
+        # "data" subchunk
+        b.write_u8(100); # 'd'
+        b.write_u8(97);  # 'a'
+        b.write_u8(116); # 't'
+        b.write_u8(97);  # 'a'
+        b.write_u32(data_size);
+
+        # Escreve as amostras quantizadas em 16-bit signed int (little-endian)
+        for (let i = 0; i < num_samples; i += 1) {
+            let s = samples[i];
+            # Hard clip entre -1.0 e 1.0
+            s = clamp(s, -1.0, 1.0);
+            let s_int = to_int(round(s * 32767.0));
+            if (s_int < 0) {
+                s_int = 65536 + s_int;
+            }
+            b.write_u16(s_int);
+        }
+
+        return b;
+    }
+
+    # Decodifica um buffer de bytes WAV em uma lista de floats normalizados (-1.0 .. 1.0)
+    fn decode_pcm16_mono(raw_bytes) {
+        if (raw_bytes.length() < 44) {
+            return [];
+        }
+
+        # Lê taxa de amostragem no offset 24 (u32 little endian)
+        let b0 = raw_bytes[24];
+        let b1 = raw_bytes[25];
+        let b2 = raw_bytes[26];
+        let b3 = raw_bytes[27];
+        this.sample_rate = b0 + (b1 * 256) + (b2 * 65536) + (b3 * 16777216);
+
+        # Lê número de canais no offset 22 (u16)
+        this.channels = raw_bytes[22] + (raw_bytes[23] * 256);
+
+        # Localiza o chunk 'data'
+        let offset = 12;
+        let data_offset = 44;
+        let total_len = raw_bytes.length();
+
+        while (offset + 8 <= total_len) {
+            let c0 = raw_bytes[offset];
+            let c1 = raw_bytes[offset + 1];
+            let c2 = raw_bytes[offset + 2];
+            let c3 = raw_bytes[offset + 3];
+
+            # 'd' = 100, 'a' = 97, 't' = 116, 'a' = 100
+            if (c0 == 100 && c1 == 97 && c2 == 116 && c3 == 97) {
+                data_offset = offset + 8;
+                break;
+            }
+            let chunk_size = raw_bytes[offset + 4] + (raw_bytes[offset + 5] * 256) + (raw_bytes[offset + 6] * 65536) + (raw_bytes[offset + 7] * 16777216);
+            offset = offset + 8 + chunk_size;
+        }
+
+        let samples = [];
+        let i = data_offset;
+        let step = this.channels * 2; # 2 bytes por amostra por canal
+
+        while (i + 1 < total_len) {
+            let low = raw_bytes[i];
+            let high = raw_bytes[i + 1];
+            let val = low + (high * 256);
+            if (val >= 32768) {
+                val = val - 65536;
+            }
+            let sample_f = val / 32768.0;
+            samples.push(sample_f);
+            i = i + step;
+        }
+
+        return samples;
+    }
+}
+
+# Gerador sintético de áudio para teste: Acordes e Riffs de Guitarra Elétrica
+fn gerar_riff_guitarra(sample_rate, duracao_seg) {
+    let total_samples = to_int(sample_rate * duracao_seg);
+    let samples = [];
+
+    # Frequências de um acorde Drop D / Power Chord (D3=146.8Hz, A3=220Hz, D4=293.6Hz)
+    let f1 = 146.83;
+    let f2 = 220.00;
+    let f3 = 293.66;
+    let two_pi = 2.0 * pi();
+
+    for (let i = 0; i < total_samples; i += 1) {
+        let t = i / sample_rate;
+
+        # Envelope decrescente com palhetada (pluck exponential decay a cada 0.8s)
+        let stroke_t = t - (floor(t / 0.8) * 0.8);
+        let envelope = exp(-stroke_t * 4.0);
+
+        # Onda composta com harmônicos típicos de corda metálica
+        let s = (sin(two_pi * f1 * t) * 0.5)
+              + (sin(two_pi * f2 * t) * 0.3)
+              + (sin(two_pi * f3 * t) * 0.25)
+              + (sin(two_pi * (f1 * 2.0) * t) * 0.15);
+
+        samples.push(s * envelope * 0.7);
+    }
+
+    return samples;
+}
+
+# Gerador sintético de Resposta ao Impulso (IR Cabinet)
+# Simula a ressonância de um gabinete 4x12 Celestion V30
+fn gerar_ir_gabinete(sample_rate, tamanho) {
+    let ir = [];
+    let two_pi = 2.0 * pi();
+
+    for (let i = 0; i < tamanho; i += 1) {
+        let t = i / sample_rate;
+        # Decaimento rápido acústico da caixa fechada
+        let decay = exp(-t * 120.0);
+
+        # Frequências ressonantes de caixa 4x12 (~110Hz body thump, 2400Hz cone bite, 4500Hz fizz cut)
+        let val = (sin(two_pi * 110.0 * t) * 0.6)
+                + (sin(two_pi * 2400.0 * t) * 0.3)
+                + (sin(two_pi * 4200.0 * t) * 0.1);
+
+        ir.push(val * decay);
+    }
+
+    return ir;
+}

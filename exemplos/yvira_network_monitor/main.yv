@@ -1,0 +1,103 @@
+# ====================================================================
+# YVIRA PULSE - NETWORK SENTINEL & SWITCH MONITOR (VUE 3 + @time)
+# ====================================================================
+
+import "switch" as Switch
+
+print("====================================================================");
+print("     INICIALIZANDO YVIRA PULSE - NETWORK SENTINEL & SWITCH MANAGER  ");
+print("====================================================================\n");
+
+# 1. Cria a Janela Desktop com Vue.js 3 e visual escuro moderno
+let app = criar_janela({
+    "titulo": "Yvira Pulse - Network Sentinel",
+    "view": "views/index.html",
+    "largura": 1240,
+    "altura": 780,
+    "min_largura": 980,
+    "min_altura": 620,
+    "barra_customizada": true,
+    "redimensionavel": true,
+    "cor_fundo": "#0a0d14"
+});
+
+# 2. Estado em memória gerenciado pelo runtime Yvira
+let cacheDispositivos = [];
+let varrendoAgora = false;
+
+# Função executada para varrer e consolidar a rede local
+fn sincronizarRede() {
+    if (varrendoAgora) {
+        return;
+    }
+    varrendoAgora = true;
+    print("[Sentinel @time]: Iniciando ciclo de varredura periódica da rede...");
+
+    # Executa auditoria L2-L7 profunda (OUI, Portas, NetBIOS, SNMP)
+    let lista = Switch.mapear_rede({
+        "alvo": "192.168.0.1-50",
+        "timeout_ms": 250,
+        "coletar_banners": true,
+        "identificar_nomes": true,
+        "tentar_snmp": true
+    });
+
+    cacheDispositivos = lista;
+
+    # Obtém também conexões ativas TCP para métricas em tempo real
+    let conns = Switch.obter_conexoes_tcp();
+
+    # Emite os novos dados reativamente para o Vue.js no front-end
+    app.emitir("receber_dados_rede", {
+        "dispositivos": cacheDispositivos,
+        "total_conexoes_tcp": conns.tamanho()
+    });
+
+    print("[Sentinel @time]: Varredura concluída! " + lista.tamanho() + " dispositivos ativos.");
+    varrendoAgora = false;
+}
+
+# 3. Handlers de Eventos IPC disparados pelo Vue.js
+
+fn onIniciar(dados) {
+    print("[IPC]: Front-end Vue.js conectado!");
+    sincronizarRede();
+}
+
+fn onForcarScan(dados) {
+    print("[IPC]: Varredura manual disparada pelo usuário no painel.");
+    sincronizarRede();
+}
+
+fn onPingHost(dados) {
+    let host = dados.ip;
+    print("[IPC]: Executando teste de ping em: " + host);
+    let resultado = Switch.ping(host, 1000);
+    app.emitir("notificar_ping", resultado);
+}
+
+fn onWolHost(dados) {
+    let mac = dados.mac;
+    print("[IPC]: Disparando pacote Wake-on-LAN para o MAC: " + mac);
+    Switch.wake_on_lan(mac);
+}
+
+# 4. Registra os eventos da janela
+app.ao_evento("iniciar", onIniciar);
+app.ao_evento("forcar_scan", onForcarScan);
+app.ao_evento("ping_host", onPingHost);
+app.ao_evento("wol_host", onWolHost);
+
+# 5. ATIVAÇÃO DA AUTOMAÇÃO NATIVA COM @time
+# Roda a rotina 'sincronizarRede' a cada 5 segundos em background automaticamente!
+@time.sincronizarRede(5);
+
+print("[Yvira Core]: Automação @time.sincronizarRede(5) iniciada com sucesso!");
+
+# 6. Exibe a janela gráfica e aguarda fechamento
+app.show();
+app.wait();
+
+# Finaliza o timer ao fechar a janela
+@stop.sincronizarRede();
+print("[Yvira Core]: Aplicação finalizada e timers encerrados.");

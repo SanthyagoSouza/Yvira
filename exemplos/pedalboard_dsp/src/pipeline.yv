@@ -1,0 +1,85 @@
+# Pipeline DSP Global do Pedalboard Virtual Yvira
+import "fs";
+import "wav.yv";
+import "effects.yv";
+
+class PedalboardPipeline {
+    fn init() {
+        this.sample_rate = 22050; # 22050Hz ideal para processamento ultra rapido
+        this.input_volume = 1.0;
+        this.output_volume = 1.0;
+
+        # Instancia componentes
+        this.drive = Overdrive();
+        this.eq = Equalizador3Vias(this.sample_rate);
+        this.cabinet = GabineteIR();
+        this.delay = DelayDigital(this.sample_rate);
+
+        # Carrega IR padrao de 128 taps (sintetizado para velocidade ideal e resposta de frequencia realista)
+        let ir = gerar_ir_gabinete(this.sample_rate, 96);
+        this.cabinet.carregar_ir(ir);
+
+        # Buffer de entrada e saida atuais
+        this.raw_input = [];
+        this.processed_output = [];
+    }
+
+    fn carregar_audio_padrao() {
+        print("[DSP]: Gerando riff de guitarra sintetica (Drop D / 146.8Hz - 293Hz)...");
+        this.raw_input = gerar_riff_guitarra(this.sample_rate, 1.5);
+        print("[DSP]: Amostras geradas: " + this.raw_input.length());
+    }
+
+    fn processar_cadeia() {
+        let t0 = clock();
+        if (this.raw_input.length() == 0) {
+            this.carregar_audio_padrao();
+        }
+
+        # 1. Input Volume
+        let current = [];
+        let in_vol = this.input_volume;
+        for (let i = 0; i < this.raw_input.length(); i += 1) {
+            current.push(this.raw_input[i] * in_vol);
+        }
+
+        # 2. Overdrive
+        current = this.drive.processar(current);
+
+        # 3. Equalizador de 3 Vias (Amp Tone Stack)
+        current = this.eq.processar(current);
+
+        # 4. Gabinete IR (Simulador de Caixa/Microfone)
+        current = this.cabinet.processar(current);
+
+        # 5. Delay Digital
+        current = this.delay.processar(current);
+
+        # 6. Master Output Volume & Limiter
+        let out_vol = this.output_volume;
+        this.processed_output = [];
+        for (let j = 0; j < current.length(); j += 1) {
+            let sample = current[j] * out_vol;
+            # Soft limiting para evitar estalos digitais
+            if (sample > 1.0) { sample = 1.0; }
+            if (sample < -1.0) { sample = -1.0; }
+            this.processed_output.push(sample);
+        }
+
+        let elapsed = clock() - t0;
+        print("[DSP]: Cadeia processada com sucesso em " + elapsed + " ms!");
+
+        return this.processed_output;
+    }
+
+    fn exportar_wav_saida(caminho) {
+        let wav = WavFile();
+        let bytes_data = wav.encode_pcm16_mono(this.processed_output, this.sample_rate);
+        let destino = caminho;
+        if (!fs.exists("audio") && fs.exists("../audio")) {
+            destino = "../" + caminho;
+        }
+        fs.write_bytes(destino, bytes_data);
+        print("[DSP]: Gravado arquivo final: " + destino);
+    }
+}

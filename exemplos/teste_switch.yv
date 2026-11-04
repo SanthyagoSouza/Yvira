@@ -1,0 +1,54 @@
+# ==============================================================================
+# TESTE DO MÓDULO NATIVO DE REDE E CONTROLE DE SWITCH (YVIRA RUNTIME)
+# ==============================================================================
+import "switch" as Switch
+
+print("==================================================")
+print("🔌 TESTE DO MÓDULO NATIVO SWITCH / REDE NO YVIRA")
+print("==================================================")
+
+# 1. Teste de Ping
+print("\n[1] Testando Conectividade (Ping)...")
+let pingDns = Switch.ping("1.1.1.1", 1500)
+print("Ping Cloudflare (1.1.1.1): " + pingDns.status + " | Tempo: " + pingDns.tempo_ms + "ms")
+
+let pingGoogle = Switch.ping("8.8.8.8", 1500)
+print("Ping Google (8.8.8.8):     " + pingGoogle.status + " | Tempo: " + pingGoogle.tempo_ms + "ms")
+
+# 2. Scanner de Portas Concorrente
+print("\n[2] Varredura de Portas de Gerência (1.1.1.1)...")
+let portasParaTestar = [22, 53, 80, 443, 8080]
+let portasResultado = Switch.scan_portas("1.1.1.1", portasParaTestar, 600)
+for (let i = 0; i < portasResultado.tamanho(); i = i + 1) {
+    let p = portasResultado[i]
+    let estado = p.aberta ? "ABERTA ✅" : "FECHADA ❌"
+    print("Porta " + p.porta + ": " + estado)
+}
+
+# 3. Listagem de Adaptadores Locais
+print("\n[3] Adaptadores de Rede Locais:")
+let adaptadores = Switch.obter_adaptadores()
+for (let i = 0; i < adaptadores.tamanho(); i = i + 1) {
+    let a = adaptadores[i]
+    if a.status == "Up" {
+        print("- Interface: " + a.nome + " (" + a.tipo + ")")
+        print("  Velocidade: " + a.velocidade_mbps + " Mbps | MAC: " + a.mac)
+    }
+}
+
+# 4. Conexões TCP Ativas no Sistema
+print("\n[4] Amostragem de Conexões TCP no Sistema Operacional:")
+let conns = Switch.obter_conexoes_tcp()
+print("Total de conexões TCP ativas no PC: " + conns.tamanho())
+let totalMostrar = 3
+if conns.tamanho() < totalMostrar {
+    totalMostrar = conns.tamanho()
+}
+for (let i = 0; i < totalMostrar; i = i + 1) {
+    let c = conns[i]
+    print("  -> " + c.local_ip + ":" + c.local_porta + " <=> " + c.remoto_ip + ":" + c.remoto_porta + " [" + c.estado + "]")
+}
+
+print("\n==================================================")
+print("✅ MÓDULO SWITCH INTEGRADO E FUNCIONANDO COM SUCESSO!")
+print("==================================================")

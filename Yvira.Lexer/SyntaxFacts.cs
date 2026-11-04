@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace Yvira.Lexer;
 
@@ -35,6 +35,8 @@ public static class SyntaxFacts
         { "static", TokenType.Static },
         { "super", TokenType.Super },
         { "class", TokenType.Class },
+        { "enum", TokenType.Enum },
+        { "is", TokenType.Is },
         { "this", TokenType.This },
         { "true", TokenType.True },
         { "false", TokenType.False },
